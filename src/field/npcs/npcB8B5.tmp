@@ -1,0 +1,27 @@
+[gd_scene load_steps=6 format=3 uid="uid://b4i22ohcw0fgd"]
+
+[ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_uyrdv"]
+[ext_resource type="PackedScene" uid="uid://caxhff6by5nqu" path="res://src/field/gamepieces/animation/walking_gamepiece_animation.tscn" id="2_nt6uj"]
+[ext_resource type="Script" path="res://src/field/npcs/npc_controller.gd" id="3_xmgw3"]
+[ext_resource type="Script" path="res://src/field/npcs/vision_manager.gd" id="4_uu4ol"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_8aea6"]
+radius = 96.0
+
+[node name="Npc" instance=ExtResource("1_uyrdv")]
+
+[node name="ControllerAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D" index="2"]
+remote_path = NodePath("../../../../Controller")
+
+[node name="Animation" parent="." index="1" instance=ExtResource("2_nt6uj")]
+
+[node name="Controller" type="Node2D" parent="." index="2"]
+script = ExtResource("3_xmgw3")
+
+[node name="VisionArea" type="Area2D" parent="Controller" index="0"]
+collision_layer = 2
+collision_mask = 7
+script = ExtResource("4_uu4ol")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Controller/VisionArea" index="0"]
+shape = SubResource("CircleShape2D_8aea6")

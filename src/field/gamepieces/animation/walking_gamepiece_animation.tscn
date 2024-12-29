@@ -1,0 +1,226 @@
+[gd_scene load_steps=17 format=3 uid="uid://caxhff6by5nqu"]
+
+[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="1_l0scw"]
+[ext_resource type="Texture2D" uid="uid://v2ng3jhojx3b" path="res://assets/sprites/24x32-characters-big-pack-by-Svetlana-Kushnariova/NPC/Townfolk-Old-M-002-spritesheet.png" id="2_wkvs8"]
+[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="3_cak7f"]
+
+[sub_resource type="Animation" id="Animation_ivohq"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("GFX/Sprite:flip_h")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_xdc4x"]
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+
+[sub_resource type="Animation" id="Animation_invt8"]
+step = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [4]
+}
+
+[sub_resource type="Animation" id="Animation_trip1"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_e03xs"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+
+[sub_resource type="Animation" id="Animation_fg0yt"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_ykwrq"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [3, 4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_aknng"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [0, 1, 2]
+}
+
+[sub_resource type="Animation" id="Animation_708je"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [6, 7, 8]
+}
+
+[sub_resource type="Animation" id="Animation_lywan"]
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [9, 10, 11]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_67ks1"]
+_data = {
+"RESET": SubResource("Animation_ivohq"),
+"idle": SubResource("Animation_xdc4x"),
+"idle_e": SubResource("Animation_invt8"),
+"idle_n": SubResource("Animation_trip1"),
+"idle_s": SubResource("Animation_e03xs"),
+"idle_w": SubResource("Animation_fg0yt"),
+"run_e": SubResource("Animation_ykwrq"),
+"run_n": SubResource("Animation_aknng"),
+"run_s": SubResource("Animation_708je"),
+"run_w": SubResource("Animation_lywan")
+}
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1wavg"]
+radius = 8.0
+height = 26.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_fjbxw"]
+radius = 6.0
+height = 22.0
+
+[node name="WalkingAnimation" type="Marker2D"]
+script = ExtResource("1_l0scw")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_67ks1")
+}
+autoplay = "idle"
+
+[node name="GFX" type="Marker2D" parent="."]
+
+[node name="Sprite" type="Sprite2D" parent="GFX"]
+texture = ExtResource("2_wkvs8")
+offset = Vector2(0, -6)
+hframes = 3
+vframes = 4
+frame = 6
+region_rect = Rect2(0, 0, 72, 128)
+
+[node name="Shadow" type="Sprite2D" parent="GFX"]
+
+[node name="ClickArea" type="Area2D" parent="GFX"]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("3_cak7f")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GFX/ClickArea"]
+position = Vector2(0, -3)
+shape = SubResource("CapsuleShape2D_1wavg")
+
+[node name="CollisionArea" type="Area2D" parent="."]
+collision_mask = 3
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionArea"]
+shape = SubResource("CapsuleShape2D_fjbxw")
+debug_color = Color(0.67451, 0.156863, 0.278431, 0.419608)

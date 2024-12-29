@@ -1,0 +1,54 @@
+[gd_scene load_steps=2 format=3 uid="uid://bve4u0hewur8"]
+
+[ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="1_6gkxm"]
+
+[node name="CanvasLayer" type="CanvasLayer"]
+
+[node name="TabContainer" type="TabContainer" parent="."]
+anchors_preset = -1
+anchor_top = 0.75
+anchor_right = 0.251
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+current_tab = 0
+
+[node name="Needs" type="Panel" parent="TabContainer"]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="NeedBars" type="VBoxContainer" parent="TabContainer/Needs"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.02
+anchor_right = 0.85
+anchor_bottom = 1.0
+offset_right = 9.0
+grow_vertical = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="HungerBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+layout_mode = 2
+need_id = "hunger"
+label_text = "Hunger"
+
+[node name="HygieneBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+layout_mode = 2
+need_id = "hygiene"
+label_text = "Hygiene"
+
+[node name="FunBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+layout_mode = 2
+need_id = "fun"
+label_text = "Fun"
+
+[node name="EnergyBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+layout_mode = 2
+need_id = "energy"
+label_text = "Energy"
+
+[node name="Panel2" type="Panel" parent="TabContainer"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1

@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3 uid="uid://d0f6cpchnxa1s"]
+
+[ext_resource type="Script" path="res://src/field/gamepieces/gamepiece.gd" id="1_d7fqc"]
+[ext_resource type="Resource" uid="uid://cbnicto2l2ur2" path="res://assets/maps/default_gameboard.tres" id="2_247le"]
+[ext_resource type="PackedScene" uid="uid://dahucxg0vpxqx" path="res://src/field/gamepieces/animation/static_gamepiece_animation.tscn" id="3_nai5v"]
+[ext_resource type="Script" path="res://src/field/items/item_controller.gd" id="4_e51l0"]
+[ext_resource type="Script" path="res://src/field/items/components/consumable_component.gd" id="5_rtfi8"]
+
+[node name="Apple" type="Node2D"]
+script = ExtResource("1_d7fqc")
+gameboard = ExtResource("2_247le")
+blocks_movement = true
+
+[node name="Decoupler" type="Node" parent="."]
+
+[node name="Path2D" type="Path2D" parent="Decoupler"]
+
+[node name="PathFollow2D" type="PathFollow2D" parent="Decoupler/Path2D"]
+
+[node name="CameraAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D"]
+update_rotation = false
+update_scale = false
+
+[node name="GFXAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D"]
+update_rotation = false
+update_scale = false
+
+[node name="Animation" parent="." instance=ExtResource("3_nai5v")]
+
+[node name="ItemController" type="Node2D" parent="."]
+script = ExtResource("4_e51l0")
+
+[node name="ConsumableComponent" type="Node2D" parent="ItemController"]
+script = ExtResource("5_rtfi8")
+need_deltas = {
+"hunger": 25.0
+}
+consumption_time = 5.0

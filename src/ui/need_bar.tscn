@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://c40y5aqilgenl"]
+
+[ext_resource type="Script" path="res://src/ui/need_bar.gd" id="1_7xf12"]
+
+[node name="NeedBar" type="HBoxContainer"]
+script = ExtResource("1_7xf12")
+need_id = null
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+bbcode_enabled = true
+fit_content = true
+
+[node name="ProgressBar" type="ProgressBar" parent="."]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+value = 100.0
+show_percentage = false
