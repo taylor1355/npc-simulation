@@ -104,6 +104,9 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		assert(gameboard, "Gamepiece '%s' must have a gameboard reference to function!" % name)
 		
+		# Add to gamepiece group for block movement change tracking
+		add_to_group("_GAMEPIECE_GROUP")
+		
 		# Ensure that the gamepiece and its path are at the same scale. Enables using local scale for movement coordinates (simplifies path creation)
 		_path.global_scale = global_scale
 

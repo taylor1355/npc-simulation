@@ -51,11 +51,11 @@ _data = {
 "idle": SubResource("Animation_xdc4x")
 }
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_f0ly4"]
-radius = 8.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rvx5c"]
+size = Vector2(13, 19)
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_1v725"]
-radius = 7.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_m4rvx"]
+size = Vector2(13, 19)
 
 [node name="StaticAnimation" type="Marker2D"]
 script = ExtResource("1_dyh1d")
@@ -81,11 +81,13 @@ monitoring = false
 script = ExtResource("3_i5rw2")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="GFX/ClickArea"]
-shape = SubResource("CircleShape2D_f0ly4")
+position = Vector2(0.5, 2)
+shape = SubResource("RectangleShape2D_rvx5c")
 
 [node name="CollisionArea" type="Area2D" parent="."]
 collision_mask = 3
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionArea"]
-shape = SubResource("CircleShape2D_1v725")
+position = Vector2(0.5, 2)
+shape = SubResource("RectangleShape2D_m4rvx")
 debug_color = Color(0.67451, 0.156863, 0.278431, 0.419608)

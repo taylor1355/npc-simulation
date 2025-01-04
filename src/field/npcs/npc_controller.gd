@@ -25,9 +25,17 @@ var needs = {}
 
 # pathfinding
 var destination : Vector2i
+var movement_locked: bool = false
 
-# placeholder ai state
-var behavior: String = "wander"
+# State machine
+enum NPCState {
+	IDLE,
+	MOVING_TO_ITEM,
+	INTERACTING,
+	WANDERING
+}
+
+var current_state: NPCState = NPCState.IDLE
 var current_interaction: Interaction = null
 
 @onready var _vision_manager: VisionManager = $VisionArea as VisionManager
@@ -82,9 +90,18 @@ func update_need(need_id: String, delta: float) -> void:
 	if not needs.has(need_id):
 		print("NpcAi: need_id not found: ", need_id)
 		return
+		
+	var old_value = needs[need_id]
 	needs[need_id] += delta
 	needs[need_id] = clamp(needs[need_id], 0, MAX_NEED_VALUE)
 	need_changed.emit(need_id, needs[need_id])
+	
+	# Trigger behavior update at energy thresholds
+	if need_id == "energy":
+		if (old_value < MAX_NEED_VALUE and needs[need_id] >= MAX_NEED_VALUE) or \
+		   (old_value > 0 and needs[need_id] <= 0):
+			print("[NpcController] Energy threshold reached, deciding behavior")
+			decide_behavior()
 
 
 func reemit_needs() -> void:
@@ -96,6 +113,9 @@ func reemit_needs() -> void:
 ### Pathfinding ###
 ###################
 func set_new_destination(new_destination = null) -> void:
+	if movement_locked:
+		return
+
 	if not new_destination:
 		var bounds : Rect2i = _gamepiece.gameboard.boundaries
 		destination = bounds.position + Vector2i(
@@ -111,44 +131,82 @@ func set_new_destination(new_destination = null) -> void:
 	travel_to_cell(destination, true)
 
 
+func set_movement_locked(locked: bool) -> void:
+	print("[NpcController] Setting movement_locked to ", locked)
+	movement_locked = locked
+
+
 ######################
 ### Placeholder AI ###
 ######################
 func decide_behavior() -> void:
-	var seen_items: Array = _vision_manager.get_items_by_distance()
-	var closest_item = seen_items[0] if seen_items else null
-	var closest_distance = _gamepiece.cell.distance_to(closest_item._gamepiece.cell) if closest_item else null
+	print("\n[NpcController] Deciding behavior")
+	print("[NpcController] Current state: ", current_state)
+	print("[NpcController] Movement locked: ", movement_locked)
+	print("[NpcController] Current interaction: ", current_interaction.name if current_interaction else "none")
+	print("[NpcController] Energy level: ", needs["energy"], "/", MAX_NEED_VALUE)
+	
+	# If movement is locked, we can only be in INTERACTING state
+	if movement_locked and current_state != NPCState.INTERACTING:
+		print("[NpcController] Movement locked, forcing IDLE state")
+		current_state = NPCState.IDLE
+		return
+		
+	# If currently interacting, check if we should stop
+	if current_interaction:
+		current_state = NPCState.INTERACTING
+		# Stop sitting if energy is full
+		if current_interaction.name == "sit" and needs["energy"] >= MAX_NEED_VALUE:
+			print("[NpcController] Energy full, stopping sit interaction")
+			var cancel_request = current_interaction.create_cancel_request(self)
+			current_interaction.cancel_request.emit(cancel_request)
+		return
 
-	# if NPC is currently interacting with an item, wait to finish the interaction
-	if current_interaction: 
-		behavior = "interact"
-	# if NPC is next to an item, interact with it
-	elif closest_item and closest_distance <= 1:
-		behavior = "pending_interaction"
-		if closest_item.interactions:
-			var interaction = closest_item.interactions.values()[0]
-			var interaction_request = interaction.create_start_request(self)
-			interaction_request.accepted.connect(
-				func():
-					current_interaction = interaction
-					closest_item.interaction_finished.connect(_on_interaction_finished)
-					decide_behavior()
-			)
-			interaction_request.rejected.connect(
-				func(_reason):
-					current_interaction = null
-					behavior = "wander"
-					set_new_destination()
-			)
-			closest_item.request_interaction.call_deferred(interaction_request)
-	# if NPC is at least 2 squares away from any seen items, move to the closest one (or wander if no close items)
+	var seen_items: Array = _vision_manager.get_items_by_distance()
+	if seen_items.is_empty():
+		print("[NpcController] No items visible, wandering")
+		current_state = NPCState.WANDERING
+		set_new_destination()
+		return
+		
+	var closest_item = seen_items[0]
+	var closest_distance = _gamepiece.cell.distance_to(closest_item._gamepiece.cell)
+	print("[NpcController] Closest item at distance: ", closest_distance)
+	
+	# If next to an item with interactions, interact with it
+	if closest_distance <= 1 and closest_item.interactions:
+		# Always check for sit interaction first when energy is not full
+		var interaction = null
+		if needs["energy"] < 0.5 * MAX_NEED_VALUE and closest_item.interactions.has("sit"):
+			print("[NpcController] Energy not full, choosing sit interaction")
+			interaction = closest_item.interactions["sit"]
+		else:
+			print("[NpcController] Energy full or no sit interaction available")
+			interaction = closest_item.interactions.values()[0]
+			
+		var interaction_request = interaction.create_start_request(self)
+		interaction_request.accepted.connect(
+			func():
+				current_interaction = interaction
+				closest_item.interaction_finished.connect(_on_interaction_finished)
+				current_state = NPCState.INTERACTING
+		)
+		interaction_request.rejected.connect(
+			func(_reason):
+				current_interaction = null
+				current_state = NPCState.WANDERING
+				set_new_destination()
+		)
+		closest_item.request_interaction.call_deferred(interaction_request)
+	# Otherwise move to closest available item
 	else:
-		for item in _vision_manager.get_items_by_distance():
+		for item in seen_items:
 			if not item.current_interaction:
-				behavior = "move_to_item"
+				current_state = NPCState.MOVING_TO_ITEM
 				set_new_destination(item._gamepiece.cell)
 				return
-		behavior = "wander"
+		
+		current_state = NPCState.WANDERING
 		set_new_destination()
 
 

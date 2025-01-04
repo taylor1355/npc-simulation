@@ -78,6 +78,10 @@ func _ready() -> void:
 		FieldEvents.gamepiece_cell_changed.connect(_on_gamepiece_cell_changed)
 		FieldEvents.terrain_changed.connect(_on_terrain_passability_changed)
 		
+		# Update pathfinding when movement blocking changes
+		for gamepiece in get_tree().get_nodes_in_group("_GAMEPIECE_GROUP"):
+			gamepiece.blocks_movement_changed.connect(_on_blocks_movement_changed)
+		
 		# Create the objects that will be used to query the state of the gamepieces and terrain.
 		var min_cell_axis: = minf(_gameboard.cell_size.x-1, _gameboard.cell_size.y-1) / 2.0
 		_gamepiece_searcher = CollisionFinder.new(get_world_2d().direct_space_state, min_cell_axis,
@@ -138,7 +142,7 @@ func is_cell_blocked(cell: Vector2i) -> bool:
 	# collision is a blocking collision.
 	for collision in collisions:
 		var blocks_movement = true
-		if collision.collider.owner.get(BLOCKING_PROPERTY):
+		if collision.collider.owner.get(BLOCKING_PROPERTY) != null:
 			blocks_movement = collision.collider.owner.get(BLOCKING_PROPERTY) as bool
 		
 		if blocks_movement:
@@ -258,3 +262,10 @@ func _on_gamepiece_cell_changed(gamepiece: Gamepiece, old_cell: Vector2) -> void
 # passable. The pathfinder will need to be rebuilt.
 func _on_terrain_passability_changed() -> void:
 	_rebuild_pathfinder()
+
+
+# When a gamepiece's blocks_movement changes, update pathfinding
+func _on_blocks_movement_changed() -> void:
+	var gamepiece = get_parent() as Gamepiece
+	print("[GamepieceController] blocks_movement changed to ", gamepiece.blocks_movement, " for cell ", gamepiece.cell)
+	_find_all_blocked_cells()

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=4 uid="uid://cg6x04dsiwoas"]
+[gd_scene load_steps=15 format=4 uid="uid://cg6x04dsiwoas"]
 
 [ext_resource type="Script" path="res://src/field/field.gd" id="1_4kyoj"]
 [ext_resource type="TileSet" uid="uid://biq84075xlypd" path="res://assets/terrain/tilesets/kenney_obstacles.tres" id="1_q4jvv"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://src/field/path_destination_marker.gd" id="6_ywrnx"]
 [ext_resource type="PackedScene" uid="uid://d0f6cpchnxa1s" path="res://src/field/items/apple.tscn" id="8_ybr5o"]
 [ext_resource type="PackedScene" uid="uid://b4i22ohcw0fgd" path="res://src/field/npcs/npc.tscn" id="9_mkw52"]
+[ext_resource type="PackedScene" uid="uid://blacicxfqcfdw" path="res://src/field/items/chair.tscn" id="9_u1dha"]
 [ext_resource type="Script" path="res://src/field/gameboard/debug_map_boundaries.gd" id="10_8t3yh"]
 [ext_resource type="PackedScene" uid="uid://bve4u0hewur8" path="res://src/ui/ui.tscn" id="11_jm6mo"]
 
@@ -190,17 +191,13 @@ gameboard = ExtResource("2_l26x2")
 [node name="Npcs" type="Node2D" parent="Field/Entities"]
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(232, 115)
-gameboard = ExtResource("2_l26x2")
-
-[node name="Npc2" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(45, 88)
+position = Vector2(279, 152)
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]
 
 [node name="Apple" parent="Field/Entities/Items" instance=ExtResource("8_ybr5o")]
-position = Vector2(144, 114)
+position = Vector2(108, 198)
 
 [node name="Apple2" parent="Field/Entities/Items" instance=ExtResource("8_ybr5o")]
 position = Vector2(35, 173)
@@ -210,6 +207,9 @@ position = Vector2(254, 20)
 
 [node name="Apple4" parent="Field/Entities/Items" instance=ExtResource("8_ybr5o")]
 position = Vector2(48, 28)
+
+[node name="Chair" parent="Field/Entities/Items" instance=ExtResource("9_u1dha")]
+position = Vector2(240, 122)
 
 [node name="MapBoundaries" type="Node2D" parent="."]
 visible = false

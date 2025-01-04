@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3 uid="uid://blacicxfqcfdw"]
+
+[ext_resource type="Script" path="res://src/field/gamepieces/gamepiece.gd" id="1_dg1dl"]
+[ext_resource type="Resource" uid="uid://cbnicto2l2ur2" path="res://assets/maps/default_gameboard.tres" id="2_gravy"]
+[ext_resource type="PackedScene" uid="uid://domp15mrjsmoy" path="res://src/field/items/chair_animation.tscn" id="4_031sg"]
+[ext_resource type="Script" path="res://src/field/items/item_controller.gd" id="4_42h0u"]
+[ext_resource type="Script" path="res://src/field/items/components/sittable_component.gd" id="5_n3bl8"]
+
+[node name="Chair" type="Node2D"]
+script = ExtResource("1_dg1dl")
+gameboard = ExtResource("2_gravy")
+blocks_movement = true
+
+[node name="Decoupler" type="Node" parent="."]
+
+[node name="Path2D" type="Path2D" parent="Decoupler"]
+
+[node name="PathFollow2D" type="PathFollow2D" parent="Decoupler/Path2D"]
+
+[node name="CameraAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D"]
+update_rotation = false
+update_scale = false
+
+[node name="GFXAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D"]
+update_rotation = false
+update_scale = false
+
+[node name="Animation" parent="." instance=ExtResource("4_031sg")]
+
+[node name="ItemController" type="Node2D" parent="."]
+script = ExtResource("4_42h0u")
+
+[node name="SittableComponent" type="Node2D" parent="ItemController"]
+script = ExtResource("5_n3bl8")

@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" path="res://src/field/gamepieces/gamepiece.gd" id="1_d7fqc"]
 [ext_resource type="Resource" uid="uid://cbnicto2l2ur2" path="res://assets/maps/default_gameboard.tres" id="2_247le"]
-[ext_resource type="PackedScene" uid="uid://dahucxg0vpxqx" path="res://src/field/gamepieces/animation/static_gamepiece_animation.tscn" id="3_nai5v"]
 [ext_resource type="Script" path="res://src/field/items/item_controller.gd" id="4_e51l0"]
 [ext_resource type="Script" path="res://src/field/items/components/consumable_component.gd" id="5_rtfi8"]
+[ext_resource type="PackedScene" uid="uid://bvjial8h0p25w" path="res://src/field/items/apple_animation.tscn" id="5_tuvc8"]
 
 [node name="Apple" type="Node2D"]
 script = ExtResource("1_d7fqc")
@@ -25,7 +25,7 @@ update_scale = false
 update_rotation = false
 update_scale = false
 
-[node name="Animation" parent="." instance=ExtResource("3_nai5v")]
+[node name="Animation" parent="." instance=ExtResource("5_tuvc8")]
 
 [node name="ItemController" type="Node2D" parent="."]
 script = ExtResource("4_e51l0")
