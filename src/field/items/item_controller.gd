@@ -42,16 +42,16 @@ func request_interaction(request: InteractionRequest):
 			request.reject("Interaction not found")
 			return
 
-		if request.request_type == "start":
+		if request.request_type == InteractionRequest.Type.START:
 			interaction.start_request.emit(request)
-		elif request.request_type == "cancel":
+		elif request.request_type == InteractionRequest.Type.CANCEL:
 			interaction.cancel_request.emit(request)
 		else:
 			request.reject("Invalid request type")
 			return
 
 		# may need to defer the status check, so that the request handler can have time to finish
-		if request.status == "accepted":
+		if request.status == InteractionRequest.Status.ACCEPTED:
 			current_interaction = interaction
 			interacting_npc = request.npc_controller
 			interaction_time = 0.0

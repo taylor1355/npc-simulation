@@ -32,7 +32,6 @@ func _ready() -> void:
 	interaction.cancel_request.connect(_handle_consume_cancel_request)
 
 
-# TODO: use a timer instead. No need to update every frame
 func _process(delta_t: float) -> void:
 	if current_npc:
 		# TODO: give some visual indicator of how much of the consumable is left
