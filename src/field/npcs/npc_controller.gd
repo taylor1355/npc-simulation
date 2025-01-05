@@ -59,9 +59,11 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		add_to_group(GROUP_NAME)
 		
-		# Forward local signals to the corresponding FieldEvents
+		# Forward local signals
 		need_changed.connect(
-			func(need_id: String, new_value: float): FieldEvents.npc_need_changed.emit(_gamepiece, need_id, new_value)
+			func(need_id: String, new_value: float): 
+				var event = NpcEvents.create_need_changed(_gamepiece, need_id, new_value)
+				FieldEvents.dispatch(event)
 		)
 
 		for need_id in NEED_IDS:
@@ -134,7 +136,8 @@ func set_new_destination(new_destination = null) -> void:
 	else:
 		destination = new_destination as Vector2i
 
-	FieldEvents.gamepiece_path_set.emit.call_deferred(_gamepiece, destination)
+	var event = GamepieceEvents.create_path_set(_gamepiece, destination)
+	FieldEvents.dispatch.call_deferred(event)
 	travel_to_cell(destination, true)
 
 
@@ -198,7 +201,7 @@ func decide_behavior() -> void:
 		interaction_request.accepted.connect(
 			func():
 				current_interaction = interaction
-				item.interaction_finished.connect(_on_interaction_finished)
+				item.interaction_finished.connect(_on_interaction_finished, CONNECT_ONE_SHOT)
 				current_state = NPCState.INTERACTING
 		)
 		interaction_request.rejected.connect(
@@ -216,10 +219,9 @@ func decide_behavior() -> void:
 ################
 ### Handlers ###
 ################
-func _on_interaction_finished(_interaction_name: String, npc: NpcController, _payload: Dictionary) -> void:
-	if npc == self:
-		current_interaction = null
-		decide_behavior()
+func _on_interaction_finished(_interaction_name: String, _npc: NpcController, _payload: Dictionary) -> void:
+	current_interaction = null
+	decide_behavior()
 	
 	
 func _on_gamepiece_arrived() -> void:

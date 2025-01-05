@@ -6,23 +6,28 @@ var focused_gamepiece: Gamepiece = null
 
 
 func _ready() -> void:
-	FieldEvents.gamepiece_path_set.connect(_on_gamepiece_path_set)
-	FieldEvents.focused_gamepiece_changed.connect(_on_focused_gamepiece_changed)
+	FieldEvents.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.GAMEPIECE_PATH_SET):
+				_on_gamepiece_path_set(event as GamepieceEvents.PathSetEvent)
+			elif event.is_type(Event.Type.FOCUSED_GAMEPIECE_CHANGED):
+				_on_focused_gamepiece_changed(event as GamepieceEvents.FocusedEvent)
+	)
 
 
-func _on_gamepiece_path_set(gamepiece: Gamepiece, destination_cell: Vector2i) -> void:
-	if gamepiece != Globals.focused_gamepiece:
+func _on_gamepiece_path_set(event: GamepieceEvents.PathSetEvent) -> void:
+	if event.gamepiece != Globals.focused_gamepiece:
 		return
 
-	gamepiece.arrived.connect(hide, CONNECT_ONE_SHOT)
-	position = gameboard.cell_to_pixel(destination_cell)
+	event.gamepiece.arrived.connect(hide, CONNECT_ONE_SHOT)
+	position = gameboard.cell_to_pixel(event.destination_cell)
 	show()
 
 
-func _on_focused_gamepiece_changed(gamepiece: Gamepiece) -> void:
+func _on_focused_gamepiece_changed(event: GamepieceEvents.FocusedEvent) -> void:
 	if focused_gamepiece:
 		focused_gamepiece.arrived.disconnect(hide)
-	focused_gamepiece = gamepiece
+	focused_gamepiece = event.gamepiece
 
 	focused_gamepiece.arrived.connect(hide, CONNECT_ONE_SHOT)
 

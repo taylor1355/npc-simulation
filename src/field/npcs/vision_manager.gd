@@ -9,7 +9,11 @@ func _ready():
 	parent_gamepiece = get_gamepiece(self)
 	area_entered.connect(_on_area_entered)
 	area_exited.connect(_on_area_exited)
-	FieldEvents.gamepiece_destroyed.connect(_on_gamepiece_removed)
+	FieldEvents.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.GAMEPIECE_DESTROYED):
+				_on_gamepiece_removed(event as GamepieceEvents.DestroyedEvent)
+	)
 
 	# TODO: add all gamepieces already in the area
 	# get_overlapping_areas() seems to not be working as expected
@@ -27,8 +31,8 @@ func _on_area_exited(area: Area2D):
 		_remove_gamepiece(gamepiece)
 
 
-func _on_gamepiece_removed(gamepiece: Gamepiece):
-	_remove_gamepiece(gamepiece)
+func _on_gamepiece_removed(event: GamepieceEvents.DestroyedEvent):
+	_remove_gamepiece(event.gamepiece)
 
 
 func _add_gamepiece(gamepiece: Gamepiece):

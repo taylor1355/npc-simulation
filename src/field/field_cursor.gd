@@ -33,7 +33,11 @@ var focus: = Gameboard.INVALID_CELL:
 func _ready() -> void:
 	assert(gameboard, "\n%s::initialize error - Invalid Gameboard reference!" % name)
 	
-	FieldEvents.input_paused.connect(_on_input_paused)
+	FieldEvents.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.INPUT_PAUSED):
+				_on_input_paused(event as SystemEvents.InputPausedEvent)
+	)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -44,8 +48,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_released("select"):
 		get_viewport().set_input_as_handled()
 		
-		selected.emit(_get_cell_under_mouse())
-		FieldEvents.cell_selected.emit(_get_cell_under_mouse())
+		var cell = _get_cell_under_mouse()
+		selected.emit(cell)
+		FieldEvents.dispatch(
+			CellEvent.create_select(cell)
+		)
 
 
 ## Limit cursor selection to a particular subset of cells.
@@ -78,7 +85,10 @@ func set_focus(value: Vector2i) -> void:
 		set_cell(0, focus, 0, Vector2(1, 5))
 	
 	focus_changed.emit(old_focus, focus)
-	FieldEvents.cell_highlighted.emit(focus)
+	if focus != Gameboard.INVALID_CELL:
+		FieldEvents.dispatch(
+			CellEvent.create_highlight(focus)
+		)
 
 
 # Convert mouse/touch coordinates to a gameboard cell.
@@ -98,8 +108,8 @@ func _is_cell_invalid(cell: Vector2i) -> bool:
 	return not valid_cells.is_empty() and not cell in valid_cells
 
 
-func _on_input_paused(is_paused: bool) -> void:
-	set_process_unhandled_input(!is_paused)
+func _on_input_paused(event: SystemEvents.InputPausedEvent) -> void:
+	set_process_unhandled_input(!event.is_paused)
 	
-	if is_paused:
+	if event.is_paused:
 		set_focus(Gameboard.INVALID_CELL)

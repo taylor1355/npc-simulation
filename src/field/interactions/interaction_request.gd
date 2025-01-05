@@ -1,6 +1,6 @@
 class_name InteractionRequest extends RefCounted
 
-enum Type {
+enum RequestType {
 	START,
 	CANCEL
 }
@@ -12,7 +12,7 @@ enum Status {
 }
 
 var interaction_name: String
-var request_type: Type
+var request_type: RequestType
 var status: Status
 var npc_controller: NpcController
 var item_controller: ItemController
@@ -22,7 +22,7 @@ signal accepted()
 signal rejected(reason: String)
 
 
-func _init(_interaction_name: String, _request_type: Type, _npc: NpcController, _arguments: Dictionary = {}):
+func _init(_interaction_name: String, _request_type: RequestType, _npc: NpcController, _arguments: Dictionary = {}):
 	interaction_name = _interaction_name
 	request_type = _request_type
 	npc_controller = _npc

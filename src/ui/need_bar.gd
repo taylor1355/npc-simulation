@@ -10,7 +10,11 @@ func _ready():
 	set_label_text(label_text)
 
 	if not Engine.is_editor_hint():
-		FieldEvents.npc_need_changed.connect(self._on_npc_need_changed)
+		FieldEvents.event_dispatched.connect(
+			func(event: Event):
+				if event.is_type(Event.Type.NPC_NEED_CHANGED):
+					_on_npc_need_changed(event as NpcEvents.NeedChangedEvent)
+		)
 
 
 func set_label_text(value: String) -> void:
@@ -18,6 +22,6 @@ func set_label_text(value: String) -> void:
 	$RichTextLabel.text = "[right]" + value + "[/right]"
 
 
-func _on_npc_need_changed(gamepiece: Gamepiece, changed_need_id: String, new_value: float) -> void:
-	if gamepiece == Globals.focused_gamepiece and changed_need_id == need_id:
-		$ProgressBar.value = new_value
+func _on_npc_need_changed(event: NpcEvents.NeedChangedEvent) -> void:
+	if event.npc == Globals.focused_gamepiece and event.need_id == need_id:
+		$ProgressBar.value = event.new_value

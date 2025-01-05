@@ -196,6 +196,14 @@ y_sort_enabled = true
 position = Vector2(279, 152)
 gameboard = ExtResource("2_l26x2")
 
+[node name="Npc2" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
+position = Vector2(158, 167)
+gameboard = ExtResource("2_l26x2")
+
+[node name="Npc3" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
+position = Vector2(279, 59)
+gameboard = ExtResource("2_l26x2")
+
 [node name="Items" type="Node2D" parent="Field/Entities"]
 y_sort_enabled = true
 

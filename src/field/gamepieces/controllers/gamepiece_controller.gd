@@ -75,7 +75,11 @@ func _ready() -> void:
 		_gamepiece.arrived.connect(_on_gamepiece_arrived)
 		
 		# The controller will be notified of any changes in the gameboard and respond accordingly.
-		FieldEvents.gamepiece_cell_changed.connect(_on_gamepiece_cell_changed)
+		FieldEvents.event_dispatched.connect(
+			func(event: Event):
+				if event.is_type(Event.Type.GAMEPIECE_CELL_CHANGED):
+					_on_gamepiece_cell_changed(event as GamepieceEvents.CellChangedEvent)
+		)
 		FieldEvents.terrain_changed.connect(_on_terrain_passability_changed)
 		
 		# Update pathfinding when movement blocking changes
@@ -253,9 +257,9 @@ func _on_gamepiece_arrived() -> void:
 
 
 # Whenever a gamepiece moves, flag its destination and origin as in need of an update.
-func _on_gamepiece_cell_changed(gamepiece: Gamepiece, old_cell: Vector2) -> void:
-	_cells_to_update.append(old_cell)
-	_cells_to_update.append(gamepiece.cell)
+func _on_gamepiece_cell_changed(event: GamepieceEvents.CellChangedEvent) -> void:
+	_cells_to_update.append(event.old_cell)
+	_cells_to_update.append(event.gamepiece.cell)
 
 
 # Various events may trigger a change in the terrain which, in turn, changes which cells are

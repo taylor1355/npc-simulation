@@ -1,6 +1,6 @@
 class_name Interaction extends RefCounted
 
-const RequestType = preload("res://src/field/interactions/interaction_request.gd").Type
+const RequestType = preload("res://src/field/interactions/interaction_request.gd").RequestType
 
 var name: String
 var description: String

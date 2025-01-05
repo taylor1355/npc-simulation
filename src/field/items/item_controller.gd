@@ -42,9 +42,9 @@ func request_interaction(request: InteractionRequest):
 			request.reject("Interaction not found")
 			return
 
-		if request.request_type == InteractionRequest.Type.START:
+		if request.request_type == InteractionRequest.RequestType.START:
 			interaction.start_request.emit(request)
-		elif request.request_type == InteractionRequest.Type.CANCEL:
+		elif request.request_type == InteractionRequest.RequestType.CANCEL:
 			interaction.cancel_request.emit(request)
 		else:
 			request.reject("Invalid request type")

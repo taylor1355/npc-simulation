@@ -10,7 +10,11 @@ func _ready() -> void:
 	assert(gameboard)
 	randomize()
 
-	FieldEvents.gamepiece_clicked.connect(_on_gamepiece_clicked)
+	FieldEvents.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.GAMEPIECE_CLICKED):
+				_on_gamepiece_clicked(event as GamepieceEvents.ClickedEvent)
+	)
 	
 	# The field state must pause/unpause with combat accordingly.
 	# Note that pausing/unpausing input is already wrapped up in triggers, which are what will initiate combat.
@@ -23,14 +27,14 @@ func _ready() -> void:
 
 # func _unhandled_key_input(event: InputEvent) -> void:
 	# if event.is_action_pressed("pause"):
-	# 	FieldEvents.input_paused.emit(true)
+	# 	FieldEvents.dispatch(SystemEvents.create_input_paused(true))
 	# 	print("Field paused")
 	# elif event.is_action_released("pause"):
-	# 	FieldEvents.input_paused.emit(false)
+	# 	FieldEvents.dispatch(SystemEvents.create_input_paused(false))
 	# 	print("Field unpaused")
 
-func _on_gamepiece_clicked(gamepiece: Gamepiece) -> void:
-	set_focused_game_piece(gamepiece)
+func _on_gamepiece_clicked(event: GamepieceEvents.ClickedEvent) -> void:
+	set_focused_game_piece(event.gamepiece)
 
 
 func set_focused_game_piece(value: Gamepiece) -> void:
@@ -46,4 +50,6 @@ func set_focused_game_piece(value: Gamepiece) -> void:
 	
 	Camera.gamepiece = focused_game_piece
 
-	FieldEvents.focused_gamepiece_changed.emit(focused_game_piece)
+	FieldEvents.dispatch(
+		GamepieceEvents.create_focused(focused_game_piece)
+	)

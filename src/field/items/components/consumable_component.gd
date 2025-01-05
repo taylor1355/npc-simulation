@@ -42,7 +42,9 @@ func _process(delta_t: float) -> void:
 
 func _finish_interaction() -> void:
 	if percent_left <= 0.0:
-		FieldEvents.gamepiece_destroyed.emit(item_controller._gamepiece)
+		FieldEvents.dispatch(
+			GamepieceEvents.create_destroyed(item_controller._gamepiece)
+		)
 	need_modifying._finish_interaction()
 	interaction_finished.emit(INTERACTION_NAME, {})
 

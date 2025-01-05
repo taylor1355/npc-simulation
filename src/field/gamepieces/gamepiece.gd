@@ -110,18 +110,22 @@ func _ready() -> void:
 		# Ensure that the gamepiece and its path are at the same scale. Enables using local scale for movement coordinates (simplifies path creation)
 		_path.global_scale = global_scale
 
-		# Forward local signals to the corresponding FieldEvents
+		# Forward local signals
 		cell_changed.connect(
-			func(old_cell: Vector2): FieldEvents.gamepiece_cell_changed.emit(self, old_cell)
+			func(old_cell: Vector2): 
+				var event = GamepieceEvents.create_cell_changed(self, old_cell)
+				FieldEvents.dispatch(event)
 		)
 		_click_area.clicked.connect(
-			func(): FieldEvents.gamepiece_clicked.emit(self)
+			func(): 
+				var event = GamepieceEvents.create_clicked(self)
+				FieldEvents.dispatch(event)
 		)
 
-		# Set up gamepiece to be deleted on gamepiece_destroyed signal
+		# Set up gamepiece to be deleted on gamepiece_destroyed event
 		FieldEvents.gamepiece_destroyed.connect(
-			func(gamepiece: Gamepiece):
-				if gamepiece == self:
+			func(event: GamepieceEvents.DestroyedEvent):
+				if event.gamepiece == self:
 					queue_free()
 		)
 		
