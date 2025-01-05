@@ -35,6 +35,10 @@ enum NPCState {
 	WANDERING
 }
 
+# Idle timing (seconds)
+const MOVEMENT_COOLDOWN = 0.75  # How long to idle after movement is unlocked 
+var idle_timer: float = 0.0  # Time left to idle
+
 var current_state: NPCState = NPCState.IDLE
 var current_interaction: Interaction = null
 
@@ -72,9 +76,15 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# TODO: accumulate delta and only update needs when it reaches a certain threshold
+	# Update needs
 	for need_id in NEED_IDS:
 		update_need(need_id, -decay_rate * delta)
+	
+	# Handle idle timer if we're idling
+	if current_state == NPCState.IDLE and idle_timer > 0:
+		idle_timer -= delta
+		if idle_timer <= 0:
+			decide_behavior()
 	
 
 func set_is_paused(paused: bool) -> void:
@@ -88,7 +98,7 @@ func set_is_paused(paused: bool) -> void:
 #############
 func update_need(need_id: String, delta: float) -> void:
 	if not needs.has(need_id):
-		print("NpcAi: need_id not found: ", need_id)
+		print("need_id not found: ", need_id)
 		return
 		
 	var old_value = needs[need_id]
@@ -100,7 +110,6 @@ func update_need(need_id: String, delta: float) -> void:
 	if need_id == "energy":
 		if (old_value < MAX_NEED_VALUE and needs[need_id] >= MAX_NEED_VALUE) or \
 		   (old_value > 0 and needs[need_id] <= 0):
-			print("[NpcController] Energy threshold reached, deciding behavior")
 			decide_behavior()
 
 
@@ -125,14 +134,14 @@ func set_new_destination(new_destination = null) -> void:
 	else:
 		destination = new_destination as Vector2i
 
-	print("Set new destination (", destination, "). Blocked? ", is_cell_blocked(destination))
-
 	FieldEvents.gamepiece_path_set.emit.call_deferred(_gamepiece, destination)
 	travel_to_cell(destination, true)
 
 
 func set_movement_locked(locked: bool) -> void:
-	print("[NpcController] Setting movement_locked to ", locked)
+	if movement_locked and not locked:
+		current_state = NPCState.IDLE
+		idle_timer = MOVEMENT_COOLDOWN
 	movement_locked = locked
 
 
@@ -140,83 +149,77 @@ func set_movement_locked(locked: bool) -> void:
 ### Placeholder AI ###
 ######################
 func decide_behavior() -> void:
-	print("\n[NpcController] Deciding behavior")
-	print("[NpcController] Current state: ", current_state)
-	print("[NpcController] Movement locked: ", movement_locked)
-	print("[NpcController] Current interaction: ", current_interaction.name if current_interaction else "none")
-	print("[NpcController] Energy level: ", needs["energy"], "/", MAX_NEED_VALUE)
-	
-	# If movement is locked, we can only be in INTERACTING state
-	if movement_locked and current_state != NPCState.INTERACTING:
-		print("[NpcController] Movement locked, forcing IDLE state")
-		current_state = NPCState.IDLE
+	# First check if we need to stop sitting, regardless of movement lock
+	if current_interaction and current_interaction.name == "sit" and needs["energy"] >= MAX_NEED_VALUE:
+		var cancel_request = current_interaction.create_cancel_request(self)
+		current_interaction.cancel_request.emit(cancel_request)
 		return
 		
-	# If currently interacting, check if we should stop
+	# Then check movement lock and idle timer
+	if movement_locked or (current_state == NPCState.IDLE and idle_timer > 0):
+		return
+		
+	# If currently interacting, continue interaction
 	if current_interaction:
 		current_state = NPCState.INTERACTING
-		# Stop sitting if energy is full
-		if current_interaction.name == "sit" and needs["energy"] >= MAX_NEED_VALUE:
-			print("[NpcController] Energy full, stopping sit interaction")
-			var cancel_request = current_interaction.create_cancel_request(self)
-			current_interaction.cancel_request.emit(cancel_request)
 		return
 
+	# Check visible items
 	var seen_items: Array = _vision_manager.get_items_by_distance()
 	if seen_items.is_empty():
-		print("[NpcController] No items visible, wandering")
 		current_state = NPCState.WANDERING
 		set_new_destination()
 		return
-		
-	var closest_item = seen_items[0]
-	var closest_distance = _gamepiece.cell.distance_to(closest_item._gamepiece.cell)
-	print("[NpcController] Closest item at distance: ", closest_distance)
 	
-	# If next to an item with interactions, interact with it
-	if closest_distance <= 1 and closest_item.interactions:
-		# Always check for sit interaction first when energy is not full
-		var interaction = null
-		if needs["energy"] < 0.5 * MAX_NEED_VALUE and closest_item.interactions.has("sit"):
-			print("[NpcController] Energy not full, choosing sit interaction")
-			interaction = closest_item.interactions["sit"]
-		else:
-			print("[NpcController] Energy full or no sit interaction available")
-			interaction = closest_item.interactions.values()[0]
+	# Try to interact with each visible item
+	for item in seen_items:
+		if not item.interactions or item.current_interaction:
+			continue
+
+		# Skip chairs if energy is high
+		if item.interactions.has("sit") and needs["energy"] >= 0.5 * MAX_NEED_VALUE:
+			continue
 			
+		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
+		if distance > 1:
+			current_state = NPCState.MOVING_TO_ITEM
+			set_new_destination(item._gamepiece.cell)
+			return
+			
+		# Choose interaction
+		var interaction = null
+		if needs["energy"] < 0.5 * MAX_NEED_VALUE and item.interactions.has("sit"):
+			interaction = item.interactions["sit"]
+		else:
+			interaction = item.interactions.values()[0]
+			
+		# Request interaction
 		var interaction_request = interaction.create_start_request(self)
 		interaction_request.accepted.connect(
 			func():
 				current_interaction = interaction
-				closest_item.interaction_finished.connect(_on_interaction_finished)
+				item.interaction_finished.connect(_on_interaction_finished)
 				current_state = NPCState.INTERACTING
 		)
 		interaction_request.rejected.connect(
 			func(_reason):
 				current_interaction = null
-				current_state = NPCState.WANDERING
-				set_new_destination()
 		)
-		closest_item.request_interaction.call_deferred(interaction_request)
-	# Otherwise move to closest available item
-	else:
-		for item in seen_items:
-			if not item.current_interaction:
-				current_state = NPCState.MOVING_TO_ITEM
-				set_new_destination(item._gamepiece.cell)
-				return
-		
-		current_state = NPCState.WANDERING
-		set_new_destination()
+		item.request_interaction.call_deferred(interaction_request)
+		return
+	
+	# No suitable items found
+	current_state = NPCState.WANDERING
+	set_new_destination()
 
 
 ################
 ### Handlers ###
 ################
-func _on_interaction_finished(_interaction_name: String, npc: NpcController, payload: Dictionary) -> void:
+func _on_interaction_finished(_interaction_name: String, npc: NpcController, _payload: Dictionary) -> void:
 	if npc == self:
 		current_interaction = null
-	decide_behavior()
+		decide_behavior()
 	
 	
 func _on_gamepiece_arrived() -> void:

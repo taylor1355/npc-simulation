@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://src/field/items/components/sittable_component.gd" id="5_n3bl8"]
 
 [node name="Chair" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_dg1dl")
 gameboard = ExtResource("2_gravy")
 blocks_movement = true

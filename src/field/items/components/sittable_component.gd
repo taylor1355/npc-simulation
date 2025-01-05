@@ -2,9 +2,16 @@ class_name SittableComponent extends ItemComponent
 
 const INTERACTION_NAME: = "sit"
 
+func _get_timestamp_str() -> String:
+	return "%.2f" % Time.get_unix_time_from_system()
+
 var current_npc: NpcController = null
 var item_controller: ItemController
-var need_modifying: NeedModifyingComponent
+var need_modifier: NeedModifyingComponent
+
+# Prevent multiple exits from running at once
+var _is_exiting := false
+
 
 func _ready() -> void:
 	super._ready()
@@ -12,11 +19,11 @@ func _ready() -> void:
 	item_controller = get_parent() as ItemController
 	
 	# Create the need modifying component for energy regeneration
-	need_modifying = NeedModifyingComponent.new()
-	need_modifying.need_rates = {
+	need_modifier = NeedModifyingComponent.new()
+	need_modifier.need_rates = {
 		"energy": 10.0  # Regenerate energy at 10 units per second
 	}
-	add_child(need_modifying)
+	add_child(need_modifier)
 
 	var interaction = Interaction.new(INTERACTION_NAME, "Sit in this chair.")
 	interactions[interaction.name] = interaction
@@ -40,39 +47,22 @@ func _handle_sit_start_request(request: InteractionRequest) -> void:
 	request.accept()
 	current_npc = request.npc_controller
 	
-	print("[SittableComponent] Starting sit interaction")
-	print("[SittableComponent] NPC at ", current_npc._gamepiece.cell, ", Chair at ", chair_cell)
-	
-	# Lock NPC movement first to prevent any automatic movement
-	print("[SittableComponent] Locking NPC movement")
+	# Lock NPC movement and prepare chair
 	current_npc.set_movement_locked(true)
-	
-	# Disable chair blocking and wait a frame to ensure physics updates
-	print("[SittableComponent] Disabling chair blocking")
 	item_controller._gamepiece.blocks_movement = false
 	await item_controller.get_tree().physics_frame
 	
-	# Move NPC to chair's position
-	print("[SittableComponent] Moving NPC to chair position")
+	# Move NPC to chair and set z-index since they're in the same cell
 	current_npc._gamepiece.cell = chair_cell
-	
-	# Face NPC in chair's direction
-	print("[SittableComponent] Setting NPC direction to ", item_controller._gamepiece.direction)
 	current_npc._gamepiece.direction = item_controller._gamepiece.direction
-	
-	# Ensure NPC appears in front of chair
-	print("[SittableComponent] Setting NPC z_index to appear in front")
 	current_npc._gamepiece.z_index = item_controller._gamepiece.z_index + 1
 	
-	# Wait another frame before re-enabling blocking
+	# Re-enable chair blocking
 	await item_controller.get_tree().physics_frame
-	print("[SittableComponent] Re-enabling chair blocking")
 	item_controller._gamepiece.blocks_movement = true
 	
-	print("[SittableComponent] Final positions - NPC: ", current_npc._gamepiece.cell, ", Chair: ", chair_cell)
-	
 	# Start energy regeneration
-	need_modifying._handle_modify_start_request(request)
+	need_modifier._handle_modify_start_request(request)
 
 
 func _handle_sit_cancel_request(request: InteractionRequest) -> void:
@@ -84,54 +74,52 @@ func _handle_sit_cancel_request(request: InteractionRequest) -> void:
 
 
 func _finish_interaction() -> void:
-	if current_npc:
-		var chair_cell = item_controller._gamepiece.cell
-		var chair_direction = item_controller._gamepiece.direction
+	if not current_npc or _is_exiting:
+		return
 		
-		print("[SittableComponent] Starting exit interaction")
-		print("[SittableComponent] Current positions - NPC: ", current_npc._gamepiece.cell, ", Chair: ", chair_cell)
-		print("[SittableComponent] Chair direction: ", chair_direction)
-		
-		# Try to find an unblocked adjacent cell
-		var possible_cells = [
-			chair_cell + Vector2i(chair_direction), # In front
-			chair_cell + Vector2i(chair_direction.rotated(-PI/2)), # Left
-			chair_cell + Vector2i(chair_direction.rotated(PI/2)),  # Right
-			chair_cell - Vector2i(chair_direction), # Behind
-		]
-		
-		print("[SittableComponent] Checking possible exit cells:")
-		var exit_cell = null
-		for cell in possible_cells:
-			print("[SittableComponent] Checking cell ", cell)
-			if not current_npc.is_cell_blocked(cell):
-				print("[SittableComponent] Found unblocked cell at ", cell)
-				exit_cell = cell
-				break
-			else:
-				print("[SittableComponent] Cell ", cell, " is blocked")
-		
-		# Temporarily disable chair blocking for exit
-		print("[SittableComponent] Disabling chair blocking for exit")
-		item_controller._gamepiece.blocks_movement = false
-		
-		# If we found an unblocked cell, move there
-		if exit_cell:
-			print("[SittableComponent] Moving NPC to exit cell ", exit_cell)
-			current_npc._gamepiece.cell = exit_cell
-		else:
-			print("[SittableComponent] No unblocked exit cells found, NPC staying at ", current_npc._gamepiece.cell)
-		
-		# Re-enable chair blocking
-		print("[SittableComponent] Re-enabling chair blocking")
-		item_controller._gamepiece.blocks_movement = true
-		
-		# Reset NPC z_index and unlock movement
-		print("[SittableComponent] Resetting NPC z_index")
-		current_npc._gamepiece.z_index = 0
-		print("[SittableComponent] Unlocking NPC movement")
-		current_npc.set_movement_locked(false)
-		
-		need_modifying._finish_interaction()
-		current_npc = null
-		interaction_finished.emit(INTERACTION_NAME, {})
+	_is_exiting = true
+	
+	var chair_cell = item_controller._gamepiece.cell
+	var chair_direction = item_controller._gamepiece.direction
+	
+	# Keep chair non-blocking during exit
+	item_controller._gamepiece.blocks_movement = false
+	
+	# Find an unblocked adjacent cell
+	var possible_cells = [
+		chair_cell + Vector2i(chair_direction), # In front
+		chair_cell + Vector2i(chair_direction.rotated(-PI/2)), # Left
+		chair_cell + Vector2i(chair_direction.rotated(PI/2)),  # Right
+		chair_cell - Vector2i(chair_direction), # Behind
+	]
+	
+	# Try to move NPC to an unblocked cell
+	for cell in possible_cells:
+		if not current_npc.is_cell_blocked(cell):
+			current_npc._gamepiece.cell = cell
+			# Clear z_index since we're no longer sharing a cell with the chair
+			current_npc._gamepiece.z_index = 0
+			break
+	
+	# Re-enable chair blocking after NPC has moved
+	item_controller._gamepiece.blocks_movement = true
+	
+	# Clean up
+	need_modifier._finish_interaction()
+	
+	# Store reference before nulling
+	var npc = current_npc
+	
+	# Clear references
+	current_npc = null
+	_is_exiting = false
+	
+	# Defer movement unlock and interaction finish to let NPC settle
+	call_deferred("_complete_exit", npc)
+
+
+func _complete_exit(npc: NpcController) -> void:
+	if is_instance_valid(npc):
+		npc.set_movement_locked(false)
+
+	interaction_finished.emit(INTERACTION_NAME, {})

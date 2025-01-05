@@ -266,6 +266,4 @@ func _on_terrain_passability_changed() -> void:
 
 # When a gamepiece's blocks_movement changes, update pathfinding
 func _on_blocks_movement_changed() -> void:
-	var gamepiece = get_parent() as Gamepiece
-	print("[GamepieceController] blocks_movement changed to ", gamepiece.blocks_movement, " for cell ", gamepiece.cell)
 	_find_all_blocked_cells()
