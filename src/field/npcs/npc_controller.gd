@@ -2,6 +2,10 @@ class_name NpcController extends GamepieceController
 
 const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 
+# Backend NPC state
+var npc_id: String
+var npc_client: NpcClient
+
 var is_active: = false:
 	set(value):
 		is_active = value
@@ -59,6 +63,14 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		add_to_group(GROUP_NAME)
 		
+		# Initialize NPC client
+		npc_client = NpcClient.new()
+		add_child(npc_client)
+		npc_client.npc_created.connect(_on_npc_created)
+		npc_client.npc_removed.connect(_on_npc_removed)
+		npc_client.action_chosen.connect(_on_action_chosen)
+		npc_client.error.connect(_on_npc_error)
+		
 		# Forward local signals
 		need_changed.connect(
 			func(need_id: String, new_value: float): 
@@ -70,12 +82,25 @@ func _ready() -> void:
 			needs[need_id] = MAX_NEED_VALUE
 			need_changed.emit(need_id, needs[need_id])
 		decay_rate = randf_range(1, 5)
+		
+		# Create new NPC if no ID provided
+		if not npc_id:
+			npc_id = str(get_instance_id()) # Use instance ID as unique identifier
+			npc_client.create_npc(
+				npc_id,
+				["curious", "active"], # Default traits
+				"I am a new NPC in this world." # Initial memory
+			)
 	
 		# Wait a frame for the gameboard and physics engine to be fully setup. Once the physics 
 		# engine is ready, its state may be queried to setup the pathfinder.
 		await get_tree().process_frame
 		decide_behavior.call_deferred()
 
+
+func _exit_tree() -> void:
+	if npc_id:
+		npc_client.cleanup_npc(npc_id)
 
 func _process(delta: float) -> void:
 	# Update needs
@@ -169,6 +194,83 @@ func decide_behavior() -> void:
 
 	# Check visible items
 	var seen_items: Array = _vision_manager.get_items_by_distance()
+	
+	# Build observation and available actions
+	var observation = _build_observation(seen_items)
+	var available_actions = _build_available_actions(seen_items)
+	
+	# Process observation through NPC client if we have an ID
+	if npc_id:
+		npc_client.process_observation(npc_id, observation, available_actions)
+	else:
+		# Fallback to default behavior if no NPC client connection
+		_handle_default_behavior(seen_items)
+
+func _build_observation(seen_items: Array) -> String:
+	var observation = "You are in a room. "
+	
+	if seen_items.is_empty():
+		observation += "You don't see any items nearby."
+	else:
+		observation += "You see: "
+		for i in range(seen_items.size()):
+			var item = seen_items[i]
+			if i > 0:
+				observation += ", " if i < seen_items.size() - 1 else " and "
+			observation += "a " + item.name
+			
+			var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
+			if distance <= 1:
+				observation += " within reach"
+			else:
+				observation += " " + str(distance) + " steps away"
+				
+	observation += "\nYour current needs are: "
+	for need_id in NEED_IDS:
+		observation += need_id + " (" + str(needs[need_id]) + "%), "
+		
+	return observation
+
+func _build_available_actions(seen_items: Array) -> Array[NpcClient.Action]:
+	var actions: Array[NpcClient.Action] = []
+	
+	# Add movement actions for items not in range
+	for item in seen_items:
+		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
+		if distance > 1:
+			actions.append(NpcClient.Action.new(
+				"move_to",
+				"Move to the " + item.name,
+				{
+					"x": item._gamepiece.cell.x,
+					"y": item._gamepiece.cell.y
+				}
+			))
+	
+	# Add interaction actions for items in range
+	for item in seen_items:
+		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
+		if distance <= 1 and item.interactions and not item.current_interaction:
+			for interaction_name in item.interactions:
+				actions.append(NpcClient.Action.new(
+					"interact",
+					interaction_name + " with the " + item.name,
+					{
+						"item_name": item.name,
+						"interaction_type": interaction_name
+					}
+				))
+	
+	# Add wandering as a fallback
+	actions.append(NpcClient.Action.new(
+		"wander",
+		"Walk to a random location",
+		{}
+	))
+	
+	return actions
+
+func _handle_default_behavior(seen_items: Array) -> void:
 	if seen_items.is_empty():
 		current_state = NPCState.WANDERING
 		set_new_destination()
@@ -214,6 +316,49 @@ func decide_behavior() -> void:
 	# No suitable items found
 	current_state = NPCState.WANDERING
 	set_new_destination()
+
+# NPC Client handlers
+func _on_npc_created(created_npc_id: String) -> void:
+	if created_npc_id == npc_id:
+		npc_client.get_npc_info(npc_id)
+
+func _on_npc_removed(removed_npc_id: String) -> void:
+	if removed_npc_id == npc_id:
+		npc_id = ""
+
+func _on_action_chosen(action_name: String, parameters: Dictionary) -> void:
+	match action_name:
+		"move_to":
+			current_state = NPCState.MOVING_TO_ITEM
+			set_new_destination(Vector2i(parameters.x, parameters.y))
+		"interact":
+			var target_item = null
+			var seen_items = _vision_manager.get_items_by_distance()
+			for item in seen_items:
+				if item.name == parameters.item_name:
+					target_item = item
+					break
+					
+			if target_item and target_item.interactions.has(parameters.interaction_type):
+				var interaction = target_item.interactions[parameters.interaction_type]
+				var interaction_request = interaction.create_start_request(self)
+				interaction_request.accepted.connect(
+					func():
+						current_interaction = interaction
+						target_item.interaction_finished.connect(_on_interaction_finished, CONNECT_ONE_SHOT)
+						current_state = NPCState.INTERACTING
+				)
+				interaction_request.rejected.connect(
+					func(_reason):
+						current_interaction = null
+				)
+				target_item.request_interaction.call_deferred(interaction_request)
+		"wander":
+			current_state = NPCState.WANDERING
+			set_new_destination()
+
+func _on_npc_error(msg: String) -> void:
+	print("NPC Error: ", msg)
 
 
 ################
