@@ -80,6 +80,8 @@ func process_observation(npc_id: String, observation: String, available_actions:
 	var result = _backend.process_observation(npc_id, observation, action_dicts)
 	if result.has("action"):
 		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, result.action, result.parameters))
+		# Get updated working memory after observation
+		get_npc_info(npc_id)
 	else:
 		error.emit(result.get("message", "Unknown error processing observation"))
 

@@ -44,8 +44,16 @@ func process_observation(agent_id: String, observation: String, available_action
 			"message": "Agent %s not found" % agent_id
 		}
 	
-	# Update agent's memory
-	agents[agent_id]["working_memory"] += "\nObserved: " + observation
+	# Update agent's working memory
+	var working_memory = agents[agent_id]["working_memory"]
+	var observations = working_memory.split("\n", false)
+	observations.append("Observed: " + observation)
+	
+	# Keep only the last few observations
+	var max_observations = 5
+	if observations.size() > max_observations:
+		observations = observations.slice(-max_observations)
+	agents[agent_id]["working_memory"] = "\n".join(observations)
 	
 	# Mock decision making - choose random action
 	var chosen_action = available_actions[randi() % available_actions.size()]
