@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://bve4u0hewur8"]
+[gd_scene load_steps=3 format=3 uid="uid://bve4u0hewur8"]
 
 [ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="1_6gkxm"]
+[ext_resource type="Script" path="res://src/ui/working_memory_panel.gd" id="2_memory"]
 
 [node name="CanvasLayer" type="CanvasLayer"]
 
@@ -48,7 +49,25 @@ layout_mode = 2
 need_id = "energy"
 label_text = "Energy"
 
-[node name="Panel2" type="Panel" parent="TabContainer"]
+[node name="WorkingMemory" type="Panel" parent="TabContainer"]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 1
+script = ExtResource("2_memory")
+
+[node name="MarginContainer" type="MarginContainer" parent="TabContainer/WorkingMemory"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="WorkingMemoryText" type="RichTextLabel" parent="TabContainer/WorkingMemory/MarginContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "Select an NPC to view their working memory."

@@ -6,6 +6,12 @@ extends Node2D
 @export var gameboard: Gameboard
 
 
+func _init() -> void:
+	# Initialize shared NPC client first
+	Globals.npc_client = NpcClient.new()
+	add_child(Globals.npc_client)
+
+
 func _ready() -> void:
 	assert(gameboard)
 	randomize()

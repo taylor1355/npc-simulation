@@ -3,14 +3,6 @@
 class_name NpcClient
 extends Node
 
-## Emitted when an NPC is created
-signal npc_created(npc_id: String)
-## Emitted when an NPC is removed
-signal npc_removed(npc_id: String)
-## Emitted when NPC info is received
-signal npc_info_received(npc_id: String, traits: Array[String], working_memory: String)
-## Emitted when an action is chosen
-signal action_chosen(action_name: String, parameters: Dictionary)
 ## Emitted when an error occurs
 signal error(msg: String)
 
@@ -70,7 +62,7 @@ func create_npc(
 	
 	var result = _backend.create_agent(npc_id, config)
 	if result.status == "created":
-		npc_created.emit(npc_id)
+		FieldEvents.dispatch(NpcClientEvents.create_created(npc_id))
 	else:
 		error.emit(result.get("message", "Unknown error creating NPC"))
 
@@ -87,7 +79,7 @@ func process_observation(npc_id: String, observation: String, available_actions:
 	
 	var result = _backend.process_observation(npc_id, observation, action_dicts)
 	if result.has("action"):
-		action_chosen.emit(result.action, result.parameters)
+		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, result.action, result.parameters))
 	else:
 		error.emit(result.get("message", "Unknown error processing observation"))
 
@@ -96,7 +88,7 @@ func cleanup_npc(npc_id: String) -> void:
 	_npc_cache.erase(npc_id)
 	var result = _backend.cleanup_agent(npc_id)
 	if result.status == "removed":
-		npc_removed.emit(npc_id)
+		FieldEvents.dispatch(NpcClientEvents.create_removed(npc_id))
 	else:
 		error.emit(result.get("message", "Unknown error cleaning up NPC"))
 
@@ -104,7 +96,11 @@ func cleanup_npc(npc_id: String) -> void:
 func get_npc_info(npc_id: String) -> void:
 	# Check cache first
 	if _npc_cache.has(npc_id) and not _npc_cache[npc_id].working_memory.is_empty():
-		npc_info_received.emit(npc_id, _npc_cache[npc_id].traits, _npc_cache[npc_id].working_memory)
+		FieldEvents.dispatch(NpcClientEvents.create_info_received(
+			npc_id,
+			_npc_cache[npc_id].traits,
+			_npc_cache[npc_id].working_memory
+		))
 		return
 	
 	# Cache miss - get from backend
@@ -116,6 +112,6 @@ func get_npc_info(npc_id: String) -> void:
 		_npc_cache[npc_id].traits = result.traits
 		_npc_cache[npc_id].working_memory = result.working_memory
 		
-		npc_info_received.emit(npc_id, result.traits, result.working_memory)
+		FieldEvents.dispatch(NpcClientEvents.create_info_received(npc_id, result.traits, result.working_memory))
 	else:
 		error.emit(result.get("message", "Unknown error getting NPC info"))

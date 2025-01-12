@@ -1,6 +1,7 @@
 extends Node
 
 var focused_gamepiece: Gamepiece = null
+var npc_client: NpcClient = null
 
 func _ready() -> void:
 	FieldEvents.event_dispatched.connect(

@@ -245,3 +245,10 @@ func set_cell(value: Vector2i) -> void:
 
 func get_faced_cell() -> Vector2i:
 	return (Vector2(cell) + direction).round()
+
+## Returns the controller for this gamepiece, or null if none exists
+func get_controller() -> GamepieceController:
+	for child in get_children():
+		if child is GamepieceController:
+			return child
+	return null

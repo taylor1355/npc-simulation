@@ -83,25 +83,54 @@ func _ready():
 ```
 
 ### NPC Implementation
-NPCs use placeholder state-based controllers until LLM-based control is implemented:
-```gdscript
-func handle_state():
-    match current_state:
-        NPCState.IDLE:
-            process_idle()
-        NPCState.INTERACTING:
-            process_interaction()
-        NPCState.MOVING:
-            process_movement()
-        NPCState.USING_ITEM:
-            process_item_usage()
+NPCs use a client-backend architecture for behavior control:
+
+```
+NpcController
+    └── NpcClient (caches state, handles communication)
+         └── Backend (mock or real LLM-based implementation)
 ```
 
-States determine NPC behavior, item interactions, and movement patterns. NPCs can:
-- Process environmental inputs
-- Make decisions based on needs
+Each NPC controller:
+- Has a unique ID for backend identification
+- Creates a new NPC if no ID is provided
+- Communicates with the backend through the client
+- Gets cleaned up when destroyed
+
+The NPC client:
+- Provides a domain-specific interface to the backend
+- Caches NPC state to reduce latency
+- Invalidates cache when observations are processed
+- Handles conversion between domain and backend types
+
+NPCs can:
+- Process environmental inputs into observations
+- Make decisions based on needs and context
 - Interact with items and other NPCs
 - Navigate using pathfinding
+
+The state machine handles immediate behaviors:
+```gdscript
+enum NPCState {
+    IDLE,
+    MOVING_TO_ITEM,
+    INTERACTING,
+    WANDERING
+}
+```
+
+While the backend handles higher-level decision making:
+```gdscript
+# Example observation processing
+npc_client.process_observation(
+    npc_id,
+    "You see a chair nearby. Your energy is low (30%).",
+    [
+        Action.new("move_to", "Move to the chair", {"x": 10, "y": 20}),
+        Action.new("interact", "Sit in the chair", {"type": "sit"})
+    ]
+)
+```
 
 ### Event System Usage
 Events handle system communication:
@@ -138,6 +167,23 @@ src/
 2. Event-driven communication
 3. State pattern for behavior management
 4. Resource cleanup implementation
+5. Accessing Controllers
+   - Use Gamepiece's get_controller() method instead of direct node access
+   - Cast controllers to specific types (e.g., `as NpcController`) for type safety
+   - Avoid coupling UI components to specific node paths or internal gamepiece structure
+
+### Event System Best Practices
+1. Follow existing patterns in event handlers:
+   ```gdscript
+   FieldEvents.event_dispatched.connect(
+       func(event: Event):
+           if event.is_type(Event.Type.YOUR_EVENT):
+               _on_your_event(event as YourEventType)
+   )
+   ```
+2. Create event classes in appropriate event collection files (e.g., NpcEvents, NpcClientEvents)
+3. Use event dispatch instead of direct signals for system-wide communication
+4. Handle initial state in _ready() after connecting to events
 
 ## Future Integration
 The current component and event architecture provides a foundation for LLM-based NPC control integration.

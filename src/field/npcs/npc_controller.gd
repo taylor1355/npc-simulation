@@ -63,13 +63,20 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		add_to_group(GROUP_NAME)
 		
-		# Initialize NPC client
-		npc_client = NpcClient.new()
-		add_child(npc_client)
-		npc_client.npc_created.connect(_on_npc_created)
-		npc_client.npc_removed.connect(_on_npc_removed)
-		npc_client.action_chosen.connect(_on_action_chosen)
+		npc_client = Globals.npc_client
 		npc_client.error.connect(_on_npc_error)
+		
+		# Listen for NPC client events
+		FieldEvents.event_dispatched.connect(
+			func(event: Event):
+				match event.event_type:
+					Event.Type.NPC_CREATED:
+						_on_npc_created(event as NpcClientEvents.CreatedEvent)
+					Event.Type.NPC_REMOVED:
+						_on_npc_removed(event as NpcClientEvents.RemovedEvent)
+					Event.Type.NPC_ACTION_CHOSEN:
+						_on_action_chosen(event as NpcClientEvents.ActionChosenEvent)
+		)
 		
 		# Forward local signals
 		need_changed.connect(
@@ -318,15 +325,21 @@ func _handle_default_behavior(seen_items: Array) -> void:
 	set_new_destination()
 
 # NPC Client handlers
-func _on_npc_created(created_npc_id: String) -> void:
-	if created_npc_id == npc_id:
+func _on_npc_created(event: NpcClientEvents.CreatedEvent) -> void:
+	if event.npc_id == npc_id:
 		npc_client.get_npc_info(npc_id)
 
-func _on_npc_removed(removed_npc_id: String) -> void:
-	if removed_npc_id == npc_id:
+func _on_npc_removed(event: NpcClientEvents.RemovedEvent) -> void:
+	if event.npc_id == npc_id:
 		npc_id = ""
 
-func _on_action_chosen(action_name: String, parameters: Dictionary) -> void:
+func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
+	# Only handle actions meant for this NPC
+	if event.npc_id != npc_id:
+		return
+		
+	var action_name = event.action_name
+	var parameters = event.parameters
 	match action_name:
 		"move_to":
 			current_state = NPCState.MOVING_TO_ITEM

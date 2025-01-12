@@ -1,6 +1,6 @@
 class_name ItemController extends GamepieceController
 
-const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
+const GROUP_NAME: = "_ITEM_CONTROLLER_GROUP"
 
 var components: Array = []
 var interactions: Dictionary = {}
