@@ -25,8 +25,8 @@ var anchored: bool = true:
 		if anchored:
 			if gamepiece:
 				gamepiece.camera_anchor.remote_path = gamepiece.camera_anchor.get_path_to(self)
-			# reset_position()
 			drag_point = null
+			# reset_position()
 		elif gamepiece:
 			gamepiece.camera_anchor.remote_path = ""
 
@@ -39,22 +39,29 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.is_action_pressed("zoom_in"):
-			zoom_by(event.factor)
-		elif event.is_action_pressed("zoom_out"):
-			zoom_by(-event.factor)
-		elif event.is_action_pressed("drag_camera"):
-			anchored = false
-			drag_point = event.position
-		elif event.is_action_released("drag_camera"):
-			drag_point = null
-	elif event is InputEventKey:
-		if event.is_action_pressed("anchor_camera"):
-			anchored = true
-	elif event is InputEventMouseMotion and drag_point:
-		position -= (event.position - drag_point) / zoom.x # zoom.x and zoom.y are the same
+	if event is InputEventMouseMotion and drag_point != null:
+		var movement = (event.position - drag_point) / zoom.x
+		position -= movement
 		drag_point = event.position
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("drag_camera"):
+		anchored = false
+		drag_point = event.position
+		get_viewport().set_input_as_handled()
+	elif event.is_action_released("drag_camera"):
+		drag_point = null
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("zoom_in"):
+		zoom_by(event.factor)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("zoom_out"):
+		zoom_by(-event.factor)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("anchor_camera"):
+		anchored = true
+		get_viewport().set_input_as_handled()
 
 
 func reset_position() -> void:

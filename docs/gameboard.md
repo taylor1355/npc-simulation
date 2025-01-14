@@ -54,6 +54,27 @@
 - Layer 0x4: Click detection
 - Collision shapes match cell size (32x32)
 
+### Camera System (field_camera.gd)
+```
+Input Handling:
+├── Actions (_unhandled_input)
+│   ├── drag_camera: Start/end panning
+│   ├── zoom_in/out: Adjust view scale
+│   └── anchor_camera: Lock to gamepiece
+└── Motion (_input)
+    └── Mouse motion during drag
+
+Priority Flow:
+1. UI _gui_input gets mouse events over UI
+2. Camera _input handles drag motion
+3. Camera _unhandled_input gets remaining events
+
+Key Properties:
+- anchored: bool (follow gamepiece)
+- drag_point: Vector2 (pan reference)
+- zoom: Vector2 (view scale)
+```
+
 ## Usage
 
 ### Setup

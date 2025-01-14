@@ -9,8 +9,12 @@
 1. Open project in Godot 4.3
 2. Open main scene (main.tscn)
 3. Run the project (F5)
-4. Click NPCs to view their state
-5. Watch them interact with items
+4. Navigate the view:
+   - Right-click drag to pan camera
+   - Mouse wheel to zoom in/out
+   - Press A to anchor camera to selected NPC
+5. Click NPCs to view their state
+6. Watch them interact with items
 
 ## System Architecture
 
