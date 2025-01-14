@@ -1,6 +1,7 @@
 class_name EventBus extends Node
 
-## Typed event bus that handles event dispatching with type safety
+## Bus that handles event dispatching
+## - event types improve maintainability over using raw signals
 
 func _init() -> void:
 	pass

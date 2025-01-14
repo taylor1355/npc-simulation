@@ -1,7 +1,7 @@
 class_name Event extends RefCounted
 
 ## Base class for all game events
-## Provides common functionality and type safety for the event system
+## Provides common functionality for the event system
 
 enum Type {
 	CELL_HIGHLIGHTED,

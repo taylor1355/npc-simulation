@@ -1,122 +1,82 @@
 # NPC Simulation Documentation
 
-## Project Overview
+## Overview
 
-This is a 2D NPC simulation game built with Godot where NPCs can interact with items and navigate a game world. The project implements pathfinding, needs systems, and item interactions.
+A 2D NPC simulation built with Godot 4.3 where NPCs interact with items and navigate a game world. Features include:
+- Needs-driven NPC behavior
+- Component-based item system
+- Grid-based movement and pathfinding
+- Event-driven architecture
 
-## Core Systems
+## Getting Started
 
-### Field System
-The field system (`src/field/field.gd`) manages the game world, including:
-- Tile-based movement
-- Cursor interaction
-- Entity management (NPCs and items)
+1. First Steps
+   - See getting-started.md for setup and quick start
+   - Follow godot-tutorial.md for a hands-on example
 
-### Gameboard System
-Located in `src/field/gameboard/`, handles:
-- Pathfinding (`pathfinder.gd`)
-- Map boundaries (`debug_map_boundaries.gd`)
-- Collision detection
+2. Core Systems
+   - gameboard.md: Grid and pathfinding system
+   - gamepiece.md: Base entity framework
+   - collision.md: Physics and detection
+   - events.md: Communication system
 
-### Gamepiece System
-Base system for all entities (`src/field/gamepieces/`):
-- Base gamepiece class with common functionality
-- Animation system
-- Controller system for behavior
+3. Entity Systems
+   - npc.md: NPC behavior and needs
+   - items.md: Interactive objects
+   - interaction.md: Entity interactions
+   - ui.md: Interface components
 
-## Key Components
+## System Architecture
 
-### NPCs
-NPCs (`src/field/npcs/`) are the main actors in the simulation:
-- Controlled by `npc_controller.gd`
-- Have needs and desires
-- Can interact with items
-- Include vision system (`vision_manager.gd`)
+### Core Systems
+```
+Field (field.gd)
+├── Gameboard: Grid management
+├── Gamepiece: Entity base
+└── Events: Communication
+```
 
-### Items
-Items (`src/field/items/`) are interactive objects:
-- Have various components for different behaviors
+### Entity Types
+```
+Gamepiece Base
+├── NPCs: Need-driven actors
+└── Items: Interactive objects
+```
 
-### UI System
-The UI system (`src/ui/`) provides:
-- Need bars to display NPC states
-- Interactive elements
-- Status displays
+### Component System
+```
+Components
+├── Base: Core functionality
+└── Specialized: Item behaviors
+```
 
-### Common Utilities
-Common utilities (`src/common/`) provide:
-- Direction handling
-- Collision detection
-- Global state management
-- Event system
-- Music system
+## Development
 
-## Usage Guide
+### Key Concepts
+1. Component-based design
+2. Event-driven communication
+3. Grid-based movement
+4. Need-based behavior
 
-### Adding New NPCs
-1. Instance the NPC scene (`src/field/npcs/npc.tscn`)
-2. Configure NPC controller parameters
-3. Set up needs and behaviors
+### Documentation Map
+```
+docs/
+├── Setup
+│   ├── getting-started.md
+│   └── godot-tutorial.md
+├── Meta
+│   └── style_guide.md
+├── Core Systems
+│   ├── gameboard.md
+│   ├── gamepiece.md
+│   ├── collision.md
+│   └── events.md
+├── Entities
+│   ├── npc.md
+│   ├── items.md
+│   └── interaction.md
+└── Interface
+    └── ui.md
+```
 
-### Creating New Items
-1. Create a new scene inheriting from gamepiece
-2. Add required components (e.g., consumable)
-3. Configure interaction parameters
-
-### Extending the Map
-1. Use the tilemap system
-2. Configure collision layers
-3. Update pathfinding grid
-
-### Adding New Interactions
-1. Create new interaction script
-2. Implement interaction logic
-3. Register with interaction system
-
-## Technical Details
-
-### Pathfinding
-The system uses A* pathfinding implemented in `pathfinder.gd` with:
-- Obstacle avoidance
-- Efficient path calculation
-- Path smoothing
-
-### Animation System
-Gamepiece animations (`src/field/gamepieces/animation/`) support:
-- Static animations
-- Walking animations
-- Click area handling
-
-### Controller System
-The controller system (`src/field/gamepieces/controllers/`) enables:
-- AI behaviors
-- Path following
-- Interaction handling
-
-### Event System
-The field events system (`src/common/field_events.gd`) manages:
-- Inter-entity communication
-- State changes
-- UI updates
-
-## Best Practices
-
-1. Always extend from appropriate base classes:
-   - Use gamepiece for entities
-   - Implement proper controllers
-   - Follow component pattern for items
-
-2. Use the event system for communication:
-   - Avoid direct references
-   - Maintain loose coupling
-   - Handle cleanup properly
-
-3. Follow the established patterns:
-   - Component-based design
-   - Event-driven architecture
-   - Resource management
-
-4. Maintain separation of concerns:
-   - Keep controllers focused
-   - Use components for specific behaviors
-   - Leverage the common utilities
+For implementation details, see the corresponding documentation files.
