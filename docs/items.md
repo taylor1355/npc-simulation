@@ -18,13 +18,13 @@
 Base (item_component.gd):
 └── Shared functionality
     ├── interaction_finished signal
-    └── interactions dictionary
+    ├── interactions dictionary
+    └── Automatic controller discovery
 
 Implementations:
 ├── NeedModifyingComponent
 │   ├── Threshold: 1.0
 │   ├── need_rates: Changes per second
-│   └── Used by other components
 ├── ConsumableComponent
 │   ├── need_deltas: Total changes
 │   ├── consumption_time: Duration
@@ -32,7 +32,8 @@ Implementations:
 └── SittableComponent
     ├── Energy regen: 10/second
     ├── Movement locking
-    └── Exit directions priority
+    ├── Exit directions priority
+    └── NeedModifyingComponent (nested)
 ```
 
 ### Scene Structure (item.tscn)

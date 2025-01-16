@@ -2,7 +2,6 @@ class_name ItemController extends GamepieceController
 
 const GROUP_NAME: = "_ITEM_CONTROLLER_GROUP"
 
-var components: Array = []
 var interactions: Dictionary = {}
 var current_interaction: Interaction = null
 var interacting_npc: NpcController = null
@@ -16,15 +15,16 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		add_to_group(GROUP_NAME)
 
-		for child in get_children():
-			if child is ItemComponent:
-				components.append(child)
-				child.interaction_finished.connect(_on_interaction_finished)
-
-				var expected_num_interactions = len(interactions) + len(child.interactions)
-				interactions.merge(child.interactions)
+		# Connect to component interactions
+		for component in components:
+			if component is ItemComponent:
+				component.interaction_finished.connect(_on_interaction_finished)
+				
+				# Collect interactions from components
+				var expected_num_interactions = len(interactions) + len(component.interactions)
+				interactions.merge(component.interactions)
 				if expected_num_interactions != len(interactions):
-					print("Duplicate interactions found in ItemController: ", child)
+					print("Duplicate interactions found in ItemController: ", component)
 
 
 func _process(delta):

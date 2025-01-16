@@ -58,6 +58,17 @@ var _waypoints: Array[Vector2i] = []
 var _current_waypoint: Vector2i
 
 
+var components: Array[GamepieceComponent] = []
+
+func get_component(type: GDScript) -> GamepieceComponent:
+	for component in components:
+		if component.get_script() == type:
+			return component
+	return null
+
+func has_component(type: GDScript) -> bool:
+	return get_component(type) != null
+
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		# A controller must operate on a gamepiece. Obtain the gamepiece reference and pull 
@@ -65,6 +76,11 @@ func _ready() -> void:
 		_gamepiece = get_parent() as Gamepiece
 		assert(_gamepiece, "The GamepieceController must have a Gamepiece as a parent. "
 			+ "%s is not a gamepiece!" % get_parent().name)
+			
+		# Collect all components
+		for child in get_children():
+			if child is GamepieceComponent:
+				components.append(child)
 		
 		_gameboard = _gamepiece.gameboard
 		assert(_gameboard, "%s error: invalid Gameboard object!" % name)

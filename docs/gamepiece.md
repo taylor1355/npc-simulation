@@ -29,6 +29,17 @@
   is_cell_blocked(): Check occupancy
   get_collisions(): Get entities in cell
   ```
+- Component management:
+  ```
+  get_component(): Get component by type
+  has_component(): Check if component exists
+  ```
+
+### Components (gamepiece_component.gd)
+- Base class for all gamepiece components
+- Can be nested at any depth under a controller
+- Automatically finds and connects to parent controller
+- Extended by specialized components (e.g. ItemComponent)
 
 ### Animation (gamepiece.tscn)
 ```

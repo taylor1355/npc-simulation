@@ -76,6 +76,10 @@ func _ready() -> void:
 						_on_npc_removed(event as NpcClientEvents.RemovedEvent)
 					Event.Type.NPC_ACTION_CHOSEN:
 						_on_action_chosen(event as NpcClientEvents.ActionChosenEvent)
+					Event.Type.FOCUSED_GAMEPIECE_CHANGED:
+						_on_focused_gamepiece_changed(
+							(event as GamepieceEvents.FocusedEvent).gamepiece
+						)
 		)
 		
 		# Forward local signals
@@ -88,7 +92,11 @@ func _ready() -> void:
 		for need_id in NEED_IDS:
 			needs[need_id] = MAX_NEED_VALUE
 			need_changed.emit(need_id, needs[need_id])
-		decay_rate = randf_range(1, 5)
+		decay_rate = randf_range(1, 2)
+		
+		# Wait a frame for the gameboard and physics engine to be fully setup. Once the physics 
+		# engine is ready, its state may be queried to setup the pathfinder.
+		await get_tree().process_frame
 		
 		# Create new NPC if no ID provided
 		if not npc_id:
@@ -98,10 +106,11 @@ func _ready() -> void:
 				["curious", "active"], # Default traits
 				"I am a new NPC in this world." # Initial memory
 			)
-	
-		# Wait a frame for the gameboard and physics engine to be fully setup. Once the physics 
-		# engine is ready, its state may be queried to setup the pathfinder.
-		await get_tree().process_frame
+			
+			# If we're the focused gamepiece, request info after creation
+			if _gamepiece == Globals.focused_gamepiece:
+				npc_client.get_npc_info(npc_id)
+		
 		decide_behavior.call_deferred()
 
 
@@ -326,7 +335,7 @@ func _handle_default_behavior(seen_items: Array) -> void:
 
 # NPC Client handlers
 func _on_npc_created(event: NpcClientEvents.CreatedEvent) -> void:
-	if event.npc_id == npc_id:
+	if event.npc_id == npc_id and _gamepiece == Globals.focused_gamepiece:
 		npc_client.get_npc_info(npc_id)
 
 func _on_npc_removed(event: NpcClientEvents.RemovedEvent) -> void:
@@ -390,3 +399,4 @@ func _on_gamepiece_arrived() -> void:
 func _on_focused_gamepiece_changed(new_focused_gamepiece: Gamepiece) -> void:
 	if new_focused_gamepiece == _gamepiece:
 		reemit_needs()
+		npc_client.get_npc_info(npc_id)

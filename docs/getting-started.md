@@ -47,6 +47,11 @@ Item Components (components/):
 ├── ConsumableComponent
 ├── NeedModifyingComponent
 └── SittableComponent
+    └── NeedModifyingComponent (example of nested component)
+
+Components can be:
+- Direct children of controllers
+- Children of other components
 ```
 
 ## Key Concepts

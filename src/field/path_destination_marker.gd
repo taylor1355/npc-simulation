@@ -25,16 +25,18 @@ func _on_gamepiece_path_set(event: GamepieceEvents.PathSetEvent) -> void:
 
 
 func _on_focused_gamepiece_changed(event: GamepieceEvents.FocusedEvent) -> void:
-	if focused_gamepiece:
+	if focused_gamepiece and focused_gamepiece.arrived.is_connected(hide):
 		focused_gamepiece.arrived.disconnect(hide)
+		
 	focused_gamepiece = event.gamepiece
+	if not focused_gamepiece:
+		hide()
+		return
 
 	focused_gamepiece.arrived.connect(hide, CONNECT_ONE_SHOT)
 
-	var path_curve = focused_gamepiece._path.curve
-	if path_curve:
-		position = path_curve.get_baked_points()[-1]
+	if focused_gamepiece._path and focused_gamepiece._path.curve:
+		position = focused_gamepiece._path.curve.get_baked_points()[-1]
 		show()
 	else:
-		push_warning("No path points found for focused gamepiece.")
 		hide()

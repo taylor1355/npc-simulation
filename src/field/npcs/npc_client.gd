@@ -62,6 +62,9 @@ func create_npc(
 	
 	var result = _backend.create_agent(npc_id, config)
 	if result.status == "created":
+		# Clear cache to force backend fetch
+		_npc_cache.erase(npc_id)
+		# Dispatch created event
 		FieldEvents.dispatch(NpcClientEvents.create_created(npc_id))
 	else:
 		error.emit(result.get("message", "Unknown error creating NPC"))

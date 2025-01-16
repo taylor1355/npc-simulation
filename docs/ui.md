@@ -2,6 +2,38 @@
 
 ## Core Components
 
+### Panel System (tab_container.gd)
+```
+Panel Types:
+├── Info Panels (priority 0)
+│   ├── NpcInfoPanel: NPC traits
+│   └── ItemInfoPanel: Item details
+├── NPC Panels (priority 1)
+│   ├── NeedsPanel: Need bars
+│   └── WorkingMemoryPanel: Memory state
+└── Component Panels (priority 1)
+    ├── ConsumablePanel: Usage info
+    ├── NeedModifyingPanel: Rate changes
+    └── SittablePanel: Occupancy state
+
+Panel Management:
+├── Creation: On focus change
+├── Sorting: By priority then name
+├── Activation: On tab change
+└── Cleanup: On focus change
+
+Base Panel (gamepiece_panel.gd):
+├── Properties
+│   ├── update_interval: Update frequency
+│   └── current_controller: Active controller
+├── Methods
+│   ├── is_compatible_with(): Type check
+│   ├── activate()/deactivate(): Processing
+│   └── _update_display(): Content refresh
+└── Events
+    └── FOCUSED_GAMEPIECE_CHANGED
+```
+
 ### Need Display (need_bar.gd, need_bar.tscn)
 ```
 Structure:

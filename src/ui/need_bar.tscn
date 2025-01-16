@@ -8,18 +8,18 @@ script = ExtResource("1_7xf12")
 need_id = null
 
 [node name="RichTextLabel" type="RichTextLabel" parent="."]
-mouse_filter = 0
+custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 size_flags_vertical = 4
 bbcode_enabled = true
 fit_content = true
+text = "Need"
 
 [node name="ProgressBar" type="ProgressBar" parent="."]
-mouse_filter = 0
-custom_minimum_size = Vector2(0, 15)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+custom_minimum_size = Vector2(0, 15)
 value = 100.0
 show_percentage = false
+step = 0.0

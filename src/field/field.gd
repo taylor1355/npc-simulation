@@ -20,6 +20,9 @@ func _ready() -> void:
 		func(event: Event):
 			if event.is_type(Event.Type.GAMEPIECE_CLICKED):
 				_on_gamepiece_clicked(event as GamepieceEvents.ClickedEvent)
+			elif event.is_type(Event.Type.GAMEPIECE_DESTROYED):
+				if event.gamepiece == focused_game_piece:
+					set_focused_game_piece(null)
 	)
 	
 	# The field state must pause/unpause with combat accordingly.
@@ -29,6 +32,15 @@ func _ready() -> void:
 	Camera.gameboard = gameboard
 	Camera.make_current()
 	Camera.reset_position()
+	
+	# Wait a frame for NPCs to initialize
+	await get_tree().process_frame
+	
+	# Emit initial focus event if there's a focused gamepiece
+	if focused_game_piece:
+		FieldEvents.dispatch(
+			GamepieceEvents.create_focused(focused_game_piece)
+		)
 
 
 # func _unhandled_key_input(event: InputEvent) -> void:
