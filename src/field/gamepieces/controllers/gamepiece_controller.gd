@@ -4,14 +4,11 @@
 ## A controller is responsible for all gamepiece behaviour, especially movement. The base controller
 ## provides several utility methods that query the [Gameboard]/[Gamepiece] state. 
 ##
-## [br][br]Please note that the GamepieceController class doesn't [i]do[/i] anything. Specific 
-## controllers will usually be subclassed from this base class. See [PlayerController] for a
+## Specific controllers will usually be subclassed from this base class. See [ItemController] for a
 ## detailed example.
 ##
 ## [br][br]Requires a gamepiece as parent. The controller is derived from Node2D to account for
 ## [member global_scale] when searching for paths/objects.
-## [br][br][b]Note:[/b] The controller is an optional component. Only gamepieces requiring player 
-## input or AI will be controlled.
 @icon("res://assets/editor/icons/IconGamepieceController.svg")
 class_name GamepieceController extends Node2D
 
@@ -51,12 +48,10 @@ var _terrain_searcher: CollisionFinder
 var is_paused: = false:
 	set = set_is_paused
 
-
 # Keep track of a move path. The controller will check that the path is clear each time the 
 # gamepiece needs to continue on to the next cell.
 var _waypoints: Array[Vector2i] = []
 var _current_waypoint: Vector2i
-
 
 var components: Array[GamepieceComponent] = []
 
@@ -69,6 +64,12 @@ func get_component(type: GDScript) -> GamepieceComponent:
 func has_component(type: GDScript) -> bool:
 	return get_component(type) != null
 
+func add_component_node(component: GamepieceComponent) -> void:
+	if not components.has(component):
+		components.append(component)
+	if not component.is_inside_tree():
+		add_child(component)
+
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		# A controller must operate on a gamepiece. Obtain the gamepiece reference and pull 
@@ -80,7 +81,7 @@ func _ready() -> void:
 		# Collect all components
 		for child in get_children():
 			if child is GamepieceComponent:
-				components.append(child)
+				add_component_node(child)
 		
 		_gameboard = _gamepiece.gameboard
 		assert(_gameboard, "%s error: invalid Gameboard object!" % name)
@@ -114,11 +115,9 @@ func _ready() -> void:
 		await get_tree().process_frame
 		_rebuild_pathfinder()
 
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PARENTED:
 		update_configuration_warnings()
-
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings: PackedStringArray = []
@@ -127,7 +126,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 			+ "Please only use GamepieceController as a child of a Gamepiece for correct animation.")
 	
 	return warnings
-
 
 func travel_to_cell(destination: Vector2i, allow_adjacent_cells: = false) -> void:
 	_update_changed_cells()
@@ -147,7 +145,6 @@ func travel_to_cell(destination: Vector2i, allow_adjacent_cells: = false) -> voi
 	
 	else:
 		_waypoints.clear()
-
 
 ## Returns true if a given cell is occupied by something that has a collider matching 
 ## [member gamepiece_mask].
@@ -173,12 +170,10 @@ func is_cell_blocked(cell: Vector2i) -> bool:
 	# have flagged this cell as 'targeted this frame'.
 	return FieldEvents.did_gp_move_to_cell_this_frame(cell)
 
-
 ## Find all collision matching [member gamepiece_mask] at a given cell.
 func get_collisions(cell: Vector2i) -> Array:
 	var search_coordinates: = Vector2(_gameboard.cell_to_pixel(cell)) * global_scale
 	return _gamepiece_searcher.search(search_coordinates)
-
 
 func set_is_paused(paused: bool) -> void:
 	is_paused = paused
@@ -186,7 +181,6 @@ func set_is_paused(paused: bool) -> void:
 	if is_inside_tree() and not _waypoints.is_empty():
 		_current_waypoint = _waypoints.pop_front()
 		_gamepiece.travel_to_cell(_current_waypoint)
-
 
 # Completely rebuild the pathfinder, searching for all empty terrain within the gameboard 
 # boundaries.
@@ -211,7 +205,6 @@ func _rebuild_pathfinder() -> void:
 	pathfinder = Pathfinder.new(pathable_cells, _gameboard)
 	_find_all_blocked_cells()
 
-
 # The following method searches ALL cells contained in the pathfinder for objects that might block
 # gamepiece movement. 
 # 
@@ -225,7 +218,6 @@ func _find_all_blocked_cells() -> void:
 			blocked_cells.append(cell)
 	
 	pathfinder.set_blocked_cells(blocked_cells)
-
 
 # Go through all cells that have been flagged for updates and determine if they are indeed occupied.
 # This should usually be called before searching for a move path.
@@ -242,10 +234,8 @@ func _update_changed_cells() -> void:
 	
 	_cells_to_update.clear()
 
-
 func _on_input_paused(paused: bool) -> void:
 	is_paused = paused
-
 
 # The controller's focus will finish travelling this frame unless it is extended. When following a
 # path, the gamepiece will want to travel to the next waypoint.
@@ -267,22 +257,18 @@ func _on_gamepiece_arriving(excess_distance: float) -> void:
 			_gamepiece.travel_to_cell(_current_waypoint)
 			excess_distance -= distance_to_waypoint
 
-
 func _on_gamepiece_arrived() -> void:
 	_waypoints.clear()
-
 
 # Whenever a gamepiece moves, flag its destination and origin as in need of an update.
 func _on_gamepiece_cell_changed(event: GamepieceEvents.CellChangedEvent) -> void:
 	_cells_to_update.append(event.old_cell)
 	_cells_to_update.append(event.gamepiece.cell)
 
-
 # Various events may trigger a change in the terrain which, in turn, changes which cells are
 # passable. The pathfinder will need to be rebuilt.
 func _on_terrain_passability_changed() -> void:
 	_rebuild_pathfinder()
-
 
 # When a gamepiece's blocks_movement changes, update pathfinding
 func _on_blocks_movement_changed() -> void:

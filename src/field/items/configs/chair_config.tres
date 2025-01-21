@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ItemConfig" load_steps=7 format=3 uid="uid://d1lf7qvflauql"]
+
+[ext_resource type="Script" path="res://src/field/items/item_config.gd" id="1_config"]
+[ext_resource type="Script" path="res://src/field/items/components/component_config.gd" id="1_d87r8"]
+[ext_resource type="Texture2D" uid="uid://1vt61f4e166j" path="res://assets/sprites/Interior full/furniture/chairs.png" id="2_texture"]
+[ext_resource type="Script" path="res://src/field/items/components/sittable_component.gd" id="3_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_chair"]
+size = Vector2(13, 19)
+
+[sub_resource type="Resource" id="Resource_component"]
+script = ExtResource("1_d87r8")
+component_script = ExtResource("3_script")
+properties = {}
+
+[resource]
+script = ExtResource("1_config")
+item_name = "Chair"
+sprite_texture = ExtResource("2_texture")
+sprite_hframes = 48
+sprite_vframes = 7
+sprite_frame = 0
+collision_shape = SubResource("RectangleShape2D_chair")
+components = Array[ExtResource("1_d87r8")]([SubResource("Resource_component")])

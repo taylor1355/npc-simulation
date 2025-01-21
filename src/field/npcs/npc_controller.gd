@@ -110,6 +110,7 @@ func _ready() -> void:
 			# If we're the focused gamepiece, request info after creation
 			if _gamepiece == Globals.focused_gamepiece:
 				npc_client.get_npc_info(npc_id)
+		_gamepiece.display_name = "NPC" # Default name
 		
 		decide_behavior.call_deferred()
 

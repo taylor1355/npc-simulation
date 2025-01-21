@@ -12,6 +12,11 @@
 @icon("res://assets/editor/icons/Gamepiece.svg")
 class_name Gamepiece extends Node2D
 
+## The display name shown in UI and used for identification. May not be unique.
+@export var display_name: String = "":
+	set(value):
+		display_name = value
+
 ## Emitted when the gamepiece begins to travel towards a destination cell.
 signal travel_begun
 

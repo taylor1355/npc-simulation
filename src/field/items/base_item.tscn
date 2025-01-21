@@ -1,0 +1,79 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_base"]
+[ext_resource type="Script" path="res://src/field/items/base_item.gd" id="2_script"]
+[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="3_anim"]
+[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="4_click"]
+[ext_resource type="Script" path="res://src/field/items/item_controller.gd" id="5_controller"]
+
+[sub_resource type="Animation" id="Animation_reset"]
+resource_name = "RESET"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary"]
+_data = {
+"RESET": SubResource("Animation_reset"),
+"idle": SubResource("Animation_idle")
+}
+
+[node name="BaseItem" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+blocks_movement = true
+
+[node name="Animation" type="Marker2D" parent="." index="1"]
+script = ExtResource("3_anim")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Animation" index="0"]
+libraries = {
+"": SubResource("AnimationLibrary")
+}
+
+[node name="GFX" type="Marker2D" parent="Animation" index="1"]
+
+[node name="Sprite" type="Sprite2D" parent="Animation/GFX" index="0"]
+
+[node name="Shadow" type="Sprite2D" parent="Animation/GFX" index="1"]
+
+[node name="ClickArea" type="Area2D" parent="Animation/GFX" index="2"]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("4_click")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Animation/GFX/ClickArea" index="0"]
+
+[node name="CollisionArea" type="Area2D" parent="Animation" index="2"]
+collision_mask = 3
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Animation/CollisionArea" index="0"]
+debug_color = Color(0.67451, 0.156863, 0.278431, 0.419608)
+
+[node name="ItemController" type="Node2D" parent="." index="2"]
+script = ExtResource("5_controller")

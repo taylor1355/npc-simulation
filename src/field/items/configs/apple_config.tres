@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ItemConfig" load_steps=7 format=3 uid="uid://ch1ggu468g6jk"]
+
+[ext_resource type="Script" path="res://src/field/items/components/component_config.gd" id="1_2xk4r"]
+[ext_resource type="Script" path="res://src/field/items/item_config.gd" id="1_config"]
+[ext_resource type="Texture2D" uid="uid://cud6njjjhox53" path="res://assets/sprites/apple_spritesheet.png" id="2_texture"]
+[ext_resource type="Script" path="res://src/field/items/components/consumable_component.gd" id="3_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_apple"]
+radius = 6.5
+
+[sub_resource type="Resource" id="Resource_component"]
+script = ExtResource("1_2xk4r")
+component_script = ExtResource("3_script")
+properties = {
+"consumption_time": 5.0,
+"need_deltas": {
+"hunger": 25.0
+}
+}
+
+[resource]
+script = ExtResource("1_config")
+item_name = "Apple"
+sprite_texture = ExtResource("2_texture")
+sprite_hframes = 8
+sprite_vframes = 1
+sprite_frame = 0
+collision_shape = SubResource("CircleShape2D_apple")
+components = Array[ExtResource("1_2xk4r")]([SubResource("Resource_component")])

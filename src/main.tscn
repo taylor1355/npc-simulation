@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=4 uid="uid://cg6x04dsiwoas"]
+[gd_scene load_steps=16 format=4 uid="uid://cg6x04dsiwoas"]
 
 [ext_resource type="Script" path="res://src/field/field.gd" id="1_4kyoj"]
 [ext_resource type="TileSet" uid="uid://biq84075xlypd" path="res://assets/terrain/tilesets/kenney_obstacles.tres" id="1_q4jvv"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://src/field/gameboard/debug_map_boundaries.gd" id="10_8t3yh"]
 [ext_resource type="PackedScene" uid="uid://d0f6cpchnxa1s" path="res://src/field/items/apple.tscn" id="11_f7mo0"]
 [ext_resource type="PackedScene" uid="uid://bve4u0hewur8" path="res://src/ui/ui.tscn" id="11_jm6mo"]
+[ext_resource type="Script" path="res://src/field/items/items_manager.gd" id="12_items"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mablp"]
 texture = ExtResource("4_l0eot")
@@ -194,33 +195,42 @@ y_sort_enabled = true
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(279, 152)
+display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Npc2" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(158, 167)
+display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Npc3" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(279, 59)
+display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]
 y_sort_enabled = true
+script = ExtResource("12_items")
 
 [node name="Chair" parent="Field/Entities/Items" instance=ExtResource("9_u1dha")]
 position = Vector2(240, 122)
+display_name = "Chair"
 
 [node name="Chair2" parent="Field/Entities/Items" instance=ExtResource("9_u1dha")]
 position = Vector2(94, 58)
+display_name = "Chair"
 
 [node name="Apple" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
 position = Vector2(93, 150)
+display_name = "Apple"
 
 [node name="Apple2" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
 position = Vector2(222, 32)
+display_name = "Apple"
 
 [node name="Apple3" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
 position = Vector2(158, 93)
+display_name = "Apple"
 
 [node name="MapBoundaries" type="Node2D" parent="."]
 visible = false

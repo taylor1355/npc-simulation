@@ -5,6 +5,8 @@ extends Node2D
 
 @export var gameboard: Gameboard
 
+@onready var items_manager: Node2D = $Entities/Items
+
 
 func _init() -> void:
 	# Initialize shared NPC client first
@@ -15,6 +17,13 @@ func _init() -> void:
 func _ready() -> void:
 	assert(gameboard)
 	randomize()
+	
+	# Set up items manager
+	items_manager.gameboard = gameboard
+	
+	# Spawn initial items
+	items_manager.spawn_chair()
+	items_manager.spawn_apple()
 
 	FieldEvents.event_dispatched.connect(
 		func(event: Event):
@@ -42,14 +51,6 @@ func _ready() -> void:
 			GamepieceEvents.create_focused(focused_game_piece)
 		)
 
-
-# func _unhandled_key_input(event: InputEvent) -> void:
-	# if event.is_action_pressed("pause"):
-	# 	FieldEvents.dispatch(SystemEvents.create_input_paused(true))
-	# 	print("Field paused")
-	# elif event.is_action_released("pause"):
-	# 	FieldEvents.dispatch(SystemEvents.create_input_paused(false))
-	# 	print("Field unpaused")
 
 func _on_gamepiece_clicked(event: GamepieceEvents.ClickedEvent) -> void:
 	set_focused_game_piece(event.gamepiece)
