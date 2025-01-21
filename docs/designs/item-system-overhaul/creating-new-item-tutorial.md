@@ -1,58 +1,35 @@
 # Creating New Items Tutorial
 
-This tutorial demonstrates how to create new items using the improved item system. While development is ongoing, it also serves as a source of requirements.
+This tutorial demonstrates how to create new items using the config-based item system.
 
-## 1. Create Component Configuration
+## 1. Create Item Configuration
 
-First, create a resource file for your item's components:
+Create a new resource file (*.tres) in src/field/items/configs/:
 
 ```gdscript
 # cookie_config.tres
 @tool
-extends ItemComponentConfig
+extends ItemConfig
 
-# Configure in the editor:
-component_script = preload("res://src/field/items/components/consumable_component.gd")
-properties = {
-    "consumption_time": 3.0,
-    "need_deltas": {
-        "hunger": 40.0,
-        "energy": 20.0
-    }
-}
+# Configure in inspector:
+item_name = "Cookie"
+sprite_texture = preload("res://assets/sprites/cookie.png")
+sprite_hframes = 1
+collision_shape = CircleShape2D.new()  # Set radius in inspector
 ```
 
-## 2. Add Factory Method
+## 2. Add Component Configuration
 
-Add a creation method to ItemFactory:
+Add components through the inspector:
+1. Create new ItemComponentConfig
+2. Set component_script (e.g., ConsumableComponent)
+3. Configure properties dictionary
+4. Add to components array
 
-```gdscript
-static func create_cookie() -> Node:
-    var config = preload("res://src/field/items/configs/cookie_config.tres")
-    return create_item({
-        "sprite_config": {
-            "texture": preload("res://assets/sprites/cookie.png"),
-            "hframes": 1  # Only needed for spritesheets
-        },
-        "collision_shape": (func(): var s = CircleShape2D.new(); s.radius = 6.5; return s).call(),
-        "components": [config]
-    }, "Cookie")
-```
-
-## 3. Using the Item
-
-```gdscript
-# Spawn at specific position
-field.add_item(ItemFactory.create_cookie(), Vector2(100, 100))
-
-# Or add to automatic spawning
-field.spawn_item(ItemFactory.create_cookie)
-```
-
-## Component Types
+## Common Component Properties
 
 ### ConsumableComponent
-```gdscript
+```
 properties = {
     "need_deltas": {  # Changes when consumed
         "hunger": 40.0,
@@ -63,7 +40,7 @@ properties = {
 ```
 
 ### SittableComponent
-```gdscript
+```
 properties = {
     "need_rates": {  # Changes per second
         "energy": 10.0
@@ -71,48 +48,65 @@ properties = {
 }
 ```
 
+## 3. Using the Item
+
+### Editor Placement
+1. Add BaseItem node to scene
+2. Assign config in inspector
+3. Position as needed
+4. See immediate preview
+
+### Runtime Spawning
+```gdscript
+# Add factory helper
+static func create_cookie(gameboard: Gameboard, position: Vector2i) -> BaseItem:
+    var config = preload("res://src/field/items/configs/cookie_config.tres")
+    return create_item(config, gameboard, position)
+
+# Usage
+var cookie = ItemFactory.create_cookie(gameboard, Vector2i(10, 10))
+```
+
 ## Tips
 
-1. **Sprite Configuration**
-   - Use "hframes" for spritesheets
-   - Set initial "frame" if needed
-   - Texture is required
+1. **Visual Setup**
+   - Preview updates live in editor
+   - Sprite frames for animations
+   - Collision shape affects click area
 
-2. **Collision Shapes**
-   - CircleShape2D for round items
-   - RectangleShape2D for furniture
-   - Click area automatically sized slightly larger
+2. **Component Configuration**
+   - Components initialize at runtime
+   - Properties validated on load
+   - Clean separation of config/behavior
 
-3. **Components**
-   - Multiple components supported
-   - Properties copied on creation
-   - Components auto-register with controller
+3. **Best Practices**
+   - One config per item type
+   - Clear, descriptive names
+   - Reuse components when possible
+   - Test in editor before runtime
 
-## Example: Apple Implementation
+## Example: Apple Configuration
 
 ```gdscript
-# configs/consumable_apple_config.tres
+# apple_config.tres
 @tool
-extends ItemComponentConfig
+extends ItemConfig
 
-component_script = preload("res://src/field/items/components/consumable_component.gd")
-properties = {
-    "consumption_time": 5.0,
-    "need_deltas": {
-        "hunger": 25.0
+item_name = "Apple"
+sprite_texture = preload("res://assets/sprites/apple_spritesheet.png")
+sprite_hframes = 8
+sprite_frame = 0
+collision_shape = CircleShape2D.new()  # radius = 6.5
+
+# Component config in inspector:
+components = [
+    {
+        component_script = ConsumableComponent,
+        properties = {
+            "consumption_time": 5.0,
+            "need_deltas": {
+                "hunger": 25.0
+            }
+        }
     }
-}
-
-# item_factory.gd
-static func create_apple() -> Node:
-    var config = preload("res://src/field/items/configs/consumable_apple_config.tres")
-    return create_item({
-        "sprite_config": {
-            "texture": preload("res://assets/sprites/apple_spritesheet.png"),
-            "hframes": 8,
-            "frame": 0
-        },
-        "collision_shape": (func(): var s = CircleShape2D.new(); s.radius = 6.5; return s).call(),
-        "components": [config]
-    }, "Apple")
-```
+]

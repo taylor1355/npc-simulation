@@ -7,9 +7,7 @@ func _ready() -> void:
 	y_sort_enabled = true
 
 func spawn_item(item: BaseItem) -> void:
-	print("Item name before add_child: ", item.name)
 	add_child(item)
-	print("Item name after add_child: ", item.name)
 
 func get_random_position() -> Vector2i:
 	# Get random cell within boundaries
@@ -21,13 +19,11 @@ func get_random_position() -> Vector2i:
 	return gameboard.cell_to_pixel(cell)
 
 func spawn_apple() -> void:
-	print("Spawning apple")
 	var pos = get_random_position()
 	var apple = ItemFactory.create_apple(gameboard, pos)
 	spawn_item(apple)
 
 func spawn_chair() -> void:
-	print("Spawning chair")
 	var pos = get_random_position()
 	var chair = ItemFactory.create_chair(gameboard, pos)
 	spawn_item(chair)

@@ -2,16 +2,21 @@
 
 ## Core Components
 
+### Configuration (item_config.gd)
+Resource-based configuration that defines:
+- Item name and display properties
+- Sprite settings (texture, frames, animation)
+- Collision shape configuration
+- List of component configurations
+- Saved as .tres resources in configs/ directory
+
 ### Controller (item_controller.gd)
-- Manages item behavior and interactions
-- Handles component system
-- Key properties:
-  ```
-  components: Array of ItemComponent
-  interactions: Dictionary of available interactions
-  current_interaction: Active interaction
-  interaction_time: Duration of current interaction
-  ```
+Manages item behavior and state:
+- Tracks available interactions
+- Handles interaction requests and timing
+- Manages component lifecycle
+- Emits interaction events
+- Maintains component registry
 
 ### Components
 ```
@@ -25,95 +30,75 @@ Implementations:
 ├── NeedModifyingComponent
 │   ├── Threshold: 1.0
 │   ├── need_rates: Changes per second
+│   ├── Handles continuous effects
+│   └── Updates on physics tick
 ├── ConsumableComponent
 │   ├── need_deltas: Total changes
 │   ├── consumption_time: Duration
-│   └── percent_left: Tracks usage
+│   ├── Handles one-time use
+│   └── Auto-cleanup after use
 └── SittableComponent
-    ├── Energy regen: 10/second
+    ├── Energy regeneration
     ├── Movement locking
-    ├── Exit directions priority
-    └── NeedModifyingComponent (nested)
+    ├── Exit direction handling
+    └── Uses NeedModifyingComponent
 ```
 
-### Scene Structure (item.tscn)
+### Scene Structure (base_item.tscn)
 ```
-ItemScene/
+BaseItem/
 ├── Decoupler/ (movement smoothing)
 ├── Animation/
 │   ├── AnimationPlayer
 │   ├── GFX/
-│   │   ├── Sprite
-│   │   ├── Shadow
-│   │   └── ClickArea (Area2D)
-│   └── CollisionArea
+│   │   ├── Sprite (configurable)
+│   │   ├── Shadow (automatic)
+│   │   └── ClickArea (interaction zone)
+│   └── CollisionArea (movement blocking)
 └── ItemController/
-    └── Components/
-```
-
-## Key Features
-
-### Interaction System
-```
-Flow:
-1. request_interaction() called
-2. Validate availability
-3. Process request type:
-   - START: Begin interaction
-   - CANCEL: End interaction
-4. Handle acceptance/rejection
-5. Track interaction time
-6. Emit completion
-```
-
-### Physics Setup
-```
-Collision Shapes:
-- ClickArea: Interaction zone
-  CircleShape2D: radius 6.5-7.5 (Apple)
-  RectangleShape2D: 13x19 (Chair)
-- CollisionArea: Movement blocking
-  Matches visual bounds
-  Uses appropriate masks
-```
-
-### Component Integration
-```
-Usage:
-1. Add component in _ready()
-2. Configure properties
-3. Connect to signals
-4. Handle interaction_finished
-
-Example:
-var component = ConsumableComponent.new()
-component.need_deltas = {"hunger": 50}
-component.consumption_time = 5.0
-add_child(component)
+    └── Components/ (runtime populated)
 ```
 
 ## Usage
 
-### Required Setup
-```
-1. Inherit gamepiece.tscn
-2. Add animation scene:
-   - AnimationPlayer (idle)
-   - Sprite (configured)
-   - Collision shapes
-3. Add ItemController
-4. Configure components
-```
+### Editor Integration
+The BaseItem node provides direct editor support:
+- Drag and drop placement in scenes
+- Live preview of sprite and collision
+- Auto-sized click areas for interaction
+- Visual configuration through inspector
+- Components initialize automatically at runtime
 
-### Common Patterns
-```
-Consumable Items:
-- Set need_deltas
-- Configure consumption_time
-- Handle destruction
+### Runtime Creation
+ItemFactory provides centralized item creation:
+- Validates configurations
+- Handles instantiation and setup
+- Sets required references (gameboard, etc)
+- Positions items correctly
+- Helper methods for common items
+- Consistent with editor-placed items
 
-Static Items:
-- Set blocking state
-- Configure interactions
-- Handle state changes
-```
+### Creating New Items
+1. Configuration:
+   - Create new ItemConfig resource
+   - Configure visual properties
+   - Set up collision shape
+   - Add required component configs
+   - Save as .tres resource
+
+2. Component Setup:
+   - Choose appropriate components
+   - Configure component properties
+   - Set up interactions if needed
+   - Handle completion events
+
+### Physics Setup
+Collision is handled through two areas:
+- ClickArea for interactions
+  - Automatically sized larger than collision
+  - CircleShape2D: radius + 1.0
+  - RectangleShape2D: size + Vector2(2, 2)
+- CollisionArea for movement
+  - Matches visual bounds
+  - Uses appropriate collision masks
+  - Handles pathfinding obstacles

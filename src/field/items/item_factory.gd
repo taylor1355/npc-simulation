@@ -13,36 +13,11 @@ static func create_item(config: ItemConfig, gameboard: Gameboard, position: Vect
 	# Set required gameboard reference
 	item.gameboard = gameboard
 	
-	# Configure sprite
-	var sprite = item.get_node("Animation/GFX/Sprite")
-	sprite.texture = config.sprite_texture
-	sprite.hframes = config.sprite_hframes
-	sprite.vframes = config.sprite_vframes
-	sprite.frame = config.sprite_frame
-	
-	# Configure collision
-	var collision_shape = config.collision_shape
-	
-	# Set up click area (slightly larger than collision)
-	var click_shape = collision_shape.duplicate()
-	if click_shape is CircleShape2D:
-		click_shape.radius += 1.0
-	elif click_shape is RectangleShape2D:
-		click_shape.size += Vector2(2, 2)
-	
-	item.get_node("Animation/GFX/ClickArea/CollisionShape2D").shape = click_shape
-	item.get_node("Animation/CollisionArea/CollisionShape2D").shape = collision_shape
-	
-	# Add components
-	var controller = item.get_node("ItemController") as ItemController
-	for component_config in config.components:
-		controller.add_component(component_config)
-	
-	# Set display name from config
-	item.display_name = config.item_name
-	
 	# Set position
 	item.position = position
+	
+	# Set config (will be fully initialized in _ready)
+	item.config = config
 	
 	return item
 

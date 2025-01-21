@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=4 uid="uid://cg6x04dsiwoas"]
+[gd_scene load_steps=17 format=4 uid="uid://cg6x04dsiwoas"]
 
 [ext_resource type="Script" path="res://src/field/field.gd" id="1_4kyoj"]
 [ext_resource type="TileSet" uid="uid://biq84075xlypd" path="res://assets/terrain/tilesets/kenney_obstacles.tres" id="1_q4jvv"]
@@ -7,11 +7,12 @@
 [ext_resource type="Script" path="res://src/field/field_cursor.gd" id="4_raf0k"]
 [ext_resource type="Script" path="res://src/field/path_destination_marker.gd" id="6_ywrnx"]
 [ext_resource type="PackedScene" uid="uid://b4i22ohcw0fgd" path="res://src/field/npcs/npc.tscn" id="9_mkw52"]
-[ext_resource type="PackedScene" uid="uid://blacicxfqcfdw" path="res://src/field/items/chair.tscn" id="9_u1dha"]
 [ext_resource type="Script" path="res://src/field/gameboard/debug_map_boundaries.gd" id="10_8t3yh"]
-[ext_resource type="PackedScene" uid="uid://d0f6cpchnxa1s" path="res://src/field/items/apple.tscn" id="11_f7mo0"]
+[ext_resource type="PackedScene" uid="uid://dpv3dx5bu7uhs" path="res://src/field/items/base_item.tscn" id="11_5q5wx"]
 [ext_resource type="PackedScene" uid="uid://bve4u0hewur8" path="res://src/ui/ui.tscn" id="11_jm6mo"]
+[ext_resource type="Resource" uid="uid://ch1ggu468g6jk" path="res://src/field/items/configs/apple_config.tres" id="11_m4n0w"]
 [ext_resource type="Script" path="res://src/field/items/items_manager.gd" id="12_items"]
+[ext_resource type="Resource" uid="uid://d1lf7qvflauql" path="res://src/field/items/configs/chair_config.tres" id="12_xyenx"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mablp"]
 texture = ExtResource("4_l0eot")
@@ -195,42 +196,49 @@ y_sort_enabled = true
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(279, 152)
-display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Npc2" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(158, 167)
-display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Npc3" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(279, 59)
-display_name = null
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]
 y_sort_enabled = true
 script = ExtResource("12_items")
 
-[node name="Chair" parent="Field/Entities/Items" instance=ExtResource("9_u1dha")]
-position = Vector2(240, 122)
-display_name = "Chair"
+[node name="Chair" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(141, 66)
+config = ExtResource("12_xyenx")
+gameboard = ExtResource("2_l26x2")
 
-[node name="Chair2" parent="Field/Entities/Items" instance=ExtResource("9_u1dha")]
-position = Vector2(94, 58)
-display_name = "Chair"
+[node name="Chair2" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(229, 121)
+config = ExtResource("12_xyenx")
+gameboard = ExtResource("2_l26x2")
 
-[node name="Apple" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
-position = Vector2(93, 150)
-display_name = "Apple"
+[node name="Chair3" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(54, 148)
+config = ExtResource("12_xyenx")
+gameboard = ExtResource("2_l26x2")
 
-[node name="Apple2" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
-position = Vector2(222, 32)
-display_name = "Apple"
+[node name="Apple" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(62, 83)
+config = ExtResource("11_m4n0w")
+gameboard = ExtResource("2_l26x2")
 
-[node name="Apple3" parent="Field/Entities/Items" instance=ExtResource("11_f7mo0")]
-position = Vector2(158, 93)
-display_name = "Apple"
+[node name="Apple2" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(139, 115)
+config = ExtResource("11_m4n0w")
+gameboard = ExtResource("2_l26x2")
+
+[node name="Apple3" parent="Field/Entities/Items" instance=ExtResource("11_5q5wx")]
+position = Vector2(215, 63)
+config = ExtResource("11_m4n0w")
+gameboard = ExtResource("2_l26x2")
 
 [node name="MapBoundaries" type="Node2D" parent="."]
 visible = false

@@ -26,7 +26,7 @@ Field (field.gd)
 │   └── Obstacles (TileMap)
 └── Entities
     ├── NPCs (npc.tscn)
-    └── Items (item.tscn)
+    └── Items (base_item.tscn + configs)
 ```
 
 ### Entity System
@@ -43,15 +43,18 @@ Base Components:
 ├── Animation (handles visuals)
 └── Controller (manages behavior)
 
-Item Components (components/):
-├── ConsumableComponent
-├── NeedModifyingComponent
-└── SittableComponent
-    └── NeedModifyingComponent (example of nested component)
+Item System:
+├── BaseItem (base_item.tscn)
+├── ItemConfig (Resource)
+└── Components
+    ├── ConsumableComponent
+    ├── NeedModifyingComponent
+    └── SittableComponent
 
-Components can be:
-- Direct children of controllers
-- Children of other components
+Components:
+- Configured through resources
+- Added at runtime
+- Can be nested
 ```
 
 ## Key Concepts
@@ -106,11 +109,11 @@ docs/           # System documentation
 
 ### Common Patterns
 ```
-Component Addition:
-1. Inherit from base
-2. Add in _ready()
-3. Connect signals
-4. Handle cleanup
+Item Creation:
+1. Create ItemConfig resource
+2. Configure properties
+3. Add component configs
+4. Place in editor or spawn at runtime
 
 Event Handling:
 1. Connect in _ready()
@@ -122,10 +125,7 @@ Event Handling:
 ## Next Steps
 1. Review system documentation
 2. Examine example scenes
-3. Try creating new items
-4. Experiment with NPC behavior
-
-## Reference
-- Example items: src/field/items/
-- Example NPCs: src/field/npcs/
-- Documentation: docs/
+3. Create ItemConfig resources
+4. Try placing items in editor
+5. Test runtime spawning
+6. Experiment with NPC behavior

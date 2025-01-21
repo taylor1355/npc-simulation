@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=9 format=3 uid="uid://dpv3dx5bu7uhs"]
 
 [ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_base"]
 [ext_resource type="Script" path="res://src/field/items/base_item.gd" id="2_script"]
@@ -45,6 +45,7 @@ _data = {
 
 [node name="BaseItem" instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+config = null
 blocks_movement = true
 
 [node name="Animation" type="Marker2D" parent="." index="1"]
