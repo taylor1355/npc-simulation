@@ -2,103 +2,111 @@
 
 ## Core Components
 
-### Configuration (item_config.gd)
-Resource-based configuration that defines:
-- Item name and display properties
-- Sprite settings (texture, frames, animation)
-- Collision shape configuration
-- List of component configurations
-- Saved as .tres resources in configs/ directory
-
 ### Controller (item_controller.gd)
-Manages item behavior and state:
-- Tracks available interactions
-- Handles interaction requests and timing
-- Manages component lifecycle
-- Emits interaction events
-- Maintains component registry
-
-### Components
 ```
-Base (item_component.gd):
-└── Shared functionality
-    ├── interaction_finished signal
-    ├── interactions dictionary
-    └── Automatic controller discovery
-
-Implementations:
-├── NeedModifyingComponent
-│   ├── Threshold: 1.0
-│   ├── need_rates: Changes per second
-│   ├── Handles continuous effects
-│   └── Updates on physics tick
-├── ConsumableComponent
-│   ├── need_deltas: Total changes
-│   ├── consumption_time: Duration
-│   ├── Handles one-time use
-│   └── Auto-cleanup after use
-└── SittableComponent
-    ├── Energy regeneration
-    ├── Movement locking
-    ├── Exit direction handling
-    └── Uses NeedModifyingComponent
+Key Features:
+├── Component Management
+│   ├── add_component(config: ItemComponentConfig)
+│   ├── add_component_node(component: GamepieceComponent)
+│   └── Automatic interaction registration
+├── Interaction System
+│   ├── interactions: Dictionary of available actions
+│   ├── current_interaction: Active interaction
+│   ├── interacting_npc: Current NPC reference
+│   └── interaction_time: Duration tracking
+└── Event Handling
+    └── interaction_finished signal
 ```
 
-### Scene Structure (base_item.tscn)
+### Component System
 ```
-BaseItem/
-├── Decoupler/ (movement smoothing)
-├── Animation/
-│   ├── AnimationPlayer
-│   ├── GFX/
-│   │   ├── Sprite (configurable)
-│   │   ├── Shadow (automatic)
-│   │   └── ClickArea (interaction zone)
-│   └── CollisionArea (movement blocking)
-└── ItemController/
-    └── Components/ (runtime populated)
+Base Component:
+├── Properties
+│   ├── interactions: Dictionary
+│   └── interaction_finished signal
+└── Integration
+    ├── Automatic controller discovery
+    └── Event forwarding
+
+ConsumableComponent Example:
+├── Configuration
+│   ├── need_deltas: Dictionary (need changes)
+│   └── consumption_time: float (duration)
+├── State
+│   ├── percent_left: float (0-100)
+│   └── current_npc: NpcController
+├── Features
+│   ├── Creates NeedModifyingComponent
+│   ├── Configures need rates
+│   └── Auto-cleanup at 0% percent_left
+└── Interaction Flow
+    ├── Start: Validates and begins consumption
+    ├── Process: Updates percent_left
+    ├── Cancel: Handles early termination
+    └── Finish: Cleanup and destruction
 ```
 
-## Usage
+### Component Configuration
+```
+ItemComponentConfig:
+├── component_script: Script reference
+├── properties: Dictionary
+└── _validate(): Verification method
 
-### Editor Integration
-The BaseItem node provides direct editor support:
-- Drag and drop placement in scenes
-- Live preview of sprite and collision
-- Auto-sized click areas for interaction
-- Visual configuration through inspector
-- Components initialize automatically at runtime
+Validation:
+├── Script inheritance check
+├── Property type verification
+└── Required field validation
+```
 
-### Runtime Creation
-ItemFactory provides centralized item creation:
-- Validates configurations
-- Handles instantiation and setup
-- Sets required references (gameboard, etc)
-- Positions items correctly
-- Helper methods for common items
-- Consistent with editor-placed items
+## Integration
 
-### Creating New Items
-1. Configuration:
-   - Create new ItemConfig resource
-   - Configure visual properties
-   - Set up collision shape
-   - Add required component configs
-   - Save as .tres resource
+### Component Setup
+```gdscript
+# Create and configure component
+var component = ConsumableComponent.new()
+component.need_deltas = {
+    "hunger": hunger_need_delta,  # Configure rates at which
+    "energy": energy_need_delta   # consumption affects needs
+}
+component.consumption_time = duration  # Set consumption duration
 
-2. Component Setup:
-   - Choose appropriate components
-   - Configure component properties
-   - Set up interactions if needed
-   - Handle completion events
+# Add to controller
+item_controller.add_component_node(component)
+```
 
-### Physics Setup
-Collision is handled through two areas:
-- ClickArea for interactions
-  - Automatically sized larger than collision
-  - CircleShape2D: radius + 1.0
-  - RectangleShape2D: size + Vector2(2, 2)
-- CollisionArea for movement
-  - Matches visual bounds
-  - Uses appropriate collision masks
-  - Handles pathfinding obstacles
+### Interaction Flow
+```
+Request Phase:
+1. NPC sends InteractionRequest
+2. Controller validates:
+   - No current interaction
+   - Interaction exists
+   - Valid request type
+3. Component handles request:
+   - Validates preconditions
+   - Sets up state
+   - Configures related components
+
+Execution:
+1. Controller tracks time
+2. Component updates state
+3. Monitors completion
+4. Handles cancellation
+5. Cleanup on finish
+```
+
+### Event System
+```
+Interaction Events:
+├── Start Request
+│   ├── Validation
+│   └── State setup
+├── Cancel Request
+│   ├── State verification
+│   └── Cleanup
+└── Finished
+    ├── State reset
+    ├── Resource cleanup
+    └── Event dispatch
+```

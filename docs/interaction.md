@@ -3,17 +3,19 @@
 ## Core Components
 
 ### Base Interaction (interaction.gd)
-- Defines available interactions
-- Key properties:
-  ```
-  name: String (interaction type)
-  description: String (user-facing)
-  ```
-- Signals:
-  ```
-  start_request: New interaction
-  cancel_request: End interaction
-  ```
+```
+Properties:
+├── name: String
+└── description: String
+
+Signals:
+├── start_request(request)
+└── cancel_request(request)
+
+Factory Methods:
+├── create_start_request(npc, arguments)
+└── create_cancel_request(npc, arguments)
+```
 
 ### Request System (interaction_request.gd)
 ```
@@ -22,90 +24,83 @@ Properties:
 ├── request_type: RequestType
 ├── status: Status
 ├── npc_controller: NpcController
-└── item_controller: ItemController
-
-Signals:
-├── accepted: Request approved
-└── rejected(reason): Request denied
+├── item_controller: ItemController
+└── arguments: Dictionary
 
 Enums:
-├── RequestType:
-│   ├── START: Begin interaction
-│   └── CANCEL: End interaction
-└── Status:
-    ├── PENDING: Awaiting response
-    ├── ACCEPTED: Request approved
-    └── REJECTED: Request denied
+├── RequestType
+│   ├── START
+│   └── CANCEL
+└── Status
+    ├── PENDING
+    ├── ACCEPTED
+    └── REJECTED
+
+Signals:
+├── accepted()
+└── rejected(reason: String)
 ```
 
-## Key Features
+## Integration Flow
 
-### Request Flow
+### Request Creation
 ```
-Start Interaction:
-1. NPC calls create_start_request()
-2. Request sent to item controller
-3. Item validates request:
-   - No current interaction
-   - Valid interaction type
-   - Conditions met
-4. Item accepts/rejects
-5. Signals emitted
-6. State updated
+1. Component defines interaction:
+   var interaction = Interaction.new(
+       "consume",
+       "Consume this item"
+   )
 
-Cancel Interaction:
-1. Entity calls create_cancel_request()
-2. Request processed
-3. Cleanup performed
+2. Register with controller:
+   interactions[interaction.name] = interaction
+
+3. Connect handlers:
+   interaction.start_request.connect(_handle_start)
+   interaction.cancel_request.connect(_handle_cancel)
+```
+
+### Request Processing
+```
+Start Flow:
+1. NPC initiates:
+   var request = interaction.create_start_request(
+       self,  # NPC controller
+       {}     # Optional arguments
+   )
+
+2. Item validates:
+   if current_interaction == null:
+       request.accept()
+       # Setup state
+   else:
+       request.reject("In use")
+
+3. Component handles:
+   func _handle_start(request):
+       if can_start():
+           request.accept()
+           setup_interaction()
+       else:
+           request.reject("Cannot start")
+
+Cancel Flow:
+1. NPC initiates cancel
+2. Item validates state
+3. Component cleans up
 4. State reset
-5. Signals emitted
 ```
 
-### Integration Points
+### State Management
 ```
-NPC Controller:
-├── Initiates requests
-├── Handles responses
-├── Manages state
-└── Handles cleanup
-
 Item Controller:
-├── Validates requests
-├── Manages active state
-├── Tracks interaction time
+├── interactions: Dictionary
+├── current_interaction: Interaction
+├── interacting_npc: NpcController
+└── interaction_time: float
+
+Component:
+├── Tracks specific state
+├── Handles validation
+├── Manages cleanup
 └── Emits completion
-```
-
-## Usage
-
-### Creating Interactions
-```gdscript
-# Define interaction
-var interaction = Interaction.new(
-    "sit",           # Name
-    "Sit in chair"   # Description
-)
-
-# Connect handlers
-interaction.start_request.connect(_on_start_request)
-interaction.cancel_request.connect(_on_cancel_request)
-```
-
-### Request Handling
-```gdscript
-# Start interaction
-var request = interaction.create_start_request(
-    npc_controller,
-    {"duration": 5.0}  # Optional args
-)
-
-# Process request
-if can_accept_request(request):
-    request.accept()
-else:
-    request.reject("Already in use")
-
-# Handle results
-request.accepted.connect(func(): start_interaction())
-request.rejected.connect(func(reason): handle_rejection())
 ```

@@ -31,32 +31,42 @@ A 2D NPC simulation built with Godot 4.3 where NPCs interact with items and navi
 ### Core Systems
 ```
 Field (field.gd)
-├── Gameboard: Grid management
-├── Gamepiece: Entity base
-└── Events: Communication
+├── Gameboard: Grid and pathfinding
+├── Gamepiece: Entity framework
+└── Events: Global communication bus
 ```
 
-### Entity Types
+### Entity Architecture
 ```
-Gamepiece Base
-├── NPCs: Need-driven actors
-└── Items: Interactive objects
+Gamepiece Base (gamepiece.gd)
+├── NPCs (npc_controller.gd)
+│   ├── Three-tier architecture
+│   │   ├── Controller: Needs and actions
+│   │   ├── Client: Backend interface
+│   │   └── Backend: Decision making
+│   ├── Need System
+│   │   ├── Values: 0-100 range
+│   │   └── Types: hunger, energy, etc
+│   └── Event-driven updates
+└── Items (item_controller.gd)
+    ├── Component-based design
+    └── Interaction system
 ```
 
-### Component System
+### Event Architecture
 ```
-Components
-├── Base: Core functionality
-└── Specialized: Item behaviors
+Event System
+├── Field Events: Global dispatch
+├── NPC Events
+│   ├── Interaction lifecycle
+│   ├── Observations
+│   └── State updates
+└── Response System
+    ├── Action definitions
+    └── Status handling
 ```
 
 ## Development
-
-### Key Concepts
-1. Component-based design
-2. Event-driven communication
-3. Grid-based movement
-4. Need-based behavior
 
 ### Documentation Map
 ```

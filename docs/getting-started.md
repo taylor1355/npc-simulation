@@ -63,23 +63,59 @@ Components:
 ```
 NPC System:
 ├── Controller (npc_controller.gd)
+│   ├── Recurring decision cycle
+│   ├── Need system
+│   │   ├── Types: hunger, hygiene, fun, energy
+│   │   ├── Value tracking
+│   │   └── Automatic decay
+│   └── Vision-based decisions
 ├── Client (npc_client.gd)
+│   ├── Backend communication
+│   ├── State caching
+│   └── Event dispatching
 └── Backend (mock_npc_backend.gd)
+    └── Decision making
 
 Features:
-- Needs system (hunger, energy, etc.)
-- Vision-based decision making
-- Item interaction
-- Pathfinding movement
+├── Needs Management
+│   ├── Configurable decay
+│   └── Component-based updates
+├── Vision System
+│   ├── Item detection
+│   └── Distance sorting
+├── Interaction System
+│   ├── Request validation
+│   ├── State tracking
+│   └── Event logging
+└── Movement System
+    ├── Pathfinding
+    ├── Destination management
+    └── Movement locking
 ```
 
 ### Event System
 ```
-Event Flow (field_events.gd):
-1. Local state changes
-2. Event dispatched
-3. System-wide updates
-4. UI refresh
+Event Flow:
+├── NPC Events
+│   ├── Interaction lifecycle
+│   │   ├── REQUEST_PENDING
+│   │   ├── REQUEST_REJECTED
+│   │   ├── STARTED
+│   │   ├── CANCELED
+│   │   └── FINISHED
+│   └── OBSERVATION
+├── Response System
+│   ├── SUCCESS/ERROR status
+│   └── Action types:
+│       ├── MOVE_TO
+│       ├── INTERACT_WITH
+│       ├── WANDER
+│       ├── WAIT
+│       ├── CONTINUE
+│       └── CANCEL_INTERACTION
+└── Field Events
+    ├── Global dispatch
+    └── System-wide updates
 ```
 
 ## Project Structure

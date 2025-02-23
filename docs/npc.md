@@ -1,123 +1,122 @@
 # NPC System
 
+## Overview
+The NPC system implements real-time decision making through a three-tier architecture, verified in the source code:
+
+- **Controller** (npc_controller.gd): Manages needs, vision, and executes actions with a decision interval of 3.0 seconds
+- **Client** (npc_client.gd): Handles backend communication and state caching
+- **Backend** (mock_npc_backend.gd): Makes decisions based on NPC state and events
+
 ## Core Components
 
 ### Controller (npc_controller.gd)
-- Manages NPC behavior and state
-- Handles needs and decision making
-- Key properties:
-  ```
-  decay_rate: 1-5 units/second (randomized)
-  MAX_NEED_VALUE: 100.0
-  MOVEMENT_COOLDOWN: 0.75 seconds
-  ```
-
-### State Machine
 ```
-NPCState (npc_controller.gd):
-├── IDLE
-│   ├── Entry: After movement unlock
-│   ├── Duration: MOVEMENT_COOLDOWN (0.75s)
-│   └── Exit: Timer expired or need threshold
-├── MOVING_TO_ITEM
-│   ├── Entry: Valid item target selected
-│   ├── Duration: Until arrived
-│   └── Exit: Reached item or path blocked
-├── INTERACTING
-│   ├── Entry: Item interaction accepted
-│   ├── Duration: Item-specific
-│   └── Exit: Interaction complete/cancelled
-└── WANDERING
-    ├── Entry: No valid items found
-    ├── Duration: Until arrived
-    └── Exit: Reached random destination
+Key Features:
+├── Need System
+│   ├── Needs: [hunger, hygiene, fun, energy]
+│   ├── Values: 0-100 range
+│   └── Decay: 1-2 units/second (randomized)
+├── Decision Making
+│   ├── Interval: 3.0 seconds
+│   └── Event-driven updates
+└── Movement Control
+    ├── Pathfinding integration
+    ├── Destination management
+    └── Movement locking
 ```
 
-### Need System
+### Client (npc_client.gd)
 ```
-Needs (npc_controller.gd):
-├── hunger
-├── hygiene
-├── fun
-└── energy
-Each need:
-- Range: 0-100
-- Decay: 1-5 units/second
-- Thresholds:
-  energy <= 0: Force behavior update
-  energy >= 100: Stop sitting
-```
-
-### Vision System (vision_manager.gd)
-- Tracks visible items through Area2D
-- Sorts items by distance to NPC
-- Used for:
-  ```
-  - Building observations
-  - Finding interaction targets
-  - Pathfinding decisions
-  ```
-
-### Client System (npc_client.gd)
-- Handles backend communication
-- Caches NPC state
-- Processes:
-  ```
-  - Observations
-  - Action choices
-  - State updates
-  ```
-
-## Key Features
-
-### Decision Making
-```
-Process (npc_controller.gd):
-1. Check state locks
-   - Movement locked
-   - Idle cooldown (0.75s)
-   - Current interaction
-2. Process visible items
-   - Build observation text
-   - Generate action options
-   - Send to NPC client
-3. Handle chosen action
-   - move_to: Set destination
-   - interact: Request interaction
-   - wander: Random movement
+Features:
+├── State Caching
+│   ├── NPCState class
+│   │   ├── traits: Array[String]
+│   │   └── working_memory: String
+│   └── Cache invalidation on updates
+├── Backend Interface
+│   ├── create_npc(id, traits, memory)
+│   ├── process_observation(id, events)
+│   ├── cleanup_npc(id)
+│   └── get_npc_info(id)
+└── Event Dispatching
+    ├── NPC creation/removal
+    ├── Action decisions
+    └── Error handling
 ```
 
-### Action System
+### Event System (npc_event.gd)
 ```
-Available Actions:
-1. Movement (for distant items)
-   - Parameters: x, y coordinates
-   - Generated when distance > 1
-2. Interaction (for nearby items)
-   - Parameters: item_name, interaction_type
-   - Generated when distance <= 1
-3. Wander (fallback)
-   - No parameters
-   - Always available
+Event Types:
+├── Interaction Events
+│   ├── REQUEST_PENDING
+│   ├── REQUEST_REJECTED
+│   ├── STARTED
+│   ├── CANCELED
+│   └── FINISHED
+├── OBSERVATION
+└── ERROR
+
+Event Structure:
+├── timestamp: float (unix time)
+├── type: Type (enum)
+└── payload: Dictionary
 ```
 
-### Event Integration
+### Action System (npc_response.gd)
 ```
-Key Events:
-- need_changed: Need value updates
-- NpcEvents.NeedChangedEvent: System broadcast
-- NpcClientEvents:
-  - CreatedEvent: New NPC initialized
-  - RemovedEvent: NPC cleanup
-  - ActionChosenEvent: Decision made
+Actions:
+├── MOVE_TO: Path to location
+├── INTERACT_WITH: Use items
+├── WANDER: Random movement
+├── WAIT: Stay idle
+├── CONTINUE: Maintain state
+└── CANCEL_INTERACTION: Stop current
+
+Response Structure:
+├── status: SUCCESS/ERROR
+├── action: Action enum
+└── parameters: Dictionary
 ```
 
-## Usage
+## Communication Flow
 
-### Required Setup
+### Decision Cycle
 ```
-1. Valid gameboard reference
-2. Vision system configuration
-3. NPC client connection
-4. Need initialization
+1. Controller Update (every 3.0s)
+   ├── Update needs (decay)
+   ├── Get visible items
+   ├── Create observation event
+   └── Process unhandled events
+
+2. Backend Processing
+   ├── NpcRequest(npc_id, events)
+   └── Returns NpcResponse
+
+3. Action Execution
+   ├── Parse response
+   ├── Execute chosen action
+   └── Handle completion/errors
+```
+
+### Interaction Flow
+```
+Start Interaction:
+1. Controller creates request
+2. Item validates request
+3. If accepted:
+   ├── Set current_interaction
+   ├── Connect completion handler
+   └── Log STARTED event
+4. If rejected:
+   ├── Log REJECTED event
+   └── Trigger new decision
+
+Cancel Interaction:
+1. Create cancel request
+2. If accepted:
+   ├── Log CANCELED event
+   ├── Clear interaction state
+   └── Trigger new decision
+3. If rejected:
+   └── Log rejection reason
 ```
