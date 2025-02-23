@@ -62,24 +62,30 @@ func request_interaction(request: InteractionRequest) -> void:
             request.reject("Interaction not found")
             return
 
+        # Connect to request status changes
+        request.accepted.connect(
+            func():
+                current_interaction = interaction
+                interacting_npc = request.npc_controller
+                interaction_time = 0.0
+        )
+
         if request.request_type == InteractionRequest.RequestType.START:
             interaction.start_request.emit(request)
         elif request.request_type == InteractionRequest.RequestType.CANCEL:
             interaction.cancel_request.emit(request)
         else:
             request.reject("Invalid request type")
-            return
-
-        # may need to defer the status check, so that the request handler can have time to finish
-        if request.status == InteractionRequest.Status.ACCEPTED:
-            current_interaction = interaction
-            interacting_npc = request.npc_controller
-            interaction_time = 0.0
     else:
         request.reject("An interaction is already in progress")
 
 func _on_interaction_finished(interaction_name: String, payload: Dictionary) -> void:
-    interaction_finished.emit(interaction_name, interacting_npc, payload)
+    var npc = interacting_npc  # Store reference before clearing
+    
+    # Clear interaction state before emitting event
     current_interaction = null
     interacting_npc = null
     interaction_time = 0.0
+    
+    # Emit event after clearing state
+    interaction_finished.emit(interaction_name, npc, payload)

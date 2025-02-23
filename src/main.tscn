@@ -184,6 +184,7 @@ script = ExtResource("4_raf0k")
 gameboard = ExtResource("2_l26x2")
 
 [node name="PathDestinationMarker" type="Sprite2D" parent="Field"]
+visible = false
 texture = SubResource("AtlasTexture_hqy20")
 script = ExtResource("6_ywrnx")
 gameboard = ExtResource("2_l26x2")
@@ -196,14 +197,6 @@ y_sort_enabled = true
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
 position = Vector2(279, 152)
-gameboard = ExtResource("2_l26x2")
-
-[node name="Npc2" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(158, 167)
-gameboard = ExtResource("2_l26x2")
-
-[node name="Npc3" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(279, 59)
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]

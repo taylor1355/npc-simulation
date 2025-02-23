@@ -5,6 +5,8 @@ const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 # Backend NPC state
 var npc_id: String
 var npc_client: NpcClient
+var event_log: Array[NpcEvent] = []
+var last_processed_event_index: int = -1
 
 var is_active: = false:
 	set(value):
@@ -15,8 +17,12 @@ var is_active: = false:
 		set_process_input(is_active)
 		set_process_unhandled_input(is_active)
 
+var decision_timer: float = 0.0 # Time since last decision
+const DECISION_INTERVAL: float = 3.0  # Make decisions every DECISION_INTERVAL seconds
+
 # needs
 # TODO: eventually refactor each need to be an object so each need can have an update fn, its own decay rate, etc.
+# The list of valid need IDs should be stored as an enum in a globally accessible file
 var decay_rate: float = 0.0 # for testing, just set to a random value between 1 and 5
 var MAX_NEED_VALUE: = 100.0
 var NEED_IDS = [
@@ -30,21 +36,10 @@ var needs = {}
 # pathfinding
 var destination : Vector2i
 var movement_locked: bool = false
+var is_wandering: bool = false
 
-# State machine
-enum NPCState {
-	IDLE,
-	MOVING_TO_ITEM,
-	INTERACTING,
-	WANDERING
-}
-
-# Idle timing (seconds)
-const MOVEMENT_COOLDOWN = 0.75  # How long to idle after movement is unlocked 
-var idle_timer: float = 0.0  # Time left to idle
-
-var current_state: NPCState = NPCState.IDLE
 var current_interaction: Interaction = null
+var current_request: InteractionRequest = null
 
 @onready var _vision_manager: VisionManager = $VisionArea as VisionManager
 
@@ -98,21 +93,24 @@ func _ready() -> void:
 		# engine is ready, its state may be queried to setup the pathfinder.
 		await get_tree().process_frame
 		
-		# Create new NPC if no ID provided
-		if not npc_id:
-			npc_id = str(get_instance_id()) # Use instance ID as unique identifier
-			npc_client.create_npc(
-				npc_id,
-				["curious", "active"], # Default traits
-				"I am a new NPC in this world." # Initial memory
-			)
-			
-			# If we're the focused gamepiece, request info after creation
-			if _gamepiece == Globals.focused_gamepiece:
-				npc_client.get_npc_info(npc_id)
+		# Set up NPC ID and initial state
+		npc_id = str(get_instance_id()) # Use instance ID as unique identifier
 		_gamepiece.display_name = "NPC" # Default name
 		
-		decide_behavior.call_deferred()
+		# Create NPC in backend
+		npc_client.create_npc(
+			npc_id,
+			["curious", "active"], # Default traits
+			"I am a new NPC in this world." # Initial memory
+		)
+		
+		# If we're the focused gamepiece, request info after creation
+		if _gamepiece == Globals.focused_gamepiece:
+			npc_client.get_npc_info(npc_id)
+		
+		# Start behavior after a frame to ensure everything is set up
+		await get_tree().process_frame
+		decide_behavior()
 
 
 func _exit_tree() -> void:
@@ -124,12 +122,10 @@ func _process(delta: float) -> void:
 	for need_id in NEED_IDS:
 		update_need(need_id, -decay_rate * delta)
 	
-	# Handle idle timer if we're idling
-	if current_state == NPCState.IDLE and idle_timer > 0:
-		idle_timer -= delta
-		if idle_timer <= 0:
-			decide_behavior()
-	
+	# Regularly make decisions
+	decision_timer += delta
+	if decision_timer >= DECISION_INTERVAL:
+		decide_behavior()
 
 func set_is_paused(paused: bool) -> void:
 	super.set_is_paused(paused)
@@ -145,16 +141,9 @@ func update_need(need_id: String, delta: float) -> void:
 		print("need_id not found: ", need_id)
 		return
 		
-	var old_value = needs[need_id]
 	needs[need_id] += delta
 	needs[need_id] = clamp(needs[need_id], 0, MAX_NEED_VALUE)
 	need_changed.emit(need_id, needs[need_id])
-	
-	# Trigger behavior update at energy thresholds
-	if need_id == "energy":
-		if (old_value < MAX_NEED_VALUE and needs[need_id] >= MAX_NEED_VALUE) or \
-		   (old_value > 0 and needs[need_id] <= 0):
-			decide_behavior()
 
 
 func reemit_needs() -> void:
@@ -184,155 +173,53 @@ func set_new_destination(new_destination = null) -> void:
 
 
 func set_movement_locked(locked: bool) -> void:
-	if movement_locked and not locked:
-		current_state = NPCState.IDLE
-		idle_timer = MOVEMENT_COOLDOWN
+	var lock_status_changed = locked != movement_locked
 	movement_locked = locked
+	if not locked and lock_status_changed:
+		decide_behavior()
 
 
 ######################
 ### Placeholder AI ###
 ######################
 func decide_behavior() -> void:
-	# First check if we need to stop sitting, regardless of movement lock
-	if current_interaction and current_interaction.name == "sit" and needs["energy"] >= MAX_NEED_VALUE:
-		var cancel_request = current_interaction.create_cancel_request(self)
-		current_interaction.cancel_request.emit(cancel_request)
+	if not npc_id:
 		return
-		
-	# Then check movement lock and idle timer
-	if movement_locked or (current_state == NPCState.IDLE and idle_timer > 0):
-		return
-		
-	# If currently interacting, continue interaction
-	if current_interaction:
-		current_state = NPCState.INTERACTING
-		return
-
-	# Check visible items
-	var seen_items: Array = _vision_manager.get_items_by_distance()
 	
-	# Build observation and available actions
-	var observation = _build_observation(seen_items)
-	var available_actions = _build_available_actions(seen_items)
+	decision_timer = 0.0
 	
-	# Process observation through NPC client if we have an ID
-	if npc_id:
-		npc_client.process_observation(npc_id, observation, available_actions)
-	else:
-		# Fallback to default behavior if no NPC client connection
-		_handle_default_behavior(seen_items)
-
-func _build_observation(seen_items: Array) -> String:
-	var observation = "You are in a room. "
+	# Get visible items and prepare data for backend
+	var seen_items = _vision_manager.get_items_by_distance()
+	var item_data = []
 	
-	if seen_items.is_empty():
-		observation += "You don't see any items nearby."
-	else:
-		observation += "You see: "
-		for i in range(seen_items.size()):
-			var item = seen_items[i]
-			if i > 0:
-				observation += ", " if i < seen_items.size() - 1 else " and "
-			observation += "a " + item.name
-			
-			var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
-			if distance <= 1:
-				observation += " within reach"
-			else:
-				observation += " " + str(distance) + " steps away"
-				
-	observation += "\nYour current needs are: "
-	for need_id in NEED_IDS:
-		observation += need_id + " (" + str(needs[need_id]) + "%), "
-		
-	return observation
-
-func _build_available_actions(seen_items: Array) -> Array[NpcClient.Action]:
-	var actions: Array[NpcClient.Action] = []
-	
-	# Add movement actions for items not in range
 	for item in seen_items:
-		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
-		if distance > 1:
-			actions.append(NpcClient.Action.new(
-				"move_to",
-				"Move to the " + item.name,
-				{
-					"x": item._gamepiece.cell.x,
-					"y": item._gamepiece.cell.y
-				}
-			))
+		item_data.append({
+			"name": item.name,
+			"cell": item._gamepiece.cell,
+			"distance_to_npc": _gamepiece.cell.distance_to(item._gamepiece.cell),
+			"interactions": item.interactions,
+			"current_interaction": item.current_interaction
+		})
 	
-	# Add interaction actions for items in range
-	for item in seen_items:
-		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
-		if distance <= 1 and item.interactions and not item.current_interaction:
-			for interaction_name in item.interactions:
-				actions.append(NpcClient.Action.new(
-					"interact",
-					interaction_name + " with the " + item.name,
-					{
-						"item_name": item.name,
-						"interaction_type": interaction_name
-					}
-				))
-	
-	# Add wandering as a fallback
-	actions.append(NpcClient.Action.new(
-		"wander",
-		"Walk to a random location",
-		{}
+	# Add observation event
+	event_log.append(NpcEvent.create_observation_event(
+		_gamepiece.cell,
+		item_data,
+		needs,
+		movement_locked,
+		current_interaction,
+		current_request
 	))
 	
-	return actions
-
-func _handle_default_behavior(seen_items: Array) -> void:
-	if seen_items.is_empty():
-		current_state = NPCState.WANDERING
-		set_new_destination()
-		return
+	# Get unprocessed events
+	var unprocessed_events = event_log.slice(last_processed_event_index + 1)
 	
-	# Try to interact with each visible item
-	for item in seen_items:
-		if not item.interactions or item.current_interaction:
-			continue
-
-		# Skip chairs if energy is high
-		if item.interactions.has("sit") and needs["energy"] >= 0.5 * MAX_NEED_VALUE:
-			continue
-			
-		var distance = _gamepiece.cell.distance_to(item._gamepiece.cell)
-		if distance > 1:
-			current_state = NPCState.MOVING_TO_ITEM
-			set_new_destination(item._gamepiece.cell)
-			return
-			
-		# Choose interaction
-		var interaction = null
-		if needs["energy"] < 0.5 * MAX_NEED_VALUE and item.interactions.has("sit"):
-			interaction = item.interactions["sit"]
-		else:
-			interaction = item.interactions.values()[0]
-			
-		# Request interaction
-		var interaction_request = interaction.create_start_request(self)
-		interaction_request.accepted.connect(
-			func():
-				current_interaction = interaction
-				item.interaction_finished.connect(_on_interaction_finished, CONNECT_ONE_SHOT)
-				current_state = NPCState.INTERACTING
-		)
-		interaction_request.rejected.connect(
-			func(_reason):
-				current_interaction = null
-		)
-		item.request_interaction.call_deferred(interaction_request)
-		return
+	# Get next action from backend
+	npc_client.process_observation(npc_id, unprocessed_events)
 	
-	# No suitable items found
-	current_state = NPCState.WANDERING
-	set_new_destination()
+	# Mark events as processed
+	last_processed_event_index = event_log.size() - 1
+
 
 # NPC Client handlers
 func _on_npc_created(event: NpcClientEvents.CreatedEvent) -> void:
@@ -344,17 +231,21 @@ func _on_npc_removed(event: NpcClientEvents.RemovedEvent) -> void:
 		npc_id = ""
 
 func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
-	# Only handle actions meant for this NPC
 	if event.npc_id != npc_id:
 		return
 		
 	var action_name = event.action_name
 	var parameters = event.parameters
+	
 	match action_name:
 		"move_to":
-			current_state = NPCState.MOVING_TO_ITEM
-			set_new_destination(Vector2i(parameters.x, parameters.y))
-		"interact":
+			if movement_locked:
+				event_log.append(NpcEvent.create_error_event("Cannot move while movement is locked"))
+			else:
+				is_wandering = false
+				set_new_destination(Vector2i(parameters.x, parameters.y))
+		"interact_with":
+			is_wandering = false
 			var target_item = null
 			var seen_items = _vision_manager.get_items_by_distance()
 			for item in seen_items:
@@ -364,21 +255,72 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 					
 			if target_item and target_item.interactions.has(parameters.interaction_type):
 				var interaction = target_item.interactions[parameters.interaction_type]
-				var interaction_request = interaction.create_start_request(self)
-				interaction_request.accepted.connect(
+				var request = interaction.create_start_request(self)
+				request.item_controller = target_item
+				current_request = request
+				
+				# Log the initial request
+				event_log.append(NpcEvent.create_interaction_request_event(request))
+				
+				request.accepted.connect(
 					func():
 						current_interaction = interaction
-						target_item.interaction_finished.connect(_on_interaction_finished, CONNECT_ONE_SHOT)
-						current_state = NPCState.INTERACTING
+						target_item.interaction_finished.connect(
+							func(interaction_name, npc, payload): _on_interaction_finished(interaction_name, npc, payload),
+							CONNECT_ONE_SHOT
+						)
+						
+						# Log interaction started
+						event_log.append(NpcEvent.create_interaction_update_event(
+							request,
+							NpcEvent.Type.INTERACTION_STARTED
+						))
 				)
-				interaction_request.rejected.connect(
-					func(_reason):
+				request.rejected.connect(
+					func(reason: String):
+						current_interaction = null
+						
+						# Log the rejected response with reason
+						event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
+						current_request = null
+						decide_behavior()
+				)
+				target_item.request_interaction.call_deferred(request)
+		"wander":
+			if not is_wandering:
+				is_wandering = true
+				set_new_destination()
+		"wait":
+			is_wandering = false
+		"continue":
+			pass
+		"cancel_interaction":
+			is_wandering = false
+			if current_interaction and current_request:
+				var request = current_interaction.create_cancel_request(self)
+				request.item_controller = current_request.item_controller
+				
+				# Log the cancel request
+				event_log.append(NpcEvent.create_interaction_request_event(request))
+				
+				request.accepted.connect(
+					func():
+						# Log interaction canceled
+						event_log.append(NpcEvent.create_interaction_update_event(
+							request,
+							NpcEvent.Type.INTERACTION_CANCELED
+						))
+						current_request = null
 						current_interaction = null
 				)
-				target_item.request_interaction.call_deferred(interaction_request)
-		"wander":
-			current_state = NPCState.WANDERING
-			set_new_destination()
+				
+				request.rejected.connect(
+					func(reason: String):
+						# Log the rejected cancel with reason
+						event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
+				)
+				
+				current_interaction.cancel_request.emit(request)
 
 func _on_npc_error(msg: String) -> void:
 	print("NPC Error: ", msg)
@@ -387,14 +329,31 @@ func _on_npc_error(msg: String) -> void:
 ################
 ### Handlers ###
 ################
-func _on_interaction_finished(_interaction_name: String, _npc: NpcController, _payload: Dictionary) -> void:
-	current_interaction = null
-	decide_behavior()
+func _on_interaction_finished(interaction_name: String, _npc: NpcController, payload: Dictionary) -> void:
+	var item_name = payload.get("item_name", "")
+	
+	if current_request and current_interaction:
+		# Log interaction finished event
+		event_log.append(NpcEvent.create_interaction_update_event(
+			current_request,
+			NpcEvent.Type.INTERACTION_FINISHED
+		))
+		
+		# Clear interaction state
+		current_interaction = null
+		current_request = null
+		
+		# Trigger next decision
+		decide_behavior()
 	
 	
 func _on_gamepiece_arrived() -> void:
 	super._on_gamepiece_arrived()
-	decide_behavior()
+	
+	if is_wandering:
+		set_new_destination()
+	else:
+		decide_behavior()
 
 
 func _on_focused_gamepiece_changed(new_focused_gamepiece: Gamepiece) -> void:

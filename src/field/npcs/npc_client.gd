@@ -15,23 +15,6 @@ class NPCState:
 		traits = p_traits
 		working_memory = p_working_memory
 
-class Action:
-	var name: String
-	var description: String
-	var parameters: Dictionary
-	
-	func _init(p_name: String, p_description: String, p_parameters: Dictionary = {}) -> void:
-		name = p_name
-		description = p_description
-		parameters = p_parameters
-	
-	func to_dict() -> Dictionary:
-		return {
-			"name": name,
-			"description": description,
-			"parameters": parameters
-		}
-
 var _backend: MockNpcBackend
 var _npc_cache: Dictionary = {} # npc_id -> NPCState
 
@@ -69,24 +52,22 @@ func create_npc(
 	else:
 		error.emit(result.get("message", "Unknown error creating NPC"))
 
-## Processes an observation and available actions for the NPC
-func process_observation(npc_id: String, observation: String, available_actions: Array[Action]) -> void:
+## Processes NPC events to determine next action
+func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 	# Invalidate cache since working memory will be updated
 	if _npc_cache.has(npc_id):
 		_npc_cache[npc_id].working_memory = ""
-
-	# Convert Action objects to dictionaries
-	var action_dicts = []
-	for action in available_actions:
-		action_dicts.append(action.to_dict())
 	
-	var result = _backend.process_observation(npc_id, observation, action_dicts)
-	if result.has("action"):
-		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, result.action, result.parameters))
+	var request = NpcRequest.new(npc_id, events)
+	var response = _backend.process_observation(request)
+	
+	if response.status == NpcResponse.Status.SUCCESS:
+		var action_name = NpcResponse.Action.keys()[response.action].to_lower()
+		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, action_name, response.parameters))
 		# Get updated working memory after observation
 		get_npc_info(npc_id)
 	else:
-		error.emit(result.get("message", "Unknown error processing observation"))
+		error.emit(response.parameters.get("error_message", "Unknown error processing observation"))
 
 ## Removes an NPC and its data
 func cleanup_npc(npc_id: String) -> void:

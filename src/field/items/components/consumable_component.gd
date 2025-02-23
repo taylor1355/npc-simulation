@@ -41,12 +41,14 @@ func _process(delta_t: float) -> void:
 
 
 func _finish_interaction() -> void:
+	need_modifying._finish_interaction()
+	interaction_finished.emit(INTERACTION_NAME, {})
+	current_npc = null
+	
 	if percent_left <= 0.0:
 		FieldEvents.dispatch(
 			GamepieceEvents.create_destroyed(item_controller._gamepiece)
 		)
-	need_modifying._finish_interaction()
-	interaction_finished.emit(INTERACTION_NAME, {})
 
 
 func _handle_consume_start_request(request: InteractionRequest) -> void:
