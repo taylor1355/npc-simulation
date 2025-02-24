@@ -1,15 +1,20 @@
 # NPC System
 
 ## Overview
-The NPC system implements real-time decision making through a three-tier architecture, verified in the source code:
+The NPC system implements real-time decision making through a three-tier architecture that separates simulation from decision making. The system is designed to be backend-agnostic, allowing for different decision making implementations while maintaining consistent behavior and interfaces.
 
-- **Controller** (npc_controller.gd): Manages needs, vision, and executes actions with a decision interval of 3.0 seconds
-- **Client** (npc_client.gd): Handles backend communication and state caching
-- **Backend** (mock_npc_backend.gd): Makes decisions based on NPC state and events
+The system follows an event-driven architecture where NPCs observe their environment, send these observations to a decision-making backend, and execute the resulting actions. This separation allows for flexible AI implementations while keeping the core simulation logic consistent.
+
+Core components:
+- **Controller**: The main simulation layer that manages NPC state and executes actions
+- **Client**: A communication layer that handles backend interaction and caches responses
+- **Backend**: A pluggable decision making system (currently using a local mock implementation)
 
 ## Core Components
 
 ### Controller (npc_controller.gd)
+The controller manages the NPC's physical presence in the world and its basic needs. It runs on a fixed update cycle to gather observations about the environment, manage need states, and execute actions received from the backend. This component forms the core of the simulation layer, handling all real-time aspects of NPC behavior.
+
 ```
 Key Features:
 ├── Need System
@@ -25,7 +30,11 @@ Key Features:
     └── Movement locking
 ```
 
+The need system simulates basic requirements that drive NPC behavior. Each need decays over time, creating pressure for the NPC to seek out items that can satisfy these needs. The controller updates these values and includes them in observations sent to the backend.
+
 ### Client (npc_client.gd)
+The client acts as a bridge between the controller and backend, managing communication and caching state to reduce backend load. It provides a consistent interface regardless of the backend implementation.
+
 ```
 Features:
 ├── State Caching
@@ -44,7 +53,11 @@ Features:
     └── Error handling
 ```
 
+The client maintains a local cache of NPC state and provides methods for lifecycle management. It handles the conversion between the simulation's event-based model and the backend's request-response pattern.
+
 ### Event System (npc_event.gd)
+Events form the core communication mechanism within the NPC system, providing a standardized way to track state changes and trigger responses. This event-driven approach enables loose coupling between components and provides a clear audit trail of system behavior.
+
 ```
 Event Types:
 ├── Interaction Events
@@ -62,15 +75,19 @@ Event Structure:
 └── payload: Dictionary
 ```
 
+Events are used to track interaction lifecycles and capture environmental observations. The payload structure varies by event type but always includes relevant context for decision making.
+
 ### Action System (npc_response.gd)
+Actions represent the decisions made by the backend, translated into concrete behaviors the controller can execute. Each action type defines a specific operation with its own parameters and validation rules, providing a clear interface between decision making and execution.
+
 ```
 Actions:
 ├── MOVE_TO: Path to location
-├── INTERACT_WITH: Use items
+├── INTERACT_WITH: Interact with an item
 ├── WANDER: Random movement
 ├── WAIT: Stay idle
 ├── CONTINUE: Maintain state
-└── CANCEL_INTERACTION: Stop current
+└── CANCEL_INTERACTION: Stop current interaction
 
 Response Structure:
 ├── status: SUCCESS/ERROR
@@ -78,25 +95,37 @@ Response Structure:
 └── parameters: Dictionary
 ```
 
+The controller executes these actions through the appropriate systems (movement, interaction, etc). Failed actions trigger new observation events to get updated decisions.
+
 ## Communication Flow
-
 ### Decision Cycle
-```
-1. Controller Update (every 3.0s)
-   ├── Update needs (decay)
-   ├── Get visible items
-   ├── Create observation event
-   └── Process unhandled events
+The decision cycle runs continuously, with the controller gathering observations and executing actions. The client manages the flow of information between components and ensures proper error handling.
 
-2. Backend Processing
-   ├── NpcRequest(npc_id, events)
-   └── Returns NpcResponse
-
-3. Action Execution
-   ├── Parse response
-   ├── Execute chosen action
-   └── Handle completion/errors
 ```
+Controller                 Client                    Backend
+    │                        │                         │
+    ├─ Update needs ─────────┤                         │
+    │  (decay over time)     │                         │
+    │                        │                         │
+    ├─ Get visible items ────┤                         │
+    │  (via vision system)   │                         │
+    │                        │                         │
+    ├─ Create observation ───┼─── Forward request ────>│
+    │  (needs + items)       │                         │
+    │                        │                         │
+    │                        │<── Return decision ─────┤
+    │                        │    (action to take)     │
+    │                        │                         │
+    │<── Return action ──────┤                         │
+    │                        │                         │
+    ├─ Execute action ───────┤                         │
+    │  (move/interact)       │                         │
+    │                        │                         │
+    ├─ Handle result ────────┼─── Report result ──────>│
+    │  (success/failure)     │                         │
+    v                        v                         v
+```
+
 
 ### Interaction Flow
 ```
@@ -120,3 +149,23 @@ Cancel Interaction:
 3. If rejected:
    └── Log rejection reason
 ```
+
+Interactions follow a request-response pattern with explicit state transitions. This ensures proper cleanup and maintains consistency between the NPC and item states.
+
+## Backend Interface
+The backend system is designed to be replaceable, requiring only a few key capabilities:
+
+1. NPC Creation
+   - Accept traits and initial memory
+   - Return unique identifier
+
+2. Observation Processing
+   - Handle environment observations
+   - Process interaction events
+   - Return action decisions
+
+3. State Management
+   - Maintain NPC state
+   - Handle cleanup on removal
+
+The mock_backend/ directory contains a reference implementation using a state machine pattern, but this will eventually be replaced with a server-based implementation.

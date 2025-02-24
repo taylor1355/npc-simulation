@@ -4,14 +4,18 @@ const RequestType = preload("res://src/field/interactions/interaction_request.gd
 
 var name: String
 var description: String
+var needs_filled: Array[String]  # Needs this interaction will increase
+var needs_drained: Array[String] # Needs this interaction will decrease
 
 signal start_request(request: InteractionRequest)
 signal cancel_request(request: InteractionRequest)
 
 
-func _init(_name: String, _description: String):
+func _init(_name: String, _description: String, _fills: Array[String] = [], _drains: Array[String] = []):
 	name = _name
 	description = _description
+	needs_filled = _fills
+	needs_drained = _drains
 
 
 func create_start_request(npc: NpcController, arguments: Dictionary = {}) -> InteractionRequest:

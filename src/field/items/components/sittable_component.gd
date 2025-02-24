@@ -25,7 +25,16 @@ func _ready() -> void:
 	}
 	add_child(need_modifier)
 
-	var interaction = Interaction.new(INTERACTION_NAME, "Sit in this chair.")
+	var description = "Sit in this chair. Effects per second: %s" % [
+		need_modifier.get_effects_description()
+	]
+	
+	var interaction = Interaction.new(
+		INTERACTION_NAME,
+		description,
+		need_modifier.get_filled_needs(),
+		need_modifier.get_drained_needs()
+	)
 	interactions[interaction.name] = interaction
 	interaction.start_request.connect(_handle_sit_start_request)
 	interaction.cancel_request.connect(_handle_sit_cancel_request)

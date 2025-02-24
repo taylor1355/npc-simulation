@@ -26,16 +26,35 @@ func _ready() -> void:
 	for need_id in need_deltas:
 		need_modifying.need_rates[need_id] = need_deltas[need_id] / consumption_time
 
-	var interaction = Interaction.new(INTERACTION_NAME, "Consume this item.")
+	var description = "Consume this item (%.1fs left). Effects per second: %s" % [
+		consumption_time,
+		need_modifying.get_effects_description()
+	]
+	
+	var interaction = Interaction.new(
+		INTERACTION_NAME,
+		description,
+		need_modifying.get_filled_needs(),
+		need_modifying.get_drained_needs()
+	)
 	interactions[interaction.name] = interaction
 	interaction.start_request.connect(_handle_consume_start_request)
 	interaction.cancel_request.connect(_handle_consume_cancel_request)
 
 
+func _update_interaction_description() -> void:
+	var time_left = consumption_time * (percent_left / 100.0)
+	interactions[INTERACTION_NAME].description = "Consume this item (%.1fs left). Effects per second: %s" % [
+		time_left,
+		need_modifying.get_effects_description()
+	]
+
 func _process(delta_t: float) -> void:
 	if current_npc:
-		# TODO: give some visual indicator of how much of the consumable is left
+		var old_percent = percent_left
 		percent_left = clampf(percent_left - 100.0 * delta_t / consumption_time, 0, 100.0)
+		if old_percent != percent_left:
+			_update_interaction_description()
 		if percent_left <= 0.0:
 			_finish_interaction()
 

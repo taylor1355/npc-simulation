@@ -12,6 +12,27 @@ var accumulated_deltas: Dictionary = {}
 
 var item_controller: ItemController
 
+func get_effects_description() -> String:
+	var effects = []
+	for need_id in need_rates:
+		var rate = need_rates[need_id]
+		if rate != 0:
+			effects.append("%s: %+.1f/s" % [need_id, rate])
+	return ", ".join(effects)
+
+func _filter_needs(condition: Callable) -> Array[String]:
+	var filtered_needs: Array[String] = []
+	for need in need_rates.keys():
+		if condition.call(need_rates[need]):
+			filtered_needs.append(need)
+	return filtered_needs
+
+func get_filled_needs() -> Array[String]:
+	return _filter_needs(func(rate): return rate > 0)
+
+func get_drained_needs() -> Array[String]:
+	return _filter_needs(func(rate): return rate < 0)
+
 func _ready() -> void:
 	super._ready()
 

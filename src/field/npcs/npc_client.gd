@@ -62,7 +62,7 @@ func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 	var response = _backend.process_observation(request)
 	
 	if response.status == NpcResponse.Status.SUCCESS:
-		var action_name = NpcResponse.Action.keys()[response.action].to_lower()
+		var action_name = Action.Type.keys()[response.action].to_lower()
 		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, action_name, response.parameters))
 		# Get updated working memory after observation
 		get_npc_info(npc_id)
