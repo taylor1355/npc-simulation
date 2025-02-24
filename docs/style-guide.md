@@ -3,11 +3,10 @@
 ## Core Principles
 
 1. Every word must be useful
-   - Remove fluff and redundant explanations
-   - Focus on what developers need to know
-   - Be specific and concrete
+   Documentation should be concise and purposeful, focusing on what developers need to know to effectively use and maintain the system. Remove any fluff or redundant explanations that don't add value.
 
 2. Use diagrams for structure
+   Visual representations help developers quickly understand system organization and relationships. Use ASCII diagrams to show hierarchies and connections.
    ```
    System
    ├── Component A (file.gd) - purpose
@@ -16,33 +15,21 @@
    ```
 
 3. Focus on function level
-   - Describe what components do
-   - Avoid copying implementation code
-   - Show key configurations and parameters
+   Documentation should explain what components do and how they integrate, rather than implementation details. Show the key configurations and parameters that developers need to work with the system.
 
 4. Include critical details
-   - Document exact values (e.g., collision layers)
-   - Specify timing and thresholds
-   - Note requirements and dependencies
-   - Reference source files (e.g., Component (component.gd))
+   Document important constants and configurations that affect system behavior. Reference source files to help developers locate implementations.
 
 ## Document Structure
 
 1. Overview
-   - Brief system purpose
-   - Core components
-   - Key relationships
+   Start with a clear explanation of the system's purpose and how it fits into the larger application. List core components and their roles to give readers immediate context.
 
 2. Components
-   - Clear purpose
-   - Important properties
-   - Critical functions
-   - Integration points
+   For each major component, explain its purpose, responsibilities, and how it interacts with other parts of the system. Focus on the public interface rather than internal details.
 
 3. Setup Requirements
-   - Required nodes
-   - Configuration values
-   - Common patterns
+   Provide clear instructions for adding the system to a scene. Include required nodes, configuration values, and common usage patterns to help developers get started quickly.
 
 ## Common Mistakes
 
@@ -52,7 +39,7 @@
 
 2. Abstraction Level
    - ❌ Too high: "Manages state changes"
-   - ✅ Specific: "Tracks energy (0-100) with 5s decay"
+   - ✅ Specific: "Tracks entity position and handles collisions"
 
 3. Missing Context
    - ❌ Listing properties without purpose
@@ -66,10 +53,11 @@
 
 ### Good Component Description
 ```
-ConsumableComponent
-- Configures need_deltas and consumption_time
-- Creates NeedModifyingComponent with rates = deltas/time
-- Tracks percent_left, destroys at 0%
+CollisionComponent
+- Handles physics interactions between entities
+- Uses collision layers for filtering
+- Emits signals on collision enter/exit
+- Requires CollisionShape2D child node
 ```
 
 ### Good Setup Description
@@ -79,34 +67,33 @@ Required Nodes:
 - Sprite with proper texture/frames
 - ClickArea for interaction detection
 - CollisionArea for movement blocking
+
+Physics Layers:
+1: Player
+2: Environment
+3: Interactables
+4: Triggers
 ```
 
 ### Good Integration Description
 ```
-Physics Layers:
-- Gamepiece (0x1): Entity collision
-- Terrain (0x2): Static obstacles
-- Click (0x4): Interaction detection
+Signal Flow:
+1. Component emits event
+2. Manager processes event
+3. System updates state
+4. UI refreshes display
 ```
 
 ## Additional Guidelines
 
 1. Visual Hierarchy
-   - Use headings to organize content
-   - Keep sections focused and atomic
-   - Order from most to least important
+   Use consistent heading levels and formatting to organize content logically. Keep sections focused and atomic, ordering from most to least important.
 
 2. Technical Accuracy
-   - Verify values and parameters
-   - Test setup instructions
-   - Keep up with code changes
+   Verify all documented behaviors and configurations. Test setup instructions to ensure they work as described. Keep documentation synchronized with code changes.
 
 3. Cross-References
-   - Link related systems
-   - Note dependencies
-   - Show integration examples
+   Link related systems and note dependencies clearly. Show integration examples that demonstrate how components work together in practice.
 
 4. Maintenance
-   - Remove outdated information
-   - Update for new features
-   - Fix unclear sections
+   Regularly review and update documentation as the codebase evolves. Remove outdated information and clarify sections that users find confusing.
