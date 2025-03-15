@@ -26,6 +26,10 @@ Globals="*res://src/common/globals.gd"
 directories/dch_directory={}
 directories/dtl_directory={}
 
+[dotnet]
+
+project/assembly_name="NPC Simulation"
+
 [input]
 
 dialogic_default_action={

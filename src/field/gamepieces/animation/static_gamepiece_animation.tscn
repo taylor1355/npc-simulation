@@ -1,8 +1,8 @@
 [gd_scene load_steps=9 format=3 uid="uid://dahucxg0vpxqx"]
 
-[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="1_dyh1d"]
+[ext_resource type="Script" uid="uid://ipktgtfpmjyx" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="1_dyh1d"]
 [ext_resource type="Texture2D" uid="uid://cud6njjjhox53" path="res://assets/sprites/apple_spritesheet.png" id="2_qquj1"]
-[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="3_i5rw2"]
+[ext_resource type="Script" uid="uid://bok4ni4k2rpge" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="3_i5rw2"]
 
 [sub_resource type="Animation" id="Animation_ivohq"]
 tracks/0/type = "value"
@@ -47,8 +47,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_67ks1"]
 _data = {
-"RESET": SubResource("Animation_ivohq"),
-"idle": SubResource("Animation_xdc4x")
+&"RESET": SubResource("Animation_ivohq"),
+&"idle": SubResource("Animation_xdc4x")
 }
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_rvx5c"]

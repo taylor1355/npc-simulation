@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://b8clk06ls8xok"]
 
-[ext_resource type="Script" path="res://src/ui/panels/needs_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://exarv4n7rn1e" path="res://src/ui/panels/needs_panel.gd" id="1_script"]
 
 [node name="NeedsPanel" type="Panel"]
 layout_mode = 2

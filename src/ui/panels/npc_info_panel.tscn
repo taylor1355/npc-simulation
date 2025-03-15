@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://cpijvqmv451y3"]
 
-[ext_resource type="Script" path="res://src/ui/panels/npc_info_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://drl82r6opesg2" path="res://src/ui/panels/npc_info_panel.gd" id="1_script"]
 
 [node name="NpcInfoPanel" type="Panel"]
 layout_mode = 2

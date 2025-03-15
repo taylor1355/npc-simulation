@@ -1,8 +1,8 @@
 [gd_scene load_steps=17 format=3 uid="uid://caxhff6by5nqu"]
 
-[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="1_l0scw"]
+[ext_resource type="Script" uid="uid://ipktgtfpmjyx" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="1_l0scw"]
 [ext_resource type="Texture2D" uid="uid://v2ng3jhojx3b" path="res://assets/sprites/24x32-characters-big-pack-by-Svetlana-Kushnariova/NPC/Townfolk-Old-M-002-spritesheet.png" id="2_wkvs8"]
-[ext_resource type="Script" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="3_cak7f"]
+[ext_resource type="Script" uid="uid://bok4ni4k2rpge" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="3_cak7f"]
 
 [sub_resource type="Animation" id="Animation_ivohq"]
 tracks/0/type = "value"
@@ -167,16 +167,16 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_67ks1"]
 _data = {
-"RESET": SubResource("Animation_ivohq"),
-"idle": SubResource("Animation_xdc4x"),
-"idle_e": SubResource("Animation_invt8"),
-"idle_n": SubResource("Animation_trip1"),
-"idle_s": SubResource("Animation_e03xs"),
-"idle_w": SubResource("Animation_fg0yt"),
-"run_e": SubResource("Animation_ykwrq"),
-"run_n": SubResource("Animation_aknng"),
-"run_s": SubResource("Animation_708je"),
-"run_w": SubResource("Animation_lywan")
+&"RESET": SubResource("Animation_ivohq"),
+&"idle": SubResource("Animation_xdc4x"),
+&"idle_e": SubResource("Animation_invt8"),
+&"idle_n": SubResource("Animation_trip1"),
+&"idle_s": SubResource("Animation_e03xs"),
+&"idle_w": SubResource("Animation_fg0yt"),
+&"run_e": SubResource("Animation_ykwrq"),
+&"run_n": SubResource("Animation_aknng"),
+&"run_s": SubResource("Animation_708je"),
+&"run_w": SubResource("Animation_lywan")
 }
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1wavg"]

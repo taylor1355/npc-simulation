@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://cb5ok1eejoa31"]
 
-[ext_resource type="Script" path="res://src/ui/panels/components/consumable_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://bill1lfhqgxfb" path="res://src/ui/panels/components/consumable_panel.gd" id="1_script"]
 
 [node name="ConsumablePanel" type="Panel"]
 layout_mode = 2

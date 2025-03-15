@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://b0l1mc28qu216"]
 
-[ext_resource type="Script" path="res://src/ui/working_memory_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://wapcjmgi1jqa" path="res://src/ui/working_memory_panel.gd" id="1_script"]
 
 [node name="WorkingMemoryPanel" type="Panel"]
 layout_mode = 2
