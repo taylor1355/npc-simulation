@@ -55,23 +55,23 @@ func process_observation(request: NpcRequest) -> NpcResponse:
 			NpcEvent.Type.ERROR:
 				agent.add_observation("Error: " + event.payload.message)
 			NpcEvent.Type.INTERACTION_REQUEST_PENDING:
-				agent.add_observation("Requesting interaction: %s" % event.payload.interaction_type)
+				agent.add_observation("Requesting interaction: %s" % event.payload.interaction_name)
 			NpcEvent.Type.INTERACTION_REQUEST_REJECTED:
 				agent.add_observation("Interaction request rejected: %s (%s)" % [
-					event.payload.interaction_type,
+					event.payload.interaction_name,
 					event.payload.reason
 				])
 				# Go back to idle if we were requesting an interaction
 				if agent.current_state is RequestingInteractionState:
 					agent.change_state(IdleState)
 			NpcEvent.Type.INTERACTION_STARTED:
-				agent.add_observation("Interaction started: %s" % event.payload.interaction_type)
+				agent.add_observation("Interaction started: %s" % event.payload.interaction_name)
 			NpcEvent.Type.INTERACTION_CANCELED, NpcEvent.Type.INTERACTION_FINISHED:
 				agent.idle_timer = MOVEMENT_COOLDOWN
 				
 				# Log appropriate message
 				var action = "canceled" if event.type == NpcEvent.Type.INTERACTION_CANCELED else "finished"
-				agent.add_observation("Interaction %s: %s" % [action, event.payload.interaction_type])
+				agent.add_observation("Interaction %s: %s" % [action, event.payload.interaction_name])
 		
 		agent.last_processed_event_timestamp = event.timestamp
 	

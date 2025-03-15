@@ -7,34 +7,19 @@ const NEED_CRITICAL_THRESHOLD = 20.0  # Point at which needs become critical
 const NEED_SEARCH_THRESHOLD = 90.0  # Point at which NPCs start looking for items
 const NEED_SATISFIED_THRESHOLD = 99.0  # Point at which needs are considered satisfied
 
-# Currently supported needs and their interactions
-const SUPPORTED_NEEDS = {
-	"hunger": ["consume"],
-	"energy": ["sit"]
-}
-
 static func get_interaction_for_need(agent_id: String, item: Dictionary, need_id: String) -> String:
-	"""Get the appropriate interaction type for a given need"""
+	"""Get the appropriate interaction for a given need"""
 	print("[%s] Finding interaction for need %s in item %s with interactions %s" % [
 		agent_id, need_id, item.name, item.interactions
 	])
 	
-	if not SUPPORTED_NEEDS.has(need_id):
-		return ""
-		
-	for interaction in SUPPORTED_NEEDS[need_id]:
-		if item.interactions.has(interaction):
-			print("[%s] Found interaction: %s" % [agent_id, interaction])
-			return interaction
+	for interaction_name in item.interactions:
+		var interaction = item.interactions[interaction_name]
+		if need_id in interaction.needs_filled:
+			print("[%s] Found interaction: %s" % [agent_id, interaction_name])
+			return interaction_name
 	
 	print("[%s] No matching interaction found" % agent_id)
-	return ""
-
-static func get_need_for_interaction(interaction: String) -> String:
-	"""Get the need that an interaction satisfies"""
-	for need_id in SUPPORTED_NEEDS:
-		if interaction in SUPPORTED_NEEDS[need_id]:
-			return need_id
 	return ""
 
 static func score_item_interactions(agent_id: String, item: Dictionary, needs: Dictionary) -> Dictionary:
@@ -43,41 +28,44 @@ static func score_item_interactions(agent_id: String, item: Dictionary, needs: D
 	Returns: Dictionary with best_interaction and score, or empty if no interactions
 		which satisfy critical needs are found
 	"""
-	var best_interaction = ""
+	var best_interaction_name = ""
 	var best_score = 0.0
 	
 	if not item.interactions or item.current_interaction:
 		return {}
 	
-	for need_id in SUPPORTED_NEEDS:
-		var need_value = needs[need_id]
-		# Only consider critical needs
-		if need_value > NEED_CRITICAL_THRESHOLD:
-			continue
-			
-		var interaction = get_interaction_for_need(agent_id, item, need_id)
-		if interaction.is_empty():
-			continue
-			
-		# Score is inverse of need value (lower need = higher score)
-		var score = NEED_CRITICAL_THRESHOLD - need_value
+	for interaction_name in item.interactions:
+		var interaction = item.interactions[interaction_name]
 		
-		print("[%s] Evaluating interaction %s for need %s (value=%s, score=%s)" % [
-			agent_id, interaction, need_id, need_value, score
-		])
-		
-		if best_interaction.is_empty() or score > best_score:
-			best_interaction = interaction
-			best_score = score
-			print("[%s] New best interaction: %s with score %s" % [
-				agent_id, best_interaction, best_score
+		# Check each need this interaction fills
+		for need_id in interaction.needs_filled:
+			if not needs.has(need_id):
+				continue
+				
+			var need_value = needs[need_id]
+			# Only consider critical needs
+			if need_value > NEED_CRITICAL_THRESHOLD:
+				continue
+				
+			# Calculate score based on how critical the need is
+			var score = NEED_CRITICAL_THRESHOLD - need_value
+			
+			print("[%s] Evaluating interaction %s for need %s (value=%s, score=%s)" % [
+				agent_id, interaction_name, need_id, need_value, score
 			])
+			
+			if best_interaction_name.is_empty() or score > best_score:
+				best_interaction_name = interaction_name
+				best_score = score
+				print("[%s] New best interaction: %s with score %s" % [
+					agent_id, best_interaction_name, best_score
+				])
 	
-	if best_interaction.is_empty():
+	if best_interaction_name.is_empty():
 		return {}
 		
 	return {
-		"interaction": best_interaction,
+		"interaction_name": best_interaction_name,
 		"score": best_score
 	}
 
@@ -104,7 +92,7 @@ static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionar
 		# 3. Equal score but closer distance
 		if best_item == null or result.score > best_score or (result.score == best_score and distance < best_distance):
 			best_item = item
-			best_interaction = result.interaction
+			best_interaction = result.interaction_name
 			best_score = result.score
 			best_distance = distance
 			print("[%s] New best: item=%s score=%s distance=%s" % [
@@ -126,48 +114,51 @@ static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionar
 	print("[%s] No suitable items found" % agent_id)
 	return Action.wander()
 
-static func should_cancel_interaction(agent_id: String, current_interaction: String, needs: Dictionary) -> bool:
+static func should_cancel_interaction(agent_id: String, current_interaction: Dictionary, needs: Dictionary) -> bool:
 	"""Check if current interaction should be canceled based on needs"""
-	print("[%s] Checking cancel for %s - needs: %s" % [agent_id, current_interaction, needs])
+	print("[%s] Checking cancel for %s - needs: %s" % [agent_id, current_interaction.interaction_name, needs])
 	
-	# Get the need this interaction satisfies
-	var current_need = get_need_for_interaction(current_interaction)
-	if current_need.is_empty():
-		print("[%s] Unknown interaction %s, canceling" % [agent_id, current_interaction])
+	# Get the needs this interaction satisfies
+	var filled_needs = current_interaction.needs_filled
+	if filled_needs.is_empty():
+		print("[%s] Interaction %s doesn't fill any needs, canceling" % [agent_id, current_interaction.interaction_name])
 		return true
 	
+	# Get primary need (first in the list)
+	var primary_need = filled_needs[0]
+	
 	# Cancel if current need is satisfied
-	if needs[current_need] >= NEED_SATISFIED_THRESHOLD:
+	if needs[primary_need] >= NEED_SATISFIED_THRESHOLD:
 		print("[%s] Canceling %s - %s satisfied (%s >= %s)" % [
-			agent_id, current_interaction, current_need, needs[current_need], NEED_SATISFIED_THRESHOLD
+			agent_id, current_interaction.name, primary_need, needs[primary_need], NEED_SATISFIED_THRESHOLD
 		])
 		return true
 		
 	# Continue if current need is near critical
-	if needs[current_need] <= NEED_CRITICAL_THRESHOLD + NEED_HYSTERESIS:
+	if needs[primary_need] <= NEED_CRITICAL_THRESHOLD + NEED_HYSTERESIS:
 		print("[%s] Continuing %s - %s critical (%s <= %s)" % [
-			agent_id, current_interaction, current_need, needs[current_need], 
+			agent_id, current_interaction.interaction_name, primary_need, needs[primary_need], 
 			NEED_CRITICAL_THRESHOLD + NEED_HYSTERESIS
 		])
 		return false
 	
 	# Cancel if different need is critical
-	for need_id in SUPPORTED_NEEDS:
-		if need_id == current_need:
+	for need_id in needs:
+		if need_id == primary_need:
 			continue
 			
 		if needs[need_id] <= NEED_CRITICAL_THRESHOLD:
 			print("[%s] Canceling %s - %s critical (%s)" % [
-				agent_id, current_interaction, need_id, needs[need_id]
+				agent_id, current_interaction.interaction_name, need_id, needs[need_id]
 			])
 			return true
 	
-	print("[%s] No reason to cancel %s" % [agent_id, current_interaction])
+	print("[%s] No reason to cancel %s" % [agent_id, current_interaction.interaction_name])
 	return false
 
 static func needs_require_attention(needs: Dictionary) -> bool:
 	"""Check if any needs require attention"""
-	for need_id in SUPPORTED_NEEDS:
+	for need_id in needs:
 		if needs[need_id] < NEED_SEARCH_THRESHOLD:
 			return true
 	return false

@@ -4,7 +4,7 @@ const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 
 # Backend NPC state
 var npc_id: String
-var npc_client: NpcClient
+var npc_client: MockNpcClient
 var event_log: Array[NpcEvent] = []
 var last_processed_event_index: int = -1
 
@@ -193,11 +193,22 @@ func decide_behavior() -> void:
 	var item_data = []
 	
 	for item in seen_items:
+		# Transform interactions to include metadata
+		var processed_interactions = {}
+		for interaction_name in item.interactions:
+			var interaction = item.interactions[interaction_name]
+			processed_interactions[interaction_name] = {
+				"name": interaction.name,
+				"description": interaction.description,
+				"needs_filled": interaction.needs_filled,
+				"needs_drained": interaction.needs_drained
+			}
+		
 		item_data.append({
 			"name": item.name,
 			"cell": item._gamepiece.cell,
 			"distance_to_npc": _gamepiece.cell.distance_to(item._gamepiece.cell),
-			"interactions": item.interactions,
+			"interactions": processed_interactions,
 			"current_interaction": item.current_interaction
 		})
 	
@@ -253,8 +264,8 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 					target_item = item
 					break
 					
-			if target_item and target_item.interactions.has(parameters.interaction_type):
-				var interaction = target_item.interactions[parameters.interaction_type]
+			if target_item and target_item.interactions.has(parameters.interaction_name):
+				var interaction = target_item.interactions[parameters.interaction_name]
 				var request = interaction.create_start_request(self)
 				request.item_controller = target_item
 				current_request = request

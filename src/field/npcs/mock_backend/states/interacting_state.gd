@@ -8,7 +8,7 @@ func update(_seen_items: Array, needs: Dictionary) -> Action:
 	if not current_interaction:
 		return Action.wait()
 		
-	if NeedManager.should_cancel_interaction(agent.id, current_interaction.interaction_type, needs):
+	if NeedManager.should_cancel_interaction(agent.id, current_interaction, needs):
 		return Action.cancel_interaction()
 		
 	return Action.continue_action()

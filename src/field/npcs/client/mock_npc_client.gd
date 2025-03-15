@@ -1,32 +1,13 @@
-## Client for interacting with NPC services. Provides a domain-specific interface
-## that internally communicates with the backend agent system.
-class_name NpcClient
-extends Node
-
-## Emitted when an error occurs
-signal error(msg: String)
-
-# Cache of NPC state
-class NPCState:
-	var traits: Array[String]
-	var working_memory: String
-	
-	func _init(p_traits: Array[String] = [], p_working_memory: String = "") -> void:
-		traits = p_traits
-		working_memory = p_working_memory
+## Client for simulating interation with the NPC module using a local mock backend.
+class_name MockNpcClient
+extends NpcClientBase
 
 var _backend: MockNpcBackend
-var _npc_cache: Dictionary = {} # npc_id -> NPCState
 
 func _ready() -> void:
 	_backend = MockNpcBackend.new()
 	add_child(_backend)
 
-## Gets cached working memory for an NPC
-func get_working_memory(npc_id: String) -> String:
-	if _npc_cache.has(npc_id):
-		return _npc_cache[npc_id].working_memory
-	return ""
 
 ## Creates a new NPC with the given traits and memories
 func create_npc(

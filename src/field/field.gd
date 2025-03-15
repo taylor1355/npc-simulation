@@ -10,7 +10,7 @@ extends Node2D
 
 func _init() -> void:
 	# Initialize shared NPC client first
-	Globals.npc_client = NpcClient.new()
+	Globals.npc_client = MockNpcClient.new()
 	add_child(Globals.npc_client)
 
 

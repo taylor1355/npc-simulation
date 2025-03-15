@@ -24,7 +24,7 @@ static func create_interaction_request_event(request: InteractionRequest) -> Npc
 	return NpcEvent.new(
 		Type.INTERACTION_REQUEST_PENDING,
 		{
-			"interaction_type": request.interaction_name,
+			"interaction_name": request.interaction_name,
 			"item_name": request.item_controller.name if request.item_controller else "",
 			"request_type": request.request_type
 		}
@@ -32,7 +32,7 @@ static func create_interaction_request_event(request: InteractionRequest) -> Npc
 
 static func create_interaction_rejected_event(request: InteractionRequest, reason: String = "") -> NpcEvent:
 	var payload = {
-		"interaction_type": request.interaction_name,
+		"interaction_name": request.interaction_name,
 		"item_name": request.item_controller.name if request.item_controller else "",
 		"request_type": request.request_type,
 		"reason": reason
@@ -43,7 +43,7 @@ static func create_interaction_update_event(request: InteractionRequest, update_
 	return NpcEvent.new(
 		update_type,
 		{
-			"interaction_type": request.interaction_name,
+			"interaction_name": request.interaction_name,
 			"item_name": request.item_controller.name if request.item_controller else ""
 		}
 	)
@@ -68,9 +68,11 @@ static func create_observation_event(
 		var item_name = current_request.item_controller.name if current_request.item_controller else ""
 		var item_cell = current_request.item_controller._gamepiece.cell if current_request.item_controller else Vector2i()
 		payload.current_interaction = {
-			"interaction_type": current_interaction.name,
+			"interaction_name": current_interaction.name,
 			"item_name": item_name,
-			"item_cell": item_cell
+			"item_cell": item_cell,
+			"needs_filled": current_interaction.needs_filled,
+			"needs_drained": current_interaction.needs_drained
 		}
 	
 	return NpcEvent.new(Type.OBSERVATION, payload)
