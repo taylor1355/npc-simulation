@@ -1,31 +1,39 @@
-## HTTP client for interacting with MCP-based NPC services.
-## Provides the same interface as MockNpcClient but communicates with an external server.
-class_name HttpNpcClient
+## MCP client for interacting with MCP-based NPC services.
+## Provides the same interface as MockNpcClient but communicates with an external MCP server.
+class_name McpNpcClient
 extends NpcClientBase
 
 # Configuration
-var server_url: String = "http://localhost:8000"
+var server_host: String = "localhost"  # Default MCP host
+var server_port: int = 3000  # Default MCP port from script
+var server_url: String = "http://%s:%d" % [server_host, server_port]
+var sse_endpoint: String = "/sse"  # SSE endpoint for the MCP server
+var api_url: String = server_url + sse_endpoint  # Full URL for API calls
 var request_timeout: int = 10  # seconds
 var max_retries: int = 3
-var debug_mode: bool = false
+var debug_mode: bool = true  # Enable debugging during integration
 
 # HTTP request handling
 var _http_request: HTTPRequest
 var _pending_requests: Dictionary = {}  # request_id -> {callback, context}
 var _retry_counts: Dictionary = {}  # request_id -> retry_count
 
-
 # Event formatter
 var _event_formatter: EventFormatter
+
+signal connection_error(error_message)
 
 func _ready() -> void:
 	_http_request = HTTPRequest.new()
 	add_child(_http_request)
 	_http_request.request_completed.connect(_on_request_completed)
+	_http_request.timeout = request_timeout
 	
 	_event_formatter = EventFormatter.new()
 	add_child(_event_formatter)
-
+	
+	# Start with a simple ping to check server availability
+	_check_server_availability()
 
 ## Creates a new NPC with the given traits and memories
 func create_npc(
@@ -119,20 +127,40 @@ func get_npc_info(npc_id: String) -> void:
 		))
 		return
 	
-	# Cache miss - get from server
-	# For MCP resources, we'll use a direct HTTP GET request
-	var url = "%s/resource/agent:/%s/info" % [server_url, npc_id]
-	var headers = []
+	# Cache miss - get from server using JSON-RPC format for FastMCP
+	# Format using resource path syntax for MCP
+	var resource_path = "agent://" + npc_id + "/info"
 	
-	var request_id = _generate_request_id()
-	_pending_requests[request_id] = {
-		"callback": _on_get_npc_info_response,
-		"context": npc_id
-	}
-	
-	_http_request.request(url, headers, HTTPClient.METHOD_GET)
+	_send_request(
+		"get_resource",
+		{ "resource_path": resource_path },
+		_on_get_npc_info_response,
+		npc_id
+	)
 
 # HTTP request handling
+
+func _check_server_availability() -> void:
+	var ping_request = HTTPRequest.new()
+	add_child(ping_request)
+	ping_request.request_completed.connect(func(result, code, headers, body):
+		if result == HTTPRequest.RESULT_SUCCESS:
+			if debug_mode:
+				print("Successfully connected to MCP server at %s" % api_url)
+		else:
+			if debug_mode:
+				print("Warning: Could not connect to MCP server at %s" % api_url)
+				print("Make sure the run_mcp_server.sh script is running")
+			connection_error.emit("Failed to connect to MCP server")
+		ping_request.queue_free()
+	)
+	
+	# Send a simple check request to the SSE endpoint
+	var err = ping_request.request(api_url)
+	if err != OK:
+		if debug_mode:
+			print("Error sending ping request: ", err)
+		connection_error.emit("Failed to connect to MCP server")
 
 func _send_request(endpoint: String, data: Dictionary, callback: Callable, context = null) -> void:
 	var request_id = _generate_request_id()
@@ -143,14 +171,25 @@ func _send_request(endpoint: String, data: Dictionary, callback: Callable, conte
 		"data": data
 	}
 	
-	var url = "%s/%s" % [server_url, endpoint]
-	var json = JSON.stringify(data)
+	var mcp_data = {
+		"jsonrpc": "2.0",
+		"id": request_id,
+		"method": endpoint,
+		"params": data
+	}
+	
+	var url = api_url
+	var json = JSON.stringify(mcp_data)
 	var headers = ["Content-Type: application/json"]
 	
 	if debug_mode:
 		print("Sending request to %s: %s" % [url, json])
 	
-	_http_request.request(url, headers, HTTPClient.METHOD_POST, json)
+	var err = _http_request.request(url, headers, HTTPClient.METHOD_POST, json)
+	if err != OK:
+		if debug_mode:
+			print("Error sending request: ", err) 
+		_handle_request_error(request_id, "Failed to send request")
 
 func _on_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
 	var request_id = _pending_requests.keys()[0] if not _pending_requests.is_empty() else ""
@@ -171,14 +210,25 @@ func _on_request_completed(result: int, response_code: int, headers: PackedStrin
 	
 	# Parse response
 	var response_text = body.get_string_from_utf8()
-	var response = JSON.parse_string(response_text)
+	var json_response = JSON.parse_string(response_text)
 	
-	if response == null:
+	if json_response == null:
 		_handle_request_error(request_id, "Failed to parse JSON response: %s" % response_text)
 		return
 	
 	if debug_mode:
 		print("Received response: %s" % response_text)
+	
+	# MCP responses include a result field
+	var response = {}
+	if json_response.has("result"):
+		response = json_response.result
+	elif json_response.has("error"):
+		_handle_request_error(request_id, "API error: %s" % json_response.error.message)
+		return
+	else:
+		_handle_request_error(request_id, "Invalid MCP response format")
+		return
 	
 	# Execute callback
 	request_data.callback.call(response, request_data.context)
@@ -188,32 +238,27 @@ func _on_request_completed(result: int, response_code: int, headers: PackedStrin
 	_retry_counts.erase(request_id)
 
 func _handle_request_error(request_id: String, error_msg: String) -> void:
-	if not _retry_counts.has(request_id):
-		_retry_counts[request_id] = 0
+	var retry_count = _retry_counts.get(request_id, 0) + 1
+	_retry_counts[request_id] = retry_count
 	
-	_retry_counts[request_id] += 1
-	
-	if _retry_counts[request_id] <= max_retries:
-		# Retry the request
+	if retry_count <= max_retries:
 		var request_data = _pending_requests[request_id]
 		var endpoint = request_data.endpoint
 		var data = request_data.data
 		var callback = request_data.callback
 		var context = request_data.context
 		
-		# Remove from pending requests
 		_pending_requests.erase(request_id)
 		
-		# Wait a moment before retrying
-		await get_tree().create_timer(0.5 * _retry_counts[request_id]).timeout
-		
 		if debug_mode:
-			print("Retrying request to %s (attempt %d/%d)" % [endpoint, _retry_counts[request_id], max_retries])
+			print("Retrying request to %s (attempt %d/%d)" % [endpoint, retry_count, max_retries])
 		
-		# Send the request again
+		# Wait before retrying
+		var timer = get_tree().create_timer(1.0 * retry_count)
+		await timer.timeout
+		
 		_send_request(endpoint, data, callback, context)
 	else:
-		# Max retries reached, emit error
 		error.emit(error_msg)
 		_pending_requests.erase(request_id)
 		_retry_counts.erase(request_id)

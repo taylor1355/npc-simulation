@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bhmwn50e7a3um"]
+
+[ext_resource type="Script" path="res://src/field/npcs/client/mcp_npc_client_test.gd" id="1_5jj1d"]
+
+[node name="MCPClientTest" type="Node"]
+script = ExtResource("1_5jj1d")
