@@ -2,8 +2,8 @@
 
 [ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_uyrdv"]
 [ext_resource type="PackedScene" uid="uid://caxhff6by5nqu" path="res://src/field/gamepieces/animation/walking_gamepiece_animation.tscn" id="2_nt6uj"]
-[ext_resource type="Script" path="res://src/field/npcs/npc_controller.gd" id="3_xmgw3"]
-[ext_resource type="Script" path="res://src/field/npcs/vision_manager.gd" id="4_uu4ol"]
+[ext_resource type="Script" uid="uid://blk0h8ca6sctn" path="res://src/field/npcs/npc_controller.gd" id="3_xmgw3"]
+[ext_resource type="Script" uid="uid://1ii7x6rdlp4r" path="res://src/field/npcs/vision_manager.gd" id="4_uu4ol"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8aea6"]
 radius = 132.004

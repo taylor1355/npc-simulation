@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="ItemConfig" load_steps=7 format=3 uid="uid://d1lf7qvflauql"]
 
-[ext_resource type="Script" path="res://src/field/items/item_config.gd" id="1_config"]
-[ext_resource type="Script" path="res://src/field/items/components/component_config.gd" id="1_d87r8"]
+[ext_resource type="Script" uid="uid://cjoljjddivhi7" path="res://src/field/items/item_config.gd" id="1_config"]
+[ext_resource type="Script" uid="uid://dbeudcu4ny7or" path="res://src/field/items/components/component_config.gd" id="1_d87r8"]
 [ext_resource type="Texture2D" uid="uid://1vt61f4e166j" path="res://assets/sprites/Interior full/furniture/chairs.png" id="2_texture"]
-[ext_resource type="Script" path="res://src/field/items/components/sittable_component.gd" id="3_script"]
+[ext_resource type="Script" uid="uid://wngq8e1fm48p" path="res://src/field/items/components/sittable_component.gd" id="3_script"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_chair"]
 size = Vector2(13, 19)
