@@ -1,0 +1,10 @@
+<Project Sdk="Godot.NET.Sdk/4.4.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>NPCSimulation</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="0.2.0-preview.1" />
+  </ItemGroup>
+</Project>

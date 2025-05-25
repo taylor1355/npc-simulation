@@ -32,28 +32,55 @@ Key Features:
 
 The need system simulates basic requirements that drive NPC behavior. Each need decays over time, creating pressure for the NPC to seek out items that can satisfy these needs. The controller updates these values and includes them in observations sent to the backend.
 
-### Client (npc_client.gd)
-The client acts as a bridge between the controller and backend, managing communication and caching state to reduce backend load. It provides a consistent interface regardless of the backend implementation.
+### Client Layer
+The Client Layer serves as the interface between the NPC simulation logic (in GDScript) and the external MCP (Model Context Protocol) backend. It's responsible for abstracting the complexities of network communication, data serialization, and connection management. This layer is composed of GDScript and C# components.
 
+**GDScript Facade (mcp_npc_client.gd)**
+This script is the primary entry point for other GDScript parts of the game (like `NpcController`) to interact with the NPC's decision-making backend. It delegates calls to the C# layer.
 ```
-Features:
-├── State Caching
-│   ├── NPCState class
-│   │   ├── traits: Array[String]
-│   │   └── working_memory: String
-│   └── Cache invalidation on updates
-├── Backend Interface
-│   ├── create_npc(id, traits, memory)
-│   ├── process_observation(id, events)
-│   ├── cleanup_npc(id)
-│   └── get_npc_info(id)
-└── Event Dispatching
-    ├── NPC creation/removal
-    ├── Action decisions
-    └── Error handling
+Responsibilities (mcp_npc_client.gd):
+├── API Abstraction:
+│   └── Provides high-level methods (create_npc, process_observation, etc.)
+├── Request Orchestration:
+│   ├── Manages request IDs and callbacks for asynchronous operations
+│   └── Handles basic retry logic
+├── Data Formatting:
+│   └── Utilizes EventFormatter for preparing observation data
+└── Signal Aggregation:
+    └── Connects to and forwards signals from the C# layer (McpSdkClient.cs)
 ```
 
-The client maintains a local cache of NPC state and provides methods for lifecycle management. It handles the conversion between the simulation's event-based model and the backend's request-response pattern.
+**C# MCP Bridge (McpSdkClient.cs)**
+This is a Godot Node written in C#. It acts as a direct bridge between GDScript calls from `mcp_npc_client.gd` and the C# MCP service proxy.
+```
+Responsibilities (McpSdkClient.cs - Godot Node):
+├── GDScript Interoperability:
+│   ├── Exposes methods callable from mcp_npc_client.gd
+│   └── Emits Godot signals (RequestCompleted, RequestError) back to GDScript
+├── Data Marshalling:
+│   └── Converts Godot data types (e.g., Godot.Collections.Dictionary) to C# native types and vice-versa
+├── Service Proxy Usage:
+│   └── Instantiates and delegates calls to McpServiceProxy.cs
+└── Error Handling:
+    └── Catches exceptions from the service proxy and translates them into error signals
+```
+
+**C# Service Proxy (McpServiceProxy.cs)**
+This pure C# class encapsulates all direct interactions with the ModelContextProtocol SDK. It manages the connection lifecycle and makes the actual calls to the MCP server.
+```
+Responsibilities (McpServiceProxy.cs - Pure C#):
+├── Connection Lifecycle Management:
+│   ├── Establishes and maintains the connection to the MCP server (via IMcpClient)
+│   ├── Handles asynchronous connection logic, including retries and timeouts internally
+│   └── Provides a robust way to get a connected IMcpClient instance
+├── MCP SDK Abstraction:
+│   └── Wraps IMcpClient methods (CallToolAsync, ListToolsAsync)
+├── Thread Safety:
+│   └── Manages concurrent access to connection resources if necessary (e.g., using locks)
+└── Status Events (Optional):
+    └── Can emit C# events for connection status changes (Connected, Disconnected)
+```
+This layered client architecture separates concerns: `mcp_npc_client.gd` for Godot integration, `McpSdkClient.cs` for C#/GDScript bridging and data marshalling, and `McpServiceProxy.cs` for robust MCP SDK interaction and connection management.
 
 ### Event System (npc_event.gd)
 Events form the core communication mechanism within the NPC system, providing a standardized way to track state changes and trigger responses. This event-driven approach enables loose coupling between components and provides a clear audit trail of system behavior.
@@ -110,15 +137,15 @@ Controller                 Client                    Backend
     ├─ Get visible items ────┤                         │
     │  (via vision system)   │                         │
     │                        │                         │
-    ├─ Create observation ───┼─── Forward request ────>│
-    │  (needs + items)       │                         │
-    │                        │                         │
-    │                        │<── Return decision ─────┤
-    │                        │    (action to take)     │
-    │                        │                         │
-    │<── Return action ──────┤                         │
-    │                        │                         │
-    ├─ Execute action ───────┤                         │
+    ├─ Create observation ───┼─── mcp_npc_client.gd ───┼─── McpSdkClient.cs ───┼─── McpServiceProxy.cs ─── Forward request ────>│
+    │  (needs + items)       │    (Format & Call C#)   │  (Marshal & Call Proxy) │   (Connect & Call SDK)   │                         │
+    │                        │                         │                         │                          │                         │
+    │                        │                         │                         │                          │<── Return decision ─────┤
+    │                        │                         │                         │                          │    (action to take)     │
+    │                        │                         │                         │                          │                         │
+    │<── Return action ──────┼<── Emit Godot Signal <───┼<── Return C# Task <─────┼<── Return C# Task <───────┤
+    │                        │                         │                         │                          │                         │
+    ├─ Execute action ───────┤                         │                         │                          │                         │
     │  (move/interact)       │                         │
     │                        │                         │
     ├─ Handle result ────────┼─── Report result ──────>│

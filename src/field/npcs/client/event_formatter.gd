@@ -77,5 +77,9 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 	return observation_text
 
 ## Returns a list of available actions for the NPC backend
+## Format: Array of action objects with {name, description, parameters} fields
+## - name: string identifier for the action
+## - description: human-readable description
+## - parameters: dictionary of parameter descriptions
 func get_available_actions() -> Array:
 	return Action.get_all_action_descriptions()

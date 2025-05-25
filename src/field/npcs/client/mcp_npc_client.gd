@@ -1,39 +1,46 @@
 ## MCP client for interacting with MCP-based NPC services.
-## Provides the same interface as MockNpcClient but communicates with an external MCP server.
+## Uses C# SDK for communication with the MCP server.
 class_name McpNpcClient
 extends NpcClientBase
 
 # Configuration
-var server_host: String = "localhost"  # Default MCP host
-var server_port: int = 3000  # Default MCP port from script
-var server_url: String = "http://%s:%d" % [server_host, server_port]
-var sse_endpoint: String = "/sse"  # SSE endpoint for the MCP server
-var api_url: String = server_url + sse_endpoint  # Full URL for API calls
-var request_timeout: int = 10  # seconds
-var max_retries: int = 3
-var debug_mode: bool = true  # Enable debugging during integration
-
-# HTTP request handling
-var _http_request: HTTPRequest
-var _pending_requests: Dictionary = {}  # request_id -> {callback, context}
-var _retry_counts: Dictionary = {}  # request_id -> retry_count
+@export var server_host: String = "localhost"
+@export var server_port: int = 3000
+@export var debug_mode: bool = true
+@export var max_retries: int = 3
 
 # Event formatter
 var _event_formatter: EventFormatter
 
+# C# SDK client
+var _sdk_client: Node
+var _pending_requests: Dictionary = {}  # request_id -> {callback, context}
+var _retry_counts: Dictionary = {}  # request_id -> retry_count
+
 signal connection_error(error_message)
 
 func _ready() -> void:
-	_http_request = HTTPRequest.new()
-	add_child(_http_request)
-	_http_request.request_completed.connect(_on_request_completed)
-	_http_request.timeout = request_timeout
-	
+	# Create event formatter
 	_event_formatter = EventFormatter.new()
 	add_child(_event_formatter)
 	
-	# Start with a simple ping to check server availability
-	_check_server_availability()
+	# Initialize the C# SDK client
+	_init_sdk_client()
+
+func _init_sdk_client() -> void:
+	# Create an instance of our C# client
+	var sdk_client_scene = load("res://src/field/npcs/client/McpSdkClient.tscn")
+	_sdk_client = sdk_client_scene.instantiate()
+	add_child(_sdk_client)
+	
+	# Configure the client
+	_sdk_client.ServerHost = server_host
+	_sdk_client.ServerPort = server_port
+	_sdk_client.DebugMode = debug_mode
+	
+	# Connect signals using PascalCase signal names from C# delegates
+	_sdk_client.connect("RequestCompleted", _on_sdk_request_completed)
+	_sdk_client.connect("RequestError", _on_sdk_request_error)
 
 ## Creates a new NPC with the given traits and memories
 func create_npc(
@@ -51,14 +58,12 @@ func create_npc(
 		"initial_long_term_memories": long_term_memories
 	}
 	
-	var data = {
-		"agent_id": npc_id,
-		"config": config
-	}
-	
 	_send_request(
 		"create_agent",
-		data,
+		{
+			"agent_id": npc_id,
+			"config": config
+		},
 		_on_create_npc_response,
 		npc_id
 	)
@@ -88,15 +93,13 @@ func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 	# Define available actions
 	var available_actions = _event_formatter.get_available_actions()
 	
-	var data = {
-		"agent_id": npc_id,
-		"observation": observation,
-		"available_actions": available_actions
-	}
-	
 	_send_request(
 		"process_observation",
-		data,
+		{
+			"agent_id": npc_id,
+			"observation": observation,
+			"available_actions": available_actions
+		},
 		_on_process_observation_response,
 		npc_id
 	)
@@ -105,19 +108,16 @@ func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 func cleanup_npc(npc_id: String) -> void:
 	_npc_cache.erase(npc_id)
 	
-	var data = {
-		"agent_id": npc_id
-	}
-	
 	_send_request(
 		"cleanup_agent",
-		data,
+		{ "agent_id": npc_id },
 		_on_cleanup_npc_response,
 		npc_id
 	)
 
 ## Gets information about an NPC
-func get_npc_info(npc_id: String) -> void:
+## @param callback: Optional callback to execute after info is received
+func get_npc_info(npc_id: String, callback: Callable = Callable()) -> void:
 	# Check cache first
 	if _npc_cache.has(npc_id) and not _npc_cache[npc_id].working_memory.is_empty():
 		FieldEvents.dispatch(NpcClientEvents.create_info_received(
@@ -125,42 +125,27 @@ func get_npc_info(npc_id: String) -> void:
 			_npc_cache[npc_id].traits,
 			_npc_cache[npc_id].working_memory
 		))
+		# Execute callback if provided
+		if callback.is_valid():
+			callback.call()
 		return
 	
-	# Cache miss - get from server using JSON-RPC format for FastMCP
-	# Format using resource path syntax for MCP
+	# Cache miss - get from server using resource path syntax for MCP
 	var resource_path = "agent://" + npc_id + "/info"
+	
+	# Store callback in context if provided
+	var context = { "npc_id": npc_id }
+	if callback.is_valid():
+		context["callback"] = callback
 	
 	_send_request(
 		"get_resource",
 		{ "resource_path": resource_path },
 		_on_get_npc_info_response,
-		npc_id
+		context
 	)
 
-# HTTP request handling
-
-func _check_server_availability() -> void:
-	var ping_request = HTTPRequest.new()
-	add_child(ping_request)
-	ping_request.request_completed.connect(func(result, code, headers, body):
-		if result == HTTPRequest.RESULT_SUCCESS:
-			if debug_mode:
-				print("Successfully connected to MCP server at %s" % api_url)
-		else:
-			if debug_mode:
-				print("Warning: Could not connect to MCP server at %s" % api_url)
-				print("Make sure the run_mcp_server.sh script is running")
-			connection_error.emit("Failed to connect to MCP server")
-		ping_request.queue_free()
-	)
-	
-	# Send a simple check request to the SSE endpoint
-	var err = ping_request.request(api_url)
-	if err != OK:
-		if debug_mode:
-			print("Error sending ping request: ", err)
-		connection_error.emit("Failed to connect to MCP server")
+# SDK client request handling
 
 func _send_request(endpoint: String, data: Dictionary, callback: Callable, context = null) -> void:
 	var request_id = _generate_request_id()
@@ -171,73 +156,58 @@ func _send_request(endpoint: String, data: Dictionary, callback: Callable, conte
 		"data": data
 	}
 	
-	var mcp_data = {
-		"jsonrpc": "2.0",
-		"id": request_id,
-		"method": endpoint,
-		"params": data
-	}
-	
-	var url = api_url
-	var json = JSON.stringify(mcp_data)
-	var headers = ["Content-Type: application/json"]
-	
 	if debug_mode:
-		print("Sending request to %s: %s" % [url, json])
+		print("Sending request to %s: %s" % [endpoint, JSON.stringify(data)])
 	
-	var err = _http_request.request(url, headers, HTTPClient.METHOD_POST, json)
-	if err != OK:
-		if debug_mode:
-			print("Error sending request: ", err) 
-		_handle_request_error(request_id, "Failed to send request")
+	# Call the appropriate method on the C# client (using PascalCase for C# methods)
+	match endpoint:
+		"create_agent":
+			_sdk_client.CreateAgent(request_id, data.agent_id, data.config)
+		"process_observation":
+			_sdk_client.ProcessObservation(request_id, data.agent_id, data.observation, data.available_actions)
+		"cleanup_agent":
+			_sdk_client.CleanupAgent(request_id, data.agent_id)
+		"get_resource":
+			_sdk_client.GetResource(request_id, data.resource_path)
+		_:
+			_handle_request_error(request_id, "Unknown endpoint: " + endpoint)
 
-func _on_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
-	var request_id = _pending_requests.keys()[0] if not _pending_requests.is_empty() else ""
-	if request_id.is_empty():
-		error.emit("Received response with no pending request")
+func _on_sdk_request_completed(request_id: String, response: Dictionary) -> void:
+	if not _pending_requests.has(request_id):
+		error.emit("Received response for unknown request: " + request_id)
 		return
 	
 	var request_data = _pending_requests[request_id]
 	
-	# Handle HTTP errors
-	if result != HTTPRequest.RESULT_SUCCESS:
-		_handle_request_error(request_id, "HTTP request failed with code: %d" % result)
-		return
-	
-	if response_code != 200:
-		_handle_request_error(request_id, "HTTP request returned error code: %d" % response_code)
-		return
-	
-	# Parse response
-	var response_text = body.get_string_from_utf8()
-	var json_response = JSON.parse_string(response_text)
-	
-	if json_response == null:
-		_handle_request_error(request_id, "Failed to parse JSON response: %s" % response_text)
-		return
-	
 	if debug_mode:
-		print("Received response: %s" % response_text)
+		print("Received response for %s: %s" % [request_id, JSON.stringify(response)])
 	
-	# MCP responses include a result field
-	var response = {}
-	if json_response.has("result"):
-		response = json_response.result
-	elif json_response.has("error"):
-		_handle_request_error(request_id, "API error: %s" % json_response.error.message)
-		return
+	# Handle errors if status field indicates an error
+	if response.has("status") and response["status"] == "error":
+		var error_msg = response.get("message", "Unknown error")
+		error.emit(error_msg)
+		
+		# Still call the callback so it can handle the error if needed
+		request_data.callback.call(response, request_data.context)
 	else:
-		_handle_request_error(request_id, "Invalid MCP response format")
-		return
-	
-	# Execute callback
-	request_data.callback.call(response, request_data.context)
+		# Execute callback with success response
+		request_data.callback.call(response, request_data.context)
+		
+		if debug_mode:
+			print("Callback executed for %s" % request_id)
 	
 	# Clean up
 	_pending_requests.erase(request_id)
 	_retry_counts.erase(request_id)
 
+func _on_sdk_request_error(request_id: String, error_msg: String) -> void:
+	_handle_request_error(request_id, error_msg)
+
 func _handle_request_error(request_id: String, error_msg: String) -> void:
+	if not _pending_requests.has(request_id):
+		error.emit("Error for unknown request: " + request_id + " - " + error_msg)
+		return
+		
 	var retry_count = _retry_counts.get(request_id, 0) + 1
 	_retry_counts[request_id] = retry_count
 	
@@ -269,49 +239,88 @@ func _generate_request_id() -> String:
 # Response handlers
 
 func _on_create_npc_response(response: Dictionary, npc_id: String) -> void:
+	if debug_mode:
+		print("Processing create_npc response: %s for NPC %s" % [JSON.stringify(response), npc_id])
+	
 	if response.get("status") == "created":
-		# Clear cache to force backend fetch
 		_npc_cache.erase(npc_id)
-		# Dispatch created event
-		FieldEvents.dispatch(NpcClientEvents.create_created(npc_id))
+		var event = NpcClientEvents.create_created(npc_id)
+		if debug_mode:
+			print("Dispatching CreatedEvent for NPC %s" % npc_id)
+		FieldEvents.dispatch(event)
 	else:
-		error.emit(response.get("message", "Unknown error creating NPC"))
+		var error_msg = "Failed to create NPC %s. Status: %s. Message: %s" % [
+			npc_id, 
+			response.get("status", "unknown"), 
+			response.get("message", "No additional message.")
+		]
+		printerr(error_msg)
+		error.emit(error_msg)
 
 func _on_process_observation_response(response: Dictionary, npc_id: String) -> void:
+	if debug_mode:
+		print("Processing observation response: %s for NPC %s" % [JSON.stringify(response), npc_id])
+		
 	if response.has("action"):
 		var action_name = response.action
 		var parameters = response.get("parameters", {})
 		
-		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(
-			npc_id, 
-			action_name, 
-			parameters
-		))
+		if debug_mode:
+			print("Observation response has action. Refreshing NPC info for %s before dispatching ActionChosenEvent." % npc_id)
 		
-		# Get updated working memory after observation
-		get_npc_info(npc_id)
+		# Create callback to dispatch action after info is refreshed
+		var dispatch_action_callback = func():
+			if debug_mode:
+				print("NPC info refreshed for %s. Now dispatching ActionChosenEvent." % npc_id)
+			var action_chosen_event = NpcClientEvents.create_action_chosen(npc_id, action_name, parameters)
+			if debug_mode:
+				print("Dispatching ActionChosenEvent for NPC %s: action=%s" % [npc_id, action_name])
+			FieldEvents.dispatch(action_chosen_event)
+		
+		# Get NPC info with callback
+		get_npc_info(npc_id, dispatch_action_callback)
 	else:
-		error.emit(response.get("message", "Unknown error processing observation"))
+		print("Warning: Missing 'action' field in observation response")
 
 func _on_cleanup_npc_response(response: Dictionary, npc_id: String) -> void:
+	if debug_mode:
+		print("Processing cleanup response: %s for NPC %s" % [JSON.stringify(response), npc_id])
+		
 	if response.get("status") == "removed":
-		FieldEvents.dispatch(NpcClientEvents.create_removed(npc_id))
+		var event = NpcClientEvents.create_removed(npc_id)
+		if debug_mode:
+			print("Dispatching RemovedEvent for NPC %s" % npc_id)
+		FieldEvents.dispatch(event)
 	else:
-		error.emit(response.get("message", "Unknown error cleaning up NPC"))
+		print("Warning: Unexpected cleanup_npc response status: %s" % response.get("status", "none"))
 
-func _on_get_npc_info_response(response: Dictionary, npc_id: String) -> void:
+func _on_get_npc_info_response(response: Dictionary, context: Dictionary) -> void:
+	var npc_id = context.get("npc_id", "")
+	
+	if debug_mode:
+		print("Processing info response: %s for NPC %s" % [JSON.stringify(response), npc_id])
+		
 	if response.get("status") == "active":
-		# Update cache
 		if not _npc_cache.has(npc_id):
 			_npc_cache[npc_id] = NPCState.new()
 		
-		_npc_cache[npc_id].traits = response.get("traits", [])
+		var incoming_traits_val = response.get("traits", [])
+		# The 'traits' property of NPCState is already Array[String].
+		# We use 'assign' to populate it from the generic array.
+		_npc_cache[npc_id].traits.assign(incoming_traits_val if incoming_traits_val else [])
 		_npc_cache[npc_id].working_memory = response.get("working_memory", "")
 		
-		FieldEvents.dispatch(NpcClientEvents.create_info_received(
+		var event = NpcClientEvents.create_info_received(
 			npc_id,
 			_npc_cache[npc_id].traits,
 			_npc_cache[npc_id].working_memory
-		))
+		)
+		if debug_mode:
+			print("Dispatching InfoReceivedEvent for NPC %s" % npc_id)
+		FieldEvents.dispatch(event)
+		
+		# Execute callback if provided in context
+		if context.has("callback") and context["callback"] is Callable and context["callback"].is_valid():
+			context["callback"].call()
 	else:
-		error.emit(response.get("message", "Unknown error getting NPC info"))
+		print("Warning: Unexpected get_npc_info response status: %s" % response.get("status", "none"))

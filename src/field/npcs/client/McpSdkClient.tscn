@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dyp6iqtf1xhvk"]
+
+[ext_resource type="Script" path="res://src/field/npcs/client/McpSdkClient.cs" id="1_v8c6f"]
+
+[node name="McpSdkClient" type="Node"]
+script = ExtResource("1_v8c6f")

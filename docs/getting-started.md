@@ -69,11 +69,12 @@ NPC System:
 │   │   ├── Value tracking
 │   │   └── Automatic decay
 │   └── Vision-based decisions
-├── Client (npc_client.gd)
-│   ├── Backend communication
-│   ├── State caching
-│   └── Event dispatching
-└── Backend (mock_npc_backend.gd)
+├── Client Layer
+│   ├── GDScript API (npc_client.gd)
+│   │   ├── State caching & Event dispatching
+│   └── C# MCP Bridge (McpSdkClient.cs & McpServiceProxy.cs)
+│       └── Handles direct MCP server communication
+└── Backend (MCP Server)
     └── Decision making
 
 Features:
