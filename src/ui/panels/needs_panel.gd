@@ -34,12 +34,13 @@ func _update_display() -> void:
 	if not npc_controller:
 		return
 		
-	for need_id in npc_controller.NEED_IDS:
+	for need_id in Needs.NEED_NAMES:
 		var need_bar = preload("res://src/ui/need_bar.tscn").instantiate()
 		need_bar.need_id = need_id
 		need_bar.label_text = need_id.capitalize()
 		needs_container.add_child(need_bar)
 
 		# Set initial value directly
-		if npc_controller.needs.has(need_id):
-			need_bar.get_node("ProgressBar").value = npc_controller.needs[need_id]
+		var needs_dict = npc_controller.needs_manager.get_all_needs()
+		if needs_dict.has(need_id):
+			need_bar.get_node("ProgressBar").value = needs_dict[need_id]

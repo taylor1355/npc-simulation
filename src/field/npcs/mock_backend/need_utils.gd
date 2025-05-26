@@ -1,6 +1,6 @@
 extends RefCounted
 
-class_name NeedManager
+class_name NeedUtils
 
 const NEED_HYSTERESIS = 10.0  # Hysteresis for need changes
 const NEED_CRITICAL_THRESHOLD = 20.0  # Point at which needs become critical
@@ -116,12 +116,12 @@ static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionar
 
 static func should_cancel_interaction(agent_id: String, current_interaction: Dictionary, needs: Dictionary) -> bool:
 	"""Check if current interaction should be canceled based on needs"""
-	print("[%s] Checking cancel for %s - needs: %s" % [agent_id, current_interaction.interaction_name, needs])
+	print("[%s] Checking cancel for %s - needs: %s" % [agent_id, current_interaction.name, needs])
 	
 	# Get the needs this interaction satisfies
 	var filled_needs = current_interaction.needs_filled
 	if filled_needs.is_empty():
-		print("[%s] Interaction %s doesn't fill any needs, canceling" % [agent_id, current_interaction.interaction_name])
+		print("[%s] Interaction %s doesn't fill any needs, canceling" % [agent_id, current_interaction.name])
 		return true
 	
 	# Get primary need (first in the list)
@@ -137,7 +137,7 @@ static func should_cancel_interaction(agent_id: String, current_interaction: Dic
 	# Continue if current need is near critical
 	if needs[primary_need] <= NEED_CRITICAL_THRESHOLD + NEED_HYSTERESIS:
 		print("[%s] Continuing %s - %s critical (%s <= %s)" % [
-			agent_id, current_interaction.interaction_name, primary_need, needs[primary_need], 
+			agent_id, current_interaction.name, primary_need, needs[primary_need], 
 			NEED_CRITICAL_THRESHOLD + NEED_HYSTERESIS
 		])
 		return false
@@ -149,11 +149,11 @@ static func should_cancel_interaction(agent_id: String, current_interaction: Dic
 			
 		if needs[need_id] <= NEED_CRITICAL_THRESHOLD:
 			print("[%s] Canceling %s - %s critical (%s)" % [
-				agent_id, current_interaction.interaction_name, need_id, needs[need_id]
+				agent_id, current_interaction.name, need_id, needs[need_id]
 			])
 			return true
 	
-	print("[%s] No reason to cancel %s" % [agent_id, current_interaction.interaction_name])
+	print("[%s] No reason to cancel %s" % [agent_id, current_interaction.name])
 	return false
 
 static func needs_require_attention(needs: Dictionary) -> bool:

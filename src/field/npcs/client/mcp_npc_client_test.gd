@@ -94,7 +94,7 @@ func test_process_observation():
 	log_message("Testing process_observation...")
 	
 	# Create a test observation
-	var events: Array[NpcEvent] = []  # Explicitly typed array
+	var events: Array[NpcEvent] = []
 	events.append(NpcEvent.create_observation_event(
 		Vector2i(5, 5),
 		[{
@@ -105,12 +105,15 @@ func test_process_observation():
 				"consume": {
 					"name": "consume",
 					"description": "Eat the apple",
-					"needs_filled": ["hunger"],
+					"needs_filled": [Needs.get_display_name(Needs.Need.HUNGER)],
 					"needs_drained": []
 				}
 			}
 		}],
-		{"hunger": 50.0, "energy": 80.0},
+		{
+			Needs.get_display_name(Needs.Need.HUNGER): 50.0,
+			Needs.get_display_name(Needs.Need.ENERGY): 80.0
+		},
 		false
 	))
 	

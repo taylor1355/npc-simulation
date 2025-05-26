@@ -20,9 +20,9 @@ func _ready() -> void:
 	
 	# Create the need modifying component for energy regeneration
 	need_modifier = NeedModifyingComponent.new()
-	need_modifier.need_rates = {
-		"energy": 10.0  # Regenerate energy at 10 units per second
-	}
+	need_modifier.need_rates = {}
+	# TODO: Make energy regeneration rate configurable
+	need_modifier.need_rates[Needs.Need.ENERGY] = 10.0
 	add_child(need_modifier)
 
 	var description = "Sit in this chair. Effects per second: %s" % [

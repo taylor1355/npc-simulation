@@ -2,35 +2,36 @@ class_name NeedModifyingComponent extends ItemComponent
 
 const INTERACTION_NAME: = "modify_needs"
 
-# Dictionary mapping need_id to rate of fulfillment (units per second)
-@export var need_rates: Dictionary = {}
+# Mapping from needs to rates of change (units per second)
+@export var need_rates: Dictionary[Needs.Need, float] = {}
 # Threshold at which accumulated changes are applied
 @export var update_threshold: float = 1.0
 
 var current_npc: NpcController = null
-var accumulated_deltas: Dictionary = {}
+var accumulated_deltas: Dictionary[Needs.Need, float] = {}
 
 var item_controller: ItemController
 
 func get_effects_description() -> String:
 	var effects = []
-	for need_id in need_rates:
-		var rate = need_rates[need_id]
+	for need in need_rates:
+		var rate = need_rates[need]
 		if rate != 0:
-			effects.append("%s: %+.1f/s" % [need_id, rate])
+			var need_name = Needs.get_display_name(need)
+			effects.append("%s: %+.1f/s" % [need_name, rate])
 	return ", ".join(effects)
 
-func _filter_needs(condition: Callable) -> Array[String]:
-	var filtered_needs: Array[String] = []
+func _filter_needs(condition: Callable) -> Array[Needs.Need]:
+	var filtered_needs: Array[Needs.Need] = []
 	for need in need_rates.keys():
 		if condition.call(need_rates[need]):
 			filtered_needs.append(need)
 	return filtered_needs
 
-func get_filled_needs() -> Array[String]:
+func get_filled_needs() -> Array[Needs.Need]:
 	return _filter_needs(func(rate): return rate > 0)
 
-func get_drained_needs() -> Array[String]:
+func get_drained_needs() -> Array[Needs.Need]:
 	return _filter_needs(func(rate): return rate < 0)
 
 func _ready() -> void:
@@ -46,14 +47,14 @@ func _ready() -> void:
 
 func _process(delta_t: float) -> void:
 	if current_npc:
-		for need_id in need_rates.keys():
-			if not accumulated_deltas.has(need_id):
-				accumulated_deltas[need_id] = 0.0
-			accumulated_deltas[need_id] += need_rates[need_id] * delta_t
+		for need in need_rates.keys():
+			if not accumulated_deltas.has(need):
+				accumulated_deltas[need] = 0.0
+			accumulated_deltas[need] += need_rates[need] * delta_t
 			
-			if abs(accumulated_deltas[need_id]) >= update_threshold:
-				current_npc.update_need(need_id, accumulated_deltas[need_id])
-				accumulated_deltas[need_id] = 0.0
+			if abs(accumulated_deltas[need]) >= update_threshold:
+				current_npc.needs_manager.update_need(need, accumulated_deltas[need])
+				accumulated_deltas[need] = 0.0
 
 
 func _finish_interaction() -> void:

@@ -21,17 +21,7 @@ var decision_timer: float = 0.0 # Time since last decision
 const DECISION_INTERVAL: float = 3.0  # Make decisions every DECISION_INTERVAL seconds
 
 # needs
-# TODO: eventually refactor each need to be an object so each need can have an update fn, its own decay rate, etc.
-# The list of valid need IDs should be stored as an enum in a globally accessible file
-var decay_rate: float = 0.0 # for testing, just set to a random value between 1 and 5
-var MAX_NEED_VALUE: = 100.0
-var NEED_IDS = [
-	"hunger",
-	"hygiene",
-	"fun",
-	"energy",
-]
-var needs = {}
+var needs_manager: NeedsManager
 
 # pathfinding
 var destination : Vector2i
@@ -77,17 +67,17 @@ func _ready() -> void:
 						)
 		)
 		
-		# Forward local signals
-		need_changed.connect(
-			func(need_id: String, new_value: float): 
-				var event = NpcEvents.create_need_changed(_gamepiece, need_id, new_value)
+		# Initialize needs manager
+		var decay_rate = randf_range(1, 2)
+		needs_manager = NeedsManager.new(decay_rate)
+		
+		# Forward needs manager signals to field events
+		needs_manager.need_changed.connect(
+			func(need_name: String, new_value: float): 
+				need_changed.emit(need_name, new_value)
+				var event = NpcEvents.create_need_changed(_gamepiece, need_name, new_value)
 				FieldEvents.dispatch(event)
 		)
-
-		for need_id in NEED_IDS:
-			needs[need_id] = MAX_NEED_VALUE
-			need_changed.emit(need_id, needs[need_id])
-		decay_rate = randf_range(1, 2)
 		
 		# Wait a frame for the gameboard and physics engine to be fully setup. Once the physics 
 		# engine is ready, its state may be queried to setup the pathfinder.
@@ -119,8 +109,7 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	# Update needs
-	for need_id in NEED_IDS:
-		update_need(need_id, -decay_rate * delta)
+	needs_manager.process_decay(delta)
 	
 	# Regularly make decisions
 	decision_timer += delta
@@ -131,24 +120,6 @@ func set_is_paused(paused: bool) -> void:
 	super.set_is_paused(paused)
 	# set_process(!paused)
 	# set_physics_process(!paused)
-	
-
-#############
-### Needs ###
-#############
-func update_need(need_id: String, delta: float) -> void:
-	if not needs.has(need_id):
-		print("need_id not found: ", need_id)
-		return
-		
-	needs[need_id] += delta
-	needs[need_id] = clamp(needs[need_id], 0, MAX_NEED_VALUE)
-	need_changed.emit(need_id, needs[need_id])
-
-
-func reemit_needs() -> void:
-	for need_id in NEED_IDS:
-		need_changed.emit(need_id, needs[need_id])
 
 
 ###################
@@ -193,22 +164,16 @@ func decide_behavior() -> void:
 	var item_data = []
 	
 	for item in seen_items:
-		# Transform interactions to include metadata
-		var processed_interactions = {}
+		var interaction_dicts = {}
 		for interaction_name in item.interactions:
 			var interaction = item.interactions[interaction_name]
-			processed_interactions[interaction_name] = {
-				"name": interaction.name,
-				"description": interaction.description,
-				"needs_filled": interaction.needs_filled,
-				"needs_drained": interaction.needs_drained
-			}
+			interaction_dicts[interaction_name] = interaction.to_dict()
 		
 		item_data.append({
 			"name": item.name,
 			"cell": item._gamepiece.cell,
 			"distance_to_npc": _gamepiece.cell.distance_to(item._gamepiece.cell),
-			"interactions": processed_interactions,
+			"interactions": interaction_dicts,
 			"current_interaction": item.current_interaction
 		})
 	
@@ -216,7 +181,7 @@ func decide_behavior() -> void:
 	event_log.append(NpcEvent.create_observation_event(
 		_gamepiece.cell,
 		item_data,
-		needs,
+		needs_manager.get_all_needs(),
 		movement_locked,
 		current_interaction,
 		current_request
@@ -369,5 +334,5 @@ func _on_gamepiece_arrived() -> void:
 
 func _on_focused_gamepiece_changed(new_focused_gamepiece: Gamepiece) -> void:
 	if new_focused_gamepiece == _gamepiece:
-		reemit_needs()
+		needs_manager.reemit_all_needs()
 		npc_client.get_npc_info(npc_id)

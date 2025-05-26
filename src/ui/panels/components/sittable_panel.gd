@@ -27,12 +27,12 @@ func _update_display() -> void:
 		
 	var text = "[b]Sittable Info[/b]\n"
 	
+	text += "Occupied by: "
 	if sittable.current_npc:
-		text += "Currently occupied by: " + sittable.current_npc._gamepiece.name
-	else:
-		text += "Currently unoccupied"
+		text += sittable.current_npc._gamepiece.name
  
-	text += "\nEnergy regeneration rate: +%.1f per second" % sittable.need_modifier.need_rates["energy"]
+	var energy_rate = sittable.need_modifier.need_rates[Needs.get_display_name(Needs.Need.ENERGY)]
+	text += "\nEnergy regeneration rate: +%.1f per second" % energy_rate
 		
 	if sittable._is_exiting:
 		text += "\n[Currently handling exit]"

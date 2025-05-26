@@ -12,7 +12,7 @@ func update(seen_items: Array, needs: Dictionary) -> Action:
 			continue
 			
 		if item.distance_to_npc <= 1 and item.interactions and not item.current_interaction:
-			var result = NeedManager.score_item_interactions(agent.id, item, needs)
+			var result = NeedUtils.score_item_interactions(agent.id, item, needs)
 			if not result.is_empty():
 				return Action.interact_with(item.name, result.interaction_name)
 	

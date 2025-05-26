@@ -61,11 +61,11 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 					
 					if not interaction.needs_filled.is_empty():
 						for need in interaction.needs_filled:
-							effects.append("%s (+)" % need.capitalize())
+							effects.append("%s (+)" % Needs.get_display_name(need).capitalize())
 					
 					if not interaction.needs_drained.is_empty():
 						for need in interaction.needs_drained:
-							effects.append("%s (-)" % need.capitalize())
+							effects.append("%s (-)" % Needs.get_display_name(need).capitalize())
 					
 					if not effects.is_empty():
 						observation_text += " Effects: %s" % ", ".join(effects)

@@ -2,8 +2,8 @@ class_name ConsumableComponent extends ItemComponent
 
 const INTERACTION_NAME: = "consume"
 
-# Dictionary mapping need_id to need delta from consuming the item
-@export var need_deltas: Dictionary = {}
+# Dictionary mapping need enum to total need delta from consuming the item
+@export var need_deltas: Dictionary[Needs.Need, float] = {}
 # Time it takes to fully consume the item
 @export var consumption_time: float = 1.0
 
@@ -23,8 +23,8 @@ func _ready() -> void:
 	add_child(need_modifying)
 	
 	# Configure rates based on total deltas and consumption time
-	for need_id in need_deltas:
-		need_modifying.need_rates[need_id] = need_deltas[need_id] / consumption_time
+	for need in need_deltas:
+		need_modifying.need_rates[need] = need_deltas[need] / consumption_time
 
 	var description = "Consume this item (%.1fs left). Effects per second: %s" % [
 		consumption_time,

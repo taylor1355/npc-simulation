@@ -67,13 +67,9 @@ static func create_observation_event(
 	if current_interaction:
 		var item_name = current_request.item_controller.name if current_request.item_controller else ""
 		var item_cell = current_request.item_controller._gamepiece.cell if current_request.item_controller else Vector2i()
-		payload.current_interaction = {
-			"interaction_name": current_interaction.name,
-			"item_name": item_name,
-			"item_cell": item_cell,
-			"needs_filled": current_interaction.needs_filled,
-			"needs_drained": current_interaction.needs_drained
-		}
+		payload.current_interaction = current_interaction.to_dict()
+		payload.current_interaction["item_name"] = item_name
+		payload.current_interaction["item_cell"] = item_cell
 	
 	return NpcEvent.new(Type.OBSERVATION, payload)
 
