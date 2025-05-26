@@ -52,13 +52,9 @@ func _remove_gamepiece(gamepiece: Gamepiece):
 		return
 
 
-# TODO: use node.owner instead of traversing up the tree
 func get_gamepiece(area: Area2D) -> Gamepiece:
-	var parent = area
-	while parent:
-		if parent is Gamepiece:
-			return parent as Gamepiece
-		parent = parent.get_parent()
+	if area.owner is Gamepiece:
+		return area.owner as Gamepiece
 	return null
 
 
