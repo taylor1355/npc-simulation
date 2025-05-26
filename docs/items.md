@@ -46,17 +46,24 @@ ConsumableComponent Example:
     └── Finish: Cleanup and destruction
 ```
 
-### Component Configuration
-```
-ItemComponentConfig:
-├── component_script: Script reference
-├── properties: Dictionary
-└── _validate(): Verification method
+### Component Configuration (`src/field/items/components/component_config.gd`)
+`ItemComponentConfig` is a `Resource` type designed to define the setup for a specific component that can be attached to an item. These configurations are typically created and saved as `.tres` files using the Godot editor.
 
-Validation:
-├── Script inheritance check
-├── Property type verification
-└── Required field validation
+**Key Properties (exported for editor):**
+
+*   **`component_script: Script`**: A reference to the script file of the component that this configuration will instantiate (e.g., `ConsumableComponent.gd`). This is a required field.
+*   **`properties: Dictionary`**: A dictionary where keys are property names (strings) and values are the desired initial values for those properties on the component instance.
+    *   Example: `{"consumption_time": 5.0, "need_deltas": {"hunger": 50.0}}` would set the `consumption_time` to `5.0` and `need_deltas` to the given dictionary on the component instance, assuming the component script has these properties.
+
+**Practical Usage:**
+
+1.  **Create Config Resource:** In the Godot FileSystem dock, right-click, choose "New Resource...", search for `ItemComponentConfig`, and save it (e.g., as `my_consumable_config.tres`).
+2.  **Assign Script:** Select the created `.tres` file. In the Inspector, drag your component script (e.g., `ConsumableComponent.gd` from the FileSystem dock) to the `Component Script` property.
+3.  **Define Properties:** In the `Properties` dictionary field in the Inspector, add entries for each property you want to initialize on the component. The keys must match the property names in your component script.
+4.  **Use in `ItemConfig`:** This `ItemComponentConfig` resource is then typically added to an array of component configurations within an `ItemConfig` resource (which defines the complete item). When the item is instantiated, its `ItemController` will iterate through these configurations to add and set up each component. It can also be used when adding components dynamically via `item_controller.add_component(config: ItemComponentConfig)`.
+
+**Validation:**
+The `ItemComponentConfig` resource has a basic internal validation (`_validate()` method) that primarily ensures the `component_script` property has been assigned. Further validation (e.g., whether the properties in the `properties` dictionary correctly match and are assignable to the actual properties of the `component_script`) is implicitly handled by Godot when it attempts to set these properties on the instantiated component. Errors might occur at runtime if property names or types mismatch.
 ```
 
 ## Integration

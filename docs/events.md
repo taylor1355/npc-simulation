@@ -21,7 +21,9 @@
 
 ## Event Collections
 
-### Gamepiece Events (gamepiece_events.gd)
+These collections are typically defined within the `src/common/events/field_events/` directory.
+
+### Gamepiece Events (field_events/gamepiece_events.gd)
 ```
 Types:
 ├── CELL_CHANGED
@@ -38,7 +40,7 @@ Types:
     └── gamepiece: Selected entity
 ```
 
-### NPC Events (npc_events.gd)
+### NPC Events (field_events/npc_events.gd)
 ```
 Types:
 ├── NEED_CHANGED
@@ -49,7 +51,7 @@ Types:
     └── npc_id: Unique identifier
 ```
 
-### NPC Client Events (npc_client_events.gd)
+### NPC Client Events (field_events/npc_client_events.gd)
 ```
 Types:
 ├── INFO_RECEIVED
@@ -61,7 +63,7 @@ Types:
     └── parameters: Action data
 ```
 
-### System Events (system_events.gd)
+### System Events (field_events/system_events.gd)
 ```
 Types:
 ├── TERRAIN_CHANGED

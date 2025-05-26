@@ -54,10 +54,15 @@
 ### Good Component Description
 ```
 CollisionComponent
-- Handles physics interactions between entities
-- Uses collision layers for filtering
-- Emits signals on collision enter/exit
-- Requires CollisionShape2D child node
+- Handles physics interactions between entities.
+- Uses collision layers for filtering.
+- Emits `body_entered(body: Node)` signal when a physics body enters its area.
+  - Purpose: Allows other systems to react to new overlaps.
+  - Consumed by: Typically by the parent entity's script to detect specific interactions.
+- Emits `body_exited(body: Node)` signal when a physics body exits its area.
+  - Purpose: Allows tracking of when overlaps end.
+  - Consumed by: Similar to `body_entered`, often by the parent entity to manage state related to overlaps.
+- Requires CollisionShape2D child node for defining its detection area.
 ```
 
 ### Good Setup Description
@@ -90,7 +95,7 @@ Signal Flow:
    Use consistent heading levels and formatting to organize content logically. Keep sections focused and atomic, ordering from most to least important.
 
 2. Technical Accuracy
-   Verify all documented behaviors and configurations. Test setup instructions to ensure they work as described. Keep documentation synchronized with code changes.
+   Verify all documented behaviors and configurations. **Always consult the relevant source code files when documenting technical details (e.g., class members, function signatures, configuration options) to ensure the documentation accurately reflects the implementation.** Test setup instructions to ensure they work as described. Keep documentation synchronized with code changes.
 
 3. Cross-References
    Link related systems and note dependencies clearly. Show integration examples that demonstrate how components work together in practice.

@@ -49,10 +49,28 @@
 - Batch operations for efficiency
 
 ### Physics Integration
-- Layer 0x1: Gamepieces (entities)
-- Layer 0x2: Terrain (obstacles)
-- Layer 0x4: Click detection
-- Collision shapes match cell size (32x32)
+The gameboard system interacts with Godot's physics engine to understand the layout and occupancy of the grid. This information is crucial for systems like pathfinding. For a detailed explanation of the project's collision layers, see [Collision System (collision.md)](collision.md).
+
+Key ways physics layers are typically used in conjunction with the gameboard:
+
+- **Layer 0x1 (Gamepiece):**
+    - Used to detect the presence of dynamic entities (gamepieces) on grid cells.
+    - When a gamepiece that blocks movement occupies a cell, that cell's corresponding point in the `Pathfinder` is often marked as disabled (blocked) using `Pathfinder.block_cell()`. This prevents other gamepieces from pathing through it.
+    - Gamepieces also use this layer for their own collision avoidance or detection.
+
+- **Layer 0x2 (Terrain):**
+    - Used during map initialization to determine which cells are inherently unpathable due to static obstacles (e.g., walls, rocks).
+    - The `Pathfinder` is typically initialized with a list of cells deemed pathable after considering this terrain layer. Cells containing terrain obstacles are excluded from the pathfinding graph.
+
+- **Layer 0x4 (Click):**
+    - Primarily used by the UI/input system to detect clicks on gamepieces or specific interactive elements on the gameboard.
+
+**Collision Shapes and Grid Alignment:**
+To ensure consistency between the logical grid representation and the physics world:
+- Collision shapes for terrain obstacles are generally designed to align with the grid cells (e.g., a 32x32 shape for a 32x32 cell).
+- Gamepieces that occupy cells for pathfinding purposes also typically have collision shapes that represent their footprint on the grid.
+
+This integration allows the logical gameboard state (e.g., which cells are blocked in `Pathfinder`) to be updated based on real-time physics interactions.
 
 ### Camera System (field_camera.gd)
 ```

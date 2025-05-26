@@ -52,13 +52,17 @@ Animation/
 ```
 
 ### Movement System (Path2D)
+The node structure for decoupled movement is typically:
 ```
-Decoupler/
-└── Path2D/
-    └── PathFollow2D/
-        ├── CameraAnchor (camera following)
-        └── GFXAnchor (visual following)
+Gamepiece (Your Scene Root)
+└── Decoupler (Node2D, for offset if needed)
+    └── Path2D (Defines the movement curve)
+        └── PathFollow2D (Follows the Path2D)
+            ├── CameraAnchor (Node2D, for camera to target)
+            └── GFXAnchor (Node2D, parent for visual elements like Sprite2D)
+                └── Sprite2D (Visual representation)
 ```
+This structure allows the `PathFollow2D` to move along the `Path2D`, carrying the `GFXAnchor` (and thus the visuals) smoothly, while the gamepiece's logical cell position can update instantly.
 
 ## Key Features
 

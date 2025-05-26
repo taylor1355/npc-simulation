@@ -13,24 +13,62 @@ Core components:
 ## Core Components
 
 ### Controller (npc_controller.gd)
-The controller manages the NPC's physical presence in the world and its basic needs. It runs on a fixed update cycle to gather observations about the environment, manage need states, and execute actions received from the backend. This component forms the core of the simulation layer, handling all real-time aspects of NPC behavior.
+The controller manages the NPC's physical presence in the world, its interaction with the environment, and the execution of actions. It runs on a fixed update cycle to gather observations and make decisions (delegated to the client/backend). This component forms the core of the simulation layer for an individual NPC.
 
 ```
 Key Features:
-├── Need System
-│   ├── Needs: [hunger, hygiene, fun, energy]
-│   ├── Values: 0-100 range
-│   └── Decay: 1-2 units/second (randomized)
 ├── Decision Making
-│   ├── Interval: 3.0 seconds
-│   └── Event-driven updates
-└── Movement Control
-    ├── Pathfinding integration
-    ├── Destination management
-    └── Movement locking
+│   ├── Interval: 3.0 seconds (configurable)
+│   └── Event-driven updates via client layer
+├── Movement Control
+│   ├── Pathfinding integration
+│   ├── Destination management
+│   └── Movement locking
+├── Interaction Management
+│   └── Handles `InteractionRequest` lifecycle with items
+└── Vision System Integration
+    └── Uses `VisionManager` to perceive items
 ```
+The `NpcController` is also responsible for instantiating and managing the `NeedsManager` for the NPC.
 
-The need system simulates basic requirements that drive NPC behavior. Each need decays over time, creating pressure for the NPC to seek out items that can satisfy these needs. The controller updates these values and includes them in observations sent to the backend.
+### Need System
+The NPC Need System simulates basic physiological and psychological requirements that drive NPC behavior. Each NPC has a set of needs that decay over time, creating internal pressure for the NPC to perform actions or interact with items that can satisfy these needs.
+
+**Core Concepts & Components:**
+
+*   **Need Types:** The fundamental needs are defined as an enumeration. Currently, these include:
+    *   `HUNGER`
+    *   `HYGIENE`
+    *   `FUN`
+    *   `ENERGY`
+    These are defined in **`Needs` (`src/field/npcs/needs.gd`)**, which also provides utility functions for mapping enum values to display names (e.g., "hunger") and for serializing/deserializing need data.
+
+*   **Need Values & Decay:**
+    *   Each need has a numerical value, typically ranging from `0` to `100`.
+    *   Needs decay over time at a configurable rate (e.g., 1-2 units per second, often randomized per NPC for variation).
+
+*   **`NeedsManager` (`src/field/npcs/needs_manager.gd`):**
+    *   Each `NpcController` owns an instance of `NeedsManager`.
+    *   This manager is responsible for:
+        *   Storing the current values of all needs for that specific NPC.
+        *   Processing the decay of needs each frame.
+        *   Providing methods (`update_need()`) to modify need values (e.g., when an item is consumed).
+        *   Emitting a local `need_changed(need_name: String, new_value: float)` signal when a need's value is updated.
+
+*   **`NpcController` Integration:**
+    *   The `NpcController` initializes its `NeedsManager`
+    *   It includes the current need values (obtained from `NeedsManager`) in the observation data sent to the decision-making backend.
+    *   It connects to the `NeedsManager.need_changed` signal and, upon receiving it, dispatches a global **`NpcEvents.NeedChangedEvent`** via `FieldEvents`.
+
+*   **`NEED_CHANGED` Event:**
+    *   This global event (`NpcEvents.NeedChangedEvent`, detailed in `docs/events.md`) is crucial for other systems to react to an NPC's changing needs.
+    *   It carries:
+        *   `npc`: The `Gamepiece` instance of the NPC whose need changed.
+        *   `need_id`: The string name of the need (e.g., "hunger").
+        *   `new_value`: The updated floating-point value of the need.
+    *   The UI system, for example, listens for this event to update need display bars.
+
+This system ensures that an NPC's internal state (its needs) influences its behavior through the decision-making process and that changes to this state are communicated effectively throughout the game.
 
 ### Client Layer
 The Client Layer serves as the interface between the NPC simulation logic (in GDScript) and the external MCP (Model Context Protocol) backend. It's responsible for abstracting the complexities of network communication, data serialization, and connection management. This layer is composed of GDScript and C# components.
@@ -81,6 +119,19 @@ Responsibilities (McpServiceProxy.cs - Pure C#):
     └── Can emit C# events for connection status changes (Connected, Disconnected)
 ```
 This layered client architecture separates concerns: `mcp_npc_client.gd` for Godot integration, `McpSdkClient.cs` for C#/GDScript bridging and data marshalling, and `McpServiceProxy.cs` for robust MCP SDK interaction and connection management.
+
+The interaction flow can be visualized as:
+```
+[NpcController (GDScript)]
+       │
+       └─ calls methods on ──> [mcp_npc_client.gd (GDScript Facade)]
+                                     │
+                                     └─ delegates to ──> [McpSdkClient.cs (C# Godot Node)]
+                                                              │
+                                                              └─ uses ──> [McpServiceProxy.cs (Pure C#)]
+                                                                               │
+                                                                               └─ interacts with ──> [MCP SDK/Server]
+```
 
 ### Event System (npc_event.gd)
 Events form the core communication mechanism within the NPC system, providing a standardized way to track state changes and trigger responses. This event-driven approach enables loose coupling between components and provides a clear audit trail of system behavior.
