@@ -3,6 +3,33 @@
 class_name McpNpcClient
 extends NpcClientBase
 
+# Pending request data structure
+class PendingRequest:
+	var callback: Callable
+	var context: Variant  # String, Dictionary, or null
+	var endpoint: String
+	var data: Dictionary[String, Variant]
+	
+	func _init(p_callback: Callable, p_context: Variant, p_endpoint: String, p_data: Dictionary[String, Variant]):
+		callback = p_callback
+		context = p_context
+		endpoint = p_endpoint
+		data = p_data
+	
+	## Execute the request using the provided SDK client
+	func execute(request_id: String, sdk_client: Node) -> void:
+		match endpoint:
+			"create_agent":
+				sdk_client.CreateAgent(request_id, data.agent_id, data.config)
+			"process_observation":
+				sdk_client.ProcessObservation(request_id, data.agent_id, data.observation, data.available_actions)
+			"cleanup_agent":
+				sdk_client.CleanupAgent(request_id, data.agent_id)
+			"get_resource":
+				sdk_client.GetResource(request_id, data.resource_path)
+			_:
+				push_error("Unknown endpoint: " + endpoint)
+
 # Configuration
 @export var server_host: String = "localhost"
 @export var server_port: int = 3000
@@ -14,8 +41,8 @@ var _event_formatter: EventFormatter
 
 # C# SDK client
 var _sdk_client: Node
-var _pending_requests: Dictionary = {}  # request_id -> {callback, context}
-var _retry_counts: Dictionary = {}  # request_id -> retry_count
+var _pending_requests: Dictionary[String, PendingRequest] = {}  # request_id -> PendingRequest
+var _retry_counts: Dictionary[String, int] = {}  # request_id -> retry_count
 
 signal connection_error(error_message)
 
@@ -147,30 +174,16 @@ func get_npc_info(npc_id: String, callback: Callable = Callable()) -> void:
 
 # SDK client request handling
 
-func _send_request(endpoint: String, data: Dictionary, callback: Callable, context = null) -> void:
+func _send_request(endpoint: String, data: Dictionary[String, Variant], callback: Callable, context = null) -> void:
 	var request_id = _generate_request_id()
-	_pending_requests[request_id] = {
-		"callback": callback,
-		"context": context,
-		"endpoint": endpoint,
-		"data": data
-	}
+	var pending_request = PendingRequest.new(callback, context, endpoint, data)
+	_pending_requests[request_id] = pending_request
 	
 	if debug_mode:
 		print("Sending request to %s: %s" % [endpoint, JSON.stringify(data)])
 	
-	# Call the appropriate method on the C# client (using PascalCase for C# methods)
-	match endpoint:
-		"create_agent":
-			_sdk_client.CreateAgent(request_id, data.agent_id, data.config)
-		"process_observation":
-			_sdk_client.ProcessObservation(request_id, data.agent_id, data.observation, data.available_actions)
-		"cleanup_agent":
-			_sdk_client.CleanupAgent(request_id, data.agent_id)
-		"get_resource":
-			_sdk_client.GetResource(request_id, data.resource_path)
-		_:
-			_handle_request_error(request_id, "Unknown endpoint: " + endpoint)
+	# Execute the request through the PendingRequest
+	pending_request.execute(request_id, _sdk_client)
 
 func _on_sdk_request_completed(request_id: String, response: Dictionary) -> void:
 	if not _pending_requests.has(request_id):

@@ -8,7 +8,7 @@ const MOVEMENT_COOLDOWN = 0.75  # How long to idle after movement
 # Backend state
 var agents: Dictionary = {}  # Dictionary of agent_id -> Agent
 
-func create_agent(agent_id: String, config: Dictionary) -> Dictionary:
+func create_agent(agent_id: String, config: Dictionary[String, Variant]) -> Dictionary[String, String]:
 	"""Create a new agent
 	
 	Args:

@@ -12,42 +12,38 @@ enum Type {
 }
 
 var type: Type
-var parameters: Dictionary
+var parameters: Dictionary[String, Variant]
 
-func _init(action_type: Type, action_parameters: Dictionary = {}):
+func _init(action_type: Type, action_parameters: Dictionary[String, Variant] = {}):
 	type = action_type
 	parameters = action_parameters
 
-static func create(action_type: Type, parameters: Dictionary = {}) -> Action:
-	"""Create an action with the given type and parameters"""
-	return Action.new(action_type, parameters)
-
 static func move_to(x: int, y: int) -> Action:
 	"""Create a move to action"""
-	return create(Type.MOVE_TO, {"x": x, "y": y})
+	return Action.new(Type.MOVE_TO, {"x": x, "y": y})
 
 static func interact_with(item_name: String, interaction_name: String) -> Action:
 	"""Create an interact with action"""
-	return create(Type.INTERACT_WITH, {
+	return Action.new(Type.INTERACT_WITH, {
 		"item_name": item_name,
 		"interaction_name": interaction_name
 	})
 
 static func wander() -> Action:
 	"""Create a wander action"""
-	return create(Type.WANDER)
+	return Action.new(Type.WANDER)
 
 static func wait() -> Action:
 	"""Create a wait action"""
-	return create(Type.WAIT)
+	return Action.new(Type.WAIT)
 
 static func continue_action() -> Action:
 	"""Create a continue action"""
-	return create(Type.CONTINUE)
+	return Action.new(Type.CONTINUE)
 
 static func cancel_interaction() -> Action:
 	"""Create a cancel interaction action"""
-	return create(Type.CANCEL_INTERACTION)
+	return Action.new(Type.CANCEL_INTERACTION)
 
 func format_action() -> String:
 	"""Get a human-readable representation of the action"""
@@ -72,7 +68,7 @@ static func get_name_from_type(action_type: Type) -> String:
 	return Type.keys()[action_type].to_lower()
 
 ## Get a dictionary describing the action for the MCP server
-static func get_action_description(action_type: Type) -> Dictionary:
+static func get_action_description(action_type: Type) -> Dictionary[String, Variant]:
 	match action_type:
 		Type.MOVE_TO:
 			return {
@@ -124,7 +120,7 @@ static func get_action_description(action_type: Type) -> Dictionary:
 			}
 
 ## Get a list of all available action descriptions
-static func get_all_action_descriptions() -> Array:
+static func get_all_action_descriptions() -> Array[Dictionary]:
 	var descriptions = []
 	for i in range(Type.size()):
 		descriptions.append(get_action_description(i))

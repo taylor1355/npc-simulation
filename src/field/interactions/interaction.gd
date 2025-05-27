@@ -19,19 +19,19 @@ func _init(_name: String, _description: String, _fills: Array[Needs.Need] = [], 
 
 
 
-func create_start_request(npc: NpcController, arguments: Dictionary = {}) -> InteractionRequest:
+func create_start_request(npc: NpcController, arguments: Dictionary[String, Variant] = {}) -> InteractionRequest:
 	return _create_request(RequestType.START, npc, arguments)
 
 
-func create_cancel_request(npc: NpcController, arguments: Dictionary = {}) -> InteractionRequest:
+func create_cancel_request(npc: NpcController, arguments: Dictionary[String, Variant] = {}) -> InteractionRequest:
 	return _create_request(RequestType.CANCEL, npc, arguments)
 
 
-func _create_request(request_type: RequestType, npc: NpcController, arguments: Dictionary) -> InteractionRequest:
+func _create_request(request_type: RequestType, npc: NpcController, arguments: Dictionary[String, Variant]) -> InteractionRequest:
 	return InteractionRequest.new(name, request_type, npc, arguments)
 
 # Serialization method for backend communication
-func to_dict() -> Dictionary:
+func to_dict() -> Dictionary[String, Variant]:
 	return {
 		"name": name,
 		"description": description,

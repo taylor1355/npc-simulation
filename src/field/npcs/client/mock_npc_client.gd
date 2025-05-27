@@ -16,22 +16,22 @@ func create_npc(
 	working_memory: String = "",
 	long_term_memories: Array[String] = []
 ) -> void:
-	# Initialize cache
 	_npc_cache[npc_id] = NPCState.new(traits, working_memory)
-	var config = {
-		"traits": traits,
-		"initial_working_memory": working_memory,
-		"initial_long_term_memories": long_term_memories
-	}
-	
-	var result = _backend.create_agent(npc_id, config)
-	if result.status == "created":
+	var create_result = _backend.create_agent(
+		npc_id,
+		{
+			"traits": traits,
+			"initial_working_memory": working_memory,
+			"initial_long_term_memories": long_term_memories
+		}
+	)
+	if create_result.status == "created":
 		# Clear cache to force backend fetch
 		_npc_cache.erase(npc_id)
 		# Dispatch created event
 		FieldEvents.dispatch(NpcClientEvents.create_created(npc_id))
 	else:
-		error.emit(result.get("message", "Unknown error creating NPC"))
+		error.emit(create_result.get("message", "Unknown error creating NPC"))
 
 ## Processes NPC events to determine next action
 func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:

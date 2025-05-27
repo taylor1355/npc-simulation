@@ -3,7 +3,7 @@ class_name ItemController extends GamepieceController
 
 const GROUP_NAME: = "_ITEM_CONTROLLER_GROUP"
 
-var interactions: Dictionary = {}
+var interactions: Dictionary[String, Interaction] = {} # interaction name -> Interaction
 var current_interaction: Interaction = null
 var interacting_npc: NpcController = null
 var interaction_time: float = 0.0

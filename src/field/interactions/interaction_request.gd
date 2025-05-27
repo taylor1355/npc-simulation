@@ -16,13 +16,13 @@ var request_type: RequestType
 var status: Status
 var npc_controller: NpcController
 var item_controller: ItemController
-var arguments: Dictionary
+var arguments: Dictionary[String, Variant]
 
 signal accepted()
 signal rejected(reason: String)
 
 
-func _init(_interaction_name: String, _request_type: RequestType, _npc: NpcController, _arguments: Dictionary = {}):
+func _init(_interaction_name: String, _request_type: RequestType, _npc: NpcController, _arguments: Dictionary[String, Variant] = {}):
 	interaction_name = _interaction_name
 	request_type = _request_type
 	npc_controller = _npc

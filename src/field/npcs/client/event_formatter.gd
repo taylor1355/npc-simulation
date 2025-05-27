@@ -81,5 +81,5 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 ## - name: string identifier for the action
 ## - description: human-readable description
 ## - parameters: dictionary of parameter descriptions
-func get_available_actions() -> Array:
+func get_available_actions() -> Array[Dictionary]:
 	return Action.get_all_action_descriptions()

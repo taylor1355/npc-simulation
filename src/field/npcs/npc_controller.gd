@@ -160,9 +160,8 @@ func decide_behavior() -> void:
 	decision_timer = 0.0
 	
 	# Get visible items and prepare data for backend
-	var seen_items = _vision_manager.get_items_by_distance()
-	var item_data = []
-	
+	var seen_items := _vision_manager.get_items_by_distance()
+	var item_data: Array[Dictionary] = []
 	for item in seen_items:
 		var interaction_dicts = {}
 		for interaction_name in item.interactions:

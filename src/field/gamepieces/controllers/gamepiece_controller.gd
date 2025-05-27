@@ -171,7 +171,7 @@ func is_cell_blocked(cell: Vector2i) -> bool:
 	return FieldEvents.did_gp_move_to_cell_this_frame(cell)
 
 ## Find all collision matching [member gamepiece_mask] at a given cell.
-func get_collisions(cell: Vector2i) -> Array:
+func get_collisions(cell: Vector2i) -> Array[Dictionary]:
 	var search_coordinates: = Vector2(_gameboard.cell_to_pixel(cell)) * global_scale
 	return _gamepiece_searcher.search(search_coordinates)
 

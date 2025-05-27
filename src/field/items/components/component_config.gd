@@ -3,7 +3,7 @@ class_name ItemComponentConfig
 extends Resource
 
 @export var component_script: Script
-@export var properties: Dictionary
+@export var properties: Dictionary[String, Variant]
 
 func _init():
     component_script = null

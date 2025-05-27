@@ -32,7 +32,7 @@ func change_state(new_state_type) -> void:
 	print("[%s] State transition: %s -> %s" % [id, old_name, current_state.state_name])
 	add_observation("State changed to %s" % current_state.state_name)
 
-func _init(agent_id: String, config: Dictionary):
+func _init(agent_id: String, config: Dictionary[String, Variant]) -> void:
 	id = agent_id
 	traits = config.get("traits", [])
 	working_memory = []
