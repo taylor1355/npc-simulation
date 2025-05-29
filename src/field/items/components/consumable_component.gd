@@ -2,10 +2,12 @@ class_name ConsumableComponent extends ItemComponent
 
 const INTERACTION_NAME: = "consume"
 
-# Dictionary mapping need enum to total need delta from consuming the item
-@export var need_deltas: Dictionary[Needs.Need, float] = {}
-# Time it takes to fully consume the item
+# Properties that will be set by ItemController
 @export var consumption_time: float = 1.0
+@export var need_deltas_config: Dictionary = {}
+
+# Internally used, enum-keyed dictionary, processed in _ready.
+var need_deltas: Dictionary[Needs.Need, float] = {}
 
 var percent_left: float = 100.0
 var current_npc: NpcController = null
@@ -13,19 +15,36 @@ var current_npc: NpcController = null
 var item_controller: ItemController
 var need_modifying: NeedModifyingComponent
 
+
 func _ready() -> void:
 	super._ready()
 
 	item_controller = get_parent() as ItemController
 	
-	# Create the need modifying component
+	if not need_deltas_config.is_empty():
+		var first_key = need_deltas_config.keys()[0]
+		if first_key is String:
+			# Convert untyped Dictionary to typed Dictionary[String, float]
+			var typed_dict: Dictionary[String, float] = {}
+			for key in need_deltas_config:
+				if key is String and (need_deltas_config[key] is float or need_deltas_config[key] is int):
+					typed_dict[key] = float(need_deltas_config[key])
+				else:
+					push_warning("Invalid need_deltas_config entry: %s = %s" % [key, need_deltas_config[key]])
+			need_deltas = Needs.deserialize_need_dict(typed_dict)
+		elif first_key is Needs.Need: # Already enum-keyed
+			need_deltas = need_deltas_config as Dictionary[Needs.Need, float]
+	
 	need_modifying = NeedModifyingComponent.new()
 	add_child(need_modifying)
 	
-	# Configure rates based on total deltas and consumption time
-	for need in need_deltas:
-		need_modifying.need_rates[need] = need_deltas[need] / consumption_time
-
+	for need_enum_key in need_deltas:
+		if consumption_time > 0.0:
+			need_modifying.need_rates[need_enum_key] = need_deltas[need_enum_key] / consumption_time
+		else:
+			need_modifying.need_rates[need_enum_key] = 0.0
+			push_warning("ConsumableComponent: consumption_time is <= 0 for item. Need rates will be zero for need '%s'." % Needs.get_display_name(need_enum_key))
+				
 	var description = "Consume this item (%.1fs left). Effects per second: %s" % [
 		consumption_time,
 		need_modifying.get_effects_description()
@@ -78,7 +97,7 @@ func _handle_consume_start_request(request: InteractionRequest) -> void:
 	request.accept()
 	current_npc = request.npc_controller
 	
-	# Face NPC towards the consumable item
+	# Rotate NPC to face the item being consumed
 	var direction_vec = Vector2(item_controller._gamepiece.cell - current_npc._gamepiece.cell)
 	current_npc._gamepiece.direction = direction_vec.normalized()
 	

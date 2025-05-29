@@ -56,14 +56,16 @@ static func create_observation_event(
 	needs: Dictionary[String, float],
 	movement_locked: bool,
 	current_interaction: Interaction = null,
-	current_request: InteractionRequest = null
+	current_request: InteractionRequest = null,
+	controller_state: Dictionary = {}
 ) -> NpcEvent:
 	var p_payload: Dictionary[String, Variant] = {
 		"position": position,
 		"seen_items": seen_items,
 		"needs": needs,
 		"movement_locked": movement_locked,
-		"current_interaction": null
+		"current_interaction": null,
+		"controller_state": controller_state
 	}
 	
 	if current_interaction:

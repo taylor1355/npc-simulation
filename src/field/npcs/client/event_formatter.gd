@@ -15,6 +15,7 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 	var needs = {}
 	var seen_items = []
 	var current_interaction = null
+	var controller_state = {}
 	
 	for event in events:
 		match event.type:
@@ -22,6 +23,7 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 				needs = event.payload.needs
 				seen_items = event.payload.seen_items
 				current_interaction = event.payload.current_interaction
+				controller_state = event.payload.get("controller_state", {})
 	
 	# Format needs as percentages
 	if not needs.is_empty():
@@ -35,6 +37,20 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 	if current_interaction:
 		observation_text += "## Current Interaction\n"
 		observation_text += "You are currently %s.\n\n" % current_interaction.name
+	
+	# Format controller state
+	if not controller_state.is_empty():
+		observation_text += "## Controller State\n"
+		observation_text += "- State: %s\n" % controller_state.get("state_enum", "UNKNOWN")
+		var context_data = controller_state.get("context_data", {})
+		if not context_data.is_empty():
+			for key in context_data:
+				var value = context_data[key]
+				if value is Dictionary and value.has("x") and value.has("y"):
+					observation_text += "- %s: (%d,%d)\n" % [key.capitalize(), value.x, value.y]
+				else:
+					observation_text += "- %s: %s\n" % [key.capitalize(), str(value)]
+		observation_text += "\n"
 	
 	# Format environment and visible items
 	observation_text += "# Environment\n\n"

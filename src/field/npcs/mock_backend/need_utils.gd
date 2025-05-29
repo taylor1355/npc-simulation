@@ -24,9 +24,9 @@ static func get_interaction_for_need(agent_id: String, item: Dictionary, need_id
 
 static func score_item_interactions(agent_id: String, item: Dictionary, needs: Dictionary) -> Dictionary:
 	"""
-	Score an item's interactions based on how critical the needs they satisfy are
+	Score an item's interactions based on how much the needs they satisfy require attention
 	Returns: Dictionary with best_interaction and score, or empty if no interactions
-		which satisfy critical needs are found
+		which satisfy needs requiring attention are found
 	"""
 	var best_interaction_name = ""
 	var best_score = 0.0
@@ -43,12 +43,13 @@ static func score_item_interactions(agent_id: String, item: Dictionary, needs: D
 				continue
 				
 			var need_value = needs[need_id]
-			# Only consider critical needs
-			if need_value > NEED_CRITICAL_THRESHOLD:
+			# Only consider needs that require attention (below search threshold)
+			if need_value > NEED_SEARCH_THRESHOLD:
 				continue
 				
-			# Calculate score based on how critical the need is
-			var score = NEED_CRITICAL_THRESHOLD - need_value
+			# Calculate score based on how much attention the need requires
+			# Higher score = more urgent (lower need value)
+			var score = NEED_SEARCH_THRESHOLD - need_value
 			
 			print("[%s] Evaluating interaction %s for need %s (value=%s, score=%s)" % [
 				agent_id, interaction_name, need_id, need_value, score

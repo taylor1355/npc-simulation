@@ -23,11 +23,12 @@ const DECISION_INTERVAL: float = 3.0  # Make decisions every DECISION_INTERVAL s
 # needs
 var needs_manager: NeedsManager
 
-# pathfinding
-var destination : Vector2i
+# State machine
+var state_machine: ControllerStateMachine
 var movement_locked: bool = false
-var is_wandering: bool = false
 
+# Current state data
+var destination: Vector2i
 var current_interaction: Interaction = null
 var current_request: InteractionRequest = null
 
@@ -50,6 +51,10 @@ func _ready() -> void:
 		
 		npc_client = Globals.npc_client
 		npc_client.error.connect(_on_npc_error)
+		
+		# Initialize state machine
+		state_machine = ControllerStateMachine.new(self)
+		state_machine.state_changed.connect(_on_state_changed)
 		
 		# Listen for NPC client events
 		FieldEvents.event_dispatched.connect(
@@ -150,6 +155,17 @@ func set_movement_locked(locked: bool) -> void:
 		decide_behavior()
 
 
+#######################
+### State Management ###
+#######################
+func change_state(new_state: BaseControllerState) -> void:
+	state_machine.change_state(new_state)
+
+func _on_state_changed(old_state_name: String, new_state_name: String) -> void:
+	# Log state transition
+	print("[NPC %s] State changed from %s to %s" % [npc_id, old_state_name, new_state_name])
+
+
 ######################
 ### Placeholder AI ###
 ######################
@@ -183,7 +199,8 @@ func decide_behavior() -> void:
 		needs_manager.get_all_needs(),
 		movement_locked,
 		current_interaction,
-		current_request
+		current_request,
+		state_machine.get_state_info()
 	))
 	
 	# Get unprocessed events
@@ -212,124 +229,43 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 	var action_name = event.action_name
 	var parameters = event.parameters
 	
-	match action_name:
-		"move_to":
-			if movement_locked:
-				event_log.append(NpcEvent.create_error_event("Cannot move while movement is locked"))
-			else:
-				is_wandering = false
-				set_new_destination(Vector2i(parameters.x, parameters.y))
-		"interact_with":
-			is_wandering = false
-			var target_item = null
-			var seen_items = _vision_manager.get_items_by_distance()
-			for item in seen_items:
-				if item.name == parameters.item_name:
-					target_item = item
-					break
-					
-			if target_item and target_item.interactions.has(parameters.interaction_name):
-				var interaction = target_item.interactions[parameters.interaction_name]
-				var request = interaction.create_start_request(self)
-				request.item_controller = target_item
-				current_request = request
-				
-				# Log the initial request
-				event_log.append(NpcEvent.create_interaction_request_event(request))
-				
-				request.accepted.connect(
-					func():
-						current_interaction = interaction
-						target_item.interaction_finished.connect(
-							func(interaction_name, npc, payload): _on_interaction_finished(interaction_name, npc, payload),
-							CONNECT_ONE_SHOT
-						)
-						
-						# Log interaction started
-						event_log.append(NpcEvent.create_interaction_update_event(
-							request,
-							NpcEvent.Type.INTERACTION_STARTED
-						))
-				)
-				request.rejected.connect(
-					func(reason: String):
-						current_interaction = null
-						
-						# Log the rejected response with reason
-						event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
-						current_request = null
-						decide_behavior()
-				)
-				target_item.request_interaction.call_deferred(request)
-		"wander":
-			if not is_wandering:
-				is_wandering = true
-				set_new_destination()
-		"wait":
-			is_wandering = false
-		"continue":
-			pass
-		"cancel_interaction":
-			is_wandering = false
-			if current_interaction and current_request:
-				var request = current_interaction.create_cancel_request(self)
-				request.item_controller = current_request.item_controller
-				
-				# Log the cancel request
-				event_log.append(NpcEvent.create_interaction_request_event(request))
-				
-				request.accepted.connect(
-					func():
-						# Log interaction canceled
-						event_log.append(NpcEvent.create_interaction_update_event(
-							request,
-							NpcEvent.Type.INTERACTION_CANCELED
-						))
-						current_request = null
-						current_interaction = null
-				)
-				
-				request.rejected.connect(
-					func(reason: String):
-						# Log the rejected cancel with reason
-						event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
-				)
-				
-				current_interaction.cancel_request.emit(request)
+	# Log the action attempt
+	print("[NPC %s] Action '%s' in state %s" % [
+		npc_id, 
+		action_name, 
+		state_machine.get_state_info().state_enum
+	])
+	
+	# Delegate to state machine
+	state_machine.handle_action(action_name, parameters)
+
+
+# Interaction callbacks that delegate to current state
+func _on_interaction_accepted(request: InteractionRequest) -> void:
+	state_machine.current_state.on_interaction_accepted(request)
+
+func _on_interaction_rejected(request: InteractionRequest, reason: String) -> void:
+	state_machine.current_state.on_interaction_rejected(request, reason)
+
+func _on_interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary) -> void:
+	state_machine.current_state.on_interaction_finished(interaction_name, npc, payload)
 
 func _on_npc_error(msg: String) -> void:
 	print("NPC Error: ", msg)
 
-
-################
-### Handlers ###
-################
-func _on_interaction_finished(interaction_name: String, _npc: NpcController, payload: Dictionary) -> void:
-	var item_name = payload.get("item_name", "")
-	
-	if current_request and current_interaction:
-		# Log interaction finished event
-		event_log.append(NpcEvent.create_interaction_update_event(
-			current_request,
-			NpcEvent.Type.INTERACTION_FINISHED
-		))
-		
-		# Clear interaction state
-		current_interaction = null
-		current_request = null
-		
-		# Trigger next decision
-		decide_behavior()
-	
-	
 func _on_gamepiece_arrived() -> void:
 	super._on_gamepiece_arrived()
 	
-	if is_wandering:
-		set_new_destination()
-	else:
-		decide_behavior()
+	# Delegate to state machine
+	state_machine.on_gamepiece_arrived()
 
+# Helper to find item by name, used by states
+func _find_item_by_name(item_name: String) -> ItemController:
+	var seen_items = _vision_manager.get_items_by_distance()
+	for item in seen_items:
+		if item.name == item_name:
+			return item
+	return null
 
 func _on_focused_gamepiece_changed(new_focused_gamepiece: Gamepiece) -> void:
 	if new_focused_gamepiece == _gamepiece:

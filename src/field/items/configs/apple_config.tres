@@ -11,12 +11,12 @@ radius = 6.5
 [sub_resource type="Resource" id="Resource_component"]
 script = ExtResource("1_2xk4r")
 component_script = ExtResource("3_script")
-properties = {
+properties = Dictionary[String, Variant]({
 "consumption_time": 5.0,
-"need_deltas": {
+"need_deltas_config": {
 "hunger": 25.0
 }
-}
+})
 
 [resource]
 script = ExtResource("1_config")
