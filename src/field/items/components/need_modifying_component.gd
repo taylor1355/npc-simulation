@@ -2,10 +2,24 @@ class_name NeedModifyingComponent extends ItemComponent
 
 const INTERACTION_NAME: = "modify_needs"
 
+func _init():
+	PROPERTY_SPECS["need_rates"] = PropertySpec.new(
+		"need_rates", 
+		TypeConverters.PropertyType.NEED_DICT, 
+		{}, 
+		"Mapping from needs to rates of change (units per second)"
+	)
+	PROPERTY_SPECS["update_threshold"] = PropertySpec.new(
+		"update_threshold", 
+		TypeConverters.PropertyType.FLOAT, 
+		1.0, 
+		"Threshold at which accumulated changes are applied"
+	)
+
 # Mapping from needs to rates of change (units per second)
-@export var need_rates: Dictionary[Needs.Need, float] = {}
+var need_rates: Dictionary[Needs.Need, float] = {}
 # Threshold at which accumulated changes are applied
-@export var update_threshold: float = 1.0
+var update_threshold: float = 1.0
 
 var current_npc: NpcController = null
 var accumulated_deltas: Dictionary[Needs.Need, float] = {}

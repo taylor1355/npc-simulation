@@ -2,9 +2,18 @@ class_name SittableComponent extends ItemComponent
 
 const INTERACTION_NAME: = "sit"
 
+func _init():
+	PROPERTY_SPECS["energy_regeneration_rate"] = PropertySpec.new(
+		"energy_regeneration_rate", 
+		TypeConverters.PropertyType.FLOAT, 
+		10.0, 
+		"Rate of energy regeneration per second while sitting"
+	)
+
 func _get_timestamp_str() -> String:
 	return "%.2f" % Time.get_unix_time_from_system()
 
+var energy_regeneration_rate: float = 10.0
 var current_npc: NpcController = null
 var item_controller: ItemController
 var need_modifier: NeedModifyingComponent
@@ -21,8 +30,7 @@ func _ready() -> void:
 	# Create the need modifying component for energy regeneration
 	need_modifier = NeedModifyingComponent.new()
 	need_modifier.need_rates = {}
-	# TODO: Make energy regeneration rate configurable
-	need_modifier.need_rates[Needs.Need.ENERGY] = 10.0
+	need_modifier.need_rates[Needs.Need.ENERGY] = energy_regeneration_rate
 	add_child(need_modifier)
 
 	var description = "Sit in this chair. Effects per second: %s" % [

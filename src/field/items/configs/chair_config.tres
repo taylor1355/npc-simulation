@@ -11,7 +11,7 @@ size = Vector2(13, 19)
 [sub_resource type="Resource" id="Resource_component"]
 script = ExtResource("1_d87r8")
 component_script = ExtResource("3_script")
-properties = {}
+properties = Dictionary[String, Variant]({})
 
 [resource]
 script = ExtResource("1_config")

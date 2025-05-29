@@ -34,16 +34,13 @@ func add_component(config: ItemComponentConfig) -> void:
         push_error("Invalid component configuration")
         return
         
+
+        
     # Create component instance
     var component = config.component_script.new()
     
-    # Configure properties
-    for key in config.properties:
-        if not key in component:
-            push_error("Invalid property '%s' for component" % key)
-            component.free()
-            return
-        component.set(key, config.properties[key])
+    # Configure properties using the component's configure method
+    component.configure_properties(config.properties)
     
     # Add to scene tree and register component
     add_component_node(component)

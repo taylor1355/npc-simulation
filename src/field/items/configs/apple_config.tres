@@ -13,7 +13,7 @@ script = ExtResource("1_2xk4r")
 component_script = ExtResource("3_script")
 properties = Dictionary[String, Variant]({
 "consumption_time": 5.0,
-"need_deltas_config": {
+"need_deltas": {
 "hunger": 25.0
 }
 })
