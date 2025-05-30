@@ -2,22 +2,30 @@
 
 ## Core Components
 
-### CollisionFinder (collision_finder.gd)
-- Dynamic object detection through physics
-- Key parameters:
-  ```
-  space_state: PhysicsDirectSpaceState2D
-  search_radius: float (16.0, half cell)
-  collision_mask: int (layer filter)
-  find_areas: bool (default true)
-  ```
-- Usage:
-  ```
-  1. Get physics state
-  2. Configure search params
-  3. Query for collisions
-  4. Process collision data
-  ```
+### CollisionFinder (`collision_finder.gd`)
+The `CollisionFinder` class is a utility for dynamically detecting physics objects (both bodies and areas) within a specified radius. It's a key tool for features like gameboard cell occupancy checks or proximity detection, querying Godot's physics engine.
+
+**Initialization & Configuration:**
+`CollisionFinder` is initialized (`_init`) with:
+*   `space_state: PhysicsDirectSpaceState2D`: The direct space state from the current 2D world, used for queries.
+*   `search_radius: float`: Defines the radius of the circular search area (e.g., `16.0` pixels, often half a game cell).
+*   `collision_mask: int`: A bitmask to filter for specific physics layers.
+*   `find_areas: bool` (default `true`): If `true`, includes `Area2D`s in results; otherwise, only `PhysicsBody2D`s.
+
+During initialization, these parameters configure a `PhysicsShapeQueryParameters2D` object. This object holds a `CircleShape2D` (using `search_radius`), the `collision_mask`, and area detection settings, and is cached for efficient repeated searches.
+
+**Searching for Collisions:**
+Its main method, `search(position: Vector2) -> Array[Dictionary]`, performs the search:
+*   Takes a global `position` to center the search.
+*   Updates the cached query's `transform.origin` to this position.
+*   Calls `_space_state.intersect_shape()`, returning an array of dictionaries. Each dictionary represents a detected object and includes details like the `collider` and `shape` index (as per Godot's `intersect_shape` documentation).
+
+**Usage Workflow:**
+1.  Get `PhysicsDirectSpaceState2D` (e.g., `get_world_2d().direct_space_state`).
+2.  Instantiate `CollisionFinder` with the space state, search radius, collision mask, and area preference.
+3.  Call `search(global_position)` as needed.
+4.  Process the returned collision results.
+Note: Physics updates may have a one-frame detection delay.
 
 ### Physics Layers
 ```
@@ -52,16 +60,12 @@ Required Shapes:
 ## Key Features
 
 ### Object Detection
-```
-Search Process:
-1. Configure query parameters:
-   - Position (global coords)
-   - Radius (16.0 pixels)
-   - Collision mask
-2. Execute physics query
-3. Filter results by mask
-4. Return collision data
-```
+`CollisionFinder` enables precise circular area detection of physics objects (`PhysicsBody2D`s and/or `Area2D`s), a capability fundamental for mechanics like cell occupancy or proximity checks. The process involves:
+
+*   **Pre-configured Queries:** `CollisionFinder` initializes and caches `PhysicsShapeQueryParameters2D` with a `CircleShape2D` (using its `search_radius`) and `collision_mask` for efficient, layer-specific searches.
+*   **Targeted Searching:** The `search(position)` method uses these cached parameters to query the physics space at the given global `position`.
+*   **Engine-Level Filtering:** The `collision_mask` ensures efficient, automatic layer filtering by Godot's physics engine during the `intersect_shape` call.
+*   **Direct Collision Data:** The `search` method returns an array of dictionaries, each containing detailed collider information (e.g., the collider node, shape index) for further processing.
 
 ### Physics Integration
 ```

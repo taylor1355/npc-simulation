@@ -1,12 +1,12 @@
 # Getting Started
 
 ## Setup Requirements
-- Godot 4.3
+- Godot 4.4
 - Git repository access
 - Project cloned locally
 
 ## Quick Start
-1. Open project in Godot 4.3
+1. Open project in Godot 4.4
 2. Open main scene (main.tscn)
 3. Run the project (F5)
 4. Navigate the view:
@@ -32,29 +32,31 @@ Field (field.gd)
 ### Entity System
 ```
 Gamepiece (gamepiece.gd, gamepiece.tscn)
-├── Position Management
-├── Animation System
-└── Controller Logic
+├── Position Management (logical cell vs. visual position)
+├── Animation System (via child AnimationPlayer, GFX nodes)
+└── Controller Logic (delegated to a child GamepieceController)
 ```
 
 ### Component System
-```
-Base Components:
-├── Animation (handles visuals)
-└── Controller (manages behavior)
+The project utilizes a component-based architecture, particularly for items, to allow for flexible and reusable behaviors.
 
-Item System:
-├── BaseItem (base_item.tscn)
-├── ItemConfig (Resource)
-└── Components
-    ├── ConsumableComponent
-    ├── NeedModifyingComponent
-    └── SittableComponent
+General Gamepiece Structure:
+├── `Gamepiece` (`src/field/gamepieces/gamepiece.gd`): The base entity. Visuals are often handled by child nodes like `Sprite2D` and `AnimationPlayer`.
+└── `GamepieceController` (`src/field/gamepieces/controllers/gamepiece_controller.gd`): Manages the gamepiece's behavior. Specialized controllers (like `NpcController`, `ItemController`) extend this.
+    └── `GamepieceComponent` (`src/field/gamepieces/controllers/gamepiece_component.gd`): Base class for components that can be attached to a `GamepieceController` to extend its functionality.
 
-Components:
-- Configured through resources
-- Added at runtime
-- Can be nested
+Item System Components (primarily in `src/field/items/components/`):
+├── `BaseItem` (`src/field/items/base_item.tscn`, `src/field/items/base_item.gd`): The base scene/script for all items. It's a specialized `Gamepiece`.
+│   └── `ItemController` (`src/field/items/item_controller.gd`): Attached to `BaseItem`, manages item-specific logic and components.
+├── `ItemConfig` (Resource - `src/field/items/item_config.gd`): Defines an item's properties, including visual setup (sprite, collision) and which `ItemComponent`s it has with their configurations.
+└── `ItemComponent` (`src/field/items/components/item_component.gd`): Base class for all item-specific logic modules (e.g., `ConsumableComponent`, `SittableComponent`). These extend `GamepieceComponent` and are added to the `ItemController`.
+
+Key Characteristics of Item Components:
+- Defined by scripts extending `ItemComponent`.
+- Configured through `ItemConfig` and `ItemComponentConfig` resources.
+- Added to an `ItemController` at runtime based on the `ItemConfig`.
+- Can define custom properties (using `PropertySpec`) and `Interaction`s.
+- Can be nested if a component itself instantiates other components (though less common for item components).
 ```
 
 ## Key Concepts
@@ -69,11 +71,12 @@ NPC System:
 │   │   ├── Value tracking
 │   │   └── Automatic decay
 │   └── Vision-based decisions
-├── Client Layer
-│   ├── GDScript API (npc_client.gd)
-│   │   ├── State caching & Event dispatching
-│   └── C# MCP Bridge (McpSdkClient.cs & McpServiceProxy.cs)
-│       └── Handles direct MCP server communication
+├── Client Layer (Interface to backend decision-making)
+│   ├── GDScript API: `NpcClientBase` (`src/field/npcs/client/npc_client_base.gd`) defines the interface.
+│   │   └── `McpNpcClient` (`src/field/npcs/client/mcp_npc_client.gd`) is the primary implementation, acting as a facade to the C# layer for MCP communication. It handles state caching & event dispatching related to client operations.
+│   └── C# MCP Bridge:
+│       ├── `McpSdkClient.cs` (`src/field/npcs/client/McpSdkClient.cs`): Godot Node (C#) bridging GDScript calls to the service proxy.
+│       └── `McpServiceProxy.cs` (`src/field/npcs/client/McpServiceProxy.cs`): Pure C# class for direct MCP SDK interaction and connection management.
 └── Backend (MCP Server)
     └── Decision making
 

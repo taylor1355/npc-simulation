@@ -14,11 +14,14 @@
    └── Component C (file.gd) - purpose
    ```
 
-3. Focus on function level
-   Documentation should explain what components do and how they integrate, rather than implementation details. Show the key configurations and parameters that developers need to work with the system.
+3. Emphasize Purpose and Responsibilities
+   Documentation should clearly explain *what* a component or system does, its primary responsibilities, and *how* it integrates with other parts of the application. Focus on the 'why' and 'what' over minute implementation details. While key configurations, parameters, or method signatures critical for usage should be included, avoid exhaustive lists of all internal properties or private methods.
 
 4. Include critical details
-   Document important constants and configurations that affect system behavior. Reference source files to help developers locate implementations.
+   Document important constants, configurations, and public interfaces (key methods, signals, exported properties) that affect system behavior or are necessary for integration. Reference source files to help developers locate implementations.
+
+5. Prioritize Clarity and Readability
+   Strive for descriptive explanations that help a developer understand a system's role and behavior quickly. Use narrative descriptions, often supplemented by bullet points for key responsibilities or features, rather than just listing technical specifications. The goal is to provide enough detail for comprehension without overwhelming the reader. Aim for strategically concise language: be descriptive enough to convey necessary information and context, but avoid unnecessary verbosity that could increase cognitive load. If a shorter phrasing conveys the same meaning effectively, prefer it. However, do not sacrifice critical context or clarity for the sake of extreme brevity. The key is to find a balance that makes the documentation both informative and easy to digest.
 
 ## Document Structure
 
@@ -33,36 +36,50 @@
 
 ## Common Mistakes
 
-1. Code Dumps
-   - ❌ Copying implementation code
-   - ✅ Describing function purpose and parameters
+1. Code Dumps or Overly Technical Listings
+   - ❌ Copying large blocks of implementation code, or exhaustively listing all internal members (private methods, internal variables) without context.
+   - ✅ Describing the component's overall purpose, its key public interfaces (APIs, signals, critical exported properties), and how they are intended to be used. Focus on what a consumer of the component needs to know.
 
 2. Abstraction Level
-   - ❌ Too high: "Manages state changes"
-   - ✅ Specific: "Tracks entity position and handles collisions"
+   - ❌ Too high: "Manages state changes" (Too vague).
+   - ✅ Specific: "Tracks entity position based on grid coordinates and handles collisions with static obstacles defined in the tilemap's physics layer." (Clear and informative).
 
 3. Missing Context
-   - ❌ Listing properties without purpose
-   - ✅ Explaining why and how properties are used
+   - ❌ Listing properties or methods without explaining their purpose or typical usage (e.g., "Property: `max_speed: float`").
+   - ✅ Explaining why a property exists and how it influences behavior (e.g., "`max_speed: float` - Defines the maximum velocity the entity can reach. Used by the movement system to cap acceleration.").
 
 4. Redundant Information
-   - ❌ Repeating obvious details
-   - ✅ Focusing on non-obvious requirements
+   - ❌ Repeating obvious details that can be inferred or are standard (e.g., "This function is a function.").
+   - ✅ Focusing on non-obvious requirements, important interactions, or critical configurations.
+
+5. Dry Specification Lists
+   - ❌ Presenting information as a dry list of technical specifications (e.g., just method signatures or property names) without descriptive text explaining their role or usage.
+   - ✅ Providing narrative explanations for how a component works and how its key features are used, supplemented by technical details where necessary, to aid understanding.
 
 ## Examples
 
 ### Good Component Description
-```
-CollisionComponent
-- Handles physics interactions between entities.
-- Uses collision layers for filtering.
-- Emits `body_entered(body: Node)` signal when a physics body enters its area.
-  - Purpose: Allows other systems to react to new overlaps.
-  - Consumed by: Typically by the parent entity's script to detect specific interactions.
-- Emits `body_exited(body: Node)` signal when a physics body exits its area.
-  - Purpose: Allows tracking of when overlaps end.
-  - Consumed by: Similar to `body_entered`, often by the parent entity to manage state related to overlaps.
-- Requires CollisionShape2D child node for defining its detection area.
+
+**AudioPlayerComponent (`audio_player_component.gd`)**
+
+The `AudioPlayerComponent` is responsible for managing and playing sound effects and background music for a game entity. It provides a simple interface for triggering sounds by name and can handle variations in pitch and volume.
+
+**Key Responsibilities:**
+*   **Sound Playback:**
+    *   Provides a `play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0)` method to trigger specific sound effects. `sound_name` should correspond to a preloaded audio stream.
+    *   Manages a collection of `AudioStreamPlayer` nodes (or a single one reused) to play sounds.
+*   **Configuration:**
+    *   `@export var sounds: Dictionary[String, AudioStream]` - Allows mapping sound names to `AudioStream` resources in the Inspector. This dictionary is used by `play_sound` to find the correct audio stream.
+    *   `@export var default_volume_db: float = 0.0` - A baseline volume adjustment (in decibels) for sounds played through this component, applied if no specific volume is provided to `play_sound`.
+*   **Integration:**
+    *   Typically added as a child node to a `Gamepiece` or other scene that requires audio feedback.
+    *   Other scripts call `play_sound()` on this component to trigger audio events (e.g., on collision, on item use, UI interactions).
+
+**Usage Example (from another script):**
+```gdscript
+# Assuming get_node("AudioPlayerComponent") returns the component
+# Play a "jump_sound" with reduced volume and slightly higher pitch.
+$AudioPlayerComponent.play_sound("jump_sound", -5.0, 1.1)
 ```
 
 ### Good Setup Description

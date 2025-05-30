@@ -12,7 +12,6 @@ A 2D NPC simulation built with Godot, where NPCs interact with items and navigat
 
 1. First Steps
    - See getting-started.md for setup and quick start
-   - Follow godot-tutorial.md for a hands-on example
 
 2. Core Systems
    - gameboard.md: Grid and pathfinding system

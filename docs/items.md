@@ -82,11 +82,13 @@ var consumption_time: float = 1.0
 var need_deltas: Dictionary[Needs.Need, float] = {}
 ```
 
-The base ItemComponent class automatically:
-1. Reads property values from configuration
-2. Converts them to the correct types using TypeConverters
-3. Sets the converted values on the component
-4. Handles errors with helpful messages showing available properties
+When an `ItemComponent` is configured (typically by `ItemController` calling the component's `configure_properties` method with values from an `ItemComponentConfig`):
+1.  For each property defined in the component's `PROPERTY_SPECS` dictionary:
+    *   The raw value from the configuration is retrieved.
+    *   This raw value is converted to the `property_type` specified in its `PropertySpec` (e.g., `TypeConverters.PropertyType.FLOAT`), using `TypeConverters`. This step also applies the `default_value` from the `PropertySpec` if the raw value is missing or conversion fails.
+    *   The successfully converted, type-safe value is then assigned directly to the corresponding member variable of the component instance (e.g., if `PROPERTY_SPECS` defines "consumption_time", the `var consumption_time: float` member variable in the component script is set).
+2.  Error Handling: If a property name from the configuration doesn't exist in `PROPERTY_SPECS`, or if a value cannot be converted, warnings are issued.
+Components can then access these configured member variables directly in their logic, typically starting from the `_component_ready()` method.
 
 **Component Structure**
 
@@ -111,33 +113,34 @@ ItemComponent (Base Class)
     └── Standard Godot lifecycle (_ready, _process, etc.)
 ```
 
-### Type Conversion System (type_converters.gd)
+### Type Conversion System (`src/field/items/components/type_converters.gd`)
 
-The type conversion system centralizes the complex logic of converting between Godot's variant types and the specific types components expect. This is particularly important for dictionary conversions where keys need to be transformed from strings or integers to enums.
+The `TypeConverters` class (extends `RefCounted`) centralizes the logic for converting property values (often from string-based or generic `Variant` types in configuration files or editor properties) into the specific, strongly-typed data that `ItemComponent`s expect. This is crucial for robustly handling `Dictionary` properties where keys might need to be converted to enums or specific string formats.
 
-```
-TypeConverters
-├── PropertyType enum - Supported conversion types
-│   ├── FLOAT - Basic numeric values
-│   ├── STRING - Text values
-│   ├── BOOL - Boolean flags
-│   ├── INT - Integer values
-│   ├── VECTOR2 - 2D positions
-│   ├── NEED_DICT - Dictionary[Needs.Need, float] (special handling)
-│   └── (extensible for new types)
-└── convert(value: Variant, type: PropertyType, default: Variant) -> Variant
-    ├── Handles null/invalid inputs gracefully
-    ├── Performs type-specific conversions
-    └── Returns default value on conversion failure
-```
+**Key Features:**
+*   **`PropertyType` Enum:** Defines the set of target types the system can convert to. As of the last review, these include:
+    *   `FLOAT`: For floating-point numbers.
+    *   `INT`: For integer numbers.
+    *   `STRING`: For text strings.
+    *   `BOOL`: For boolean true/false values.
+    *   `NEED_DICT`: Specialised for `Dictionary[Needs.Need, float]`, converting string or integer keys to `Needs.Need` enums.
+    *   `TYPED_FLOAT_DICT`: For `Dictionary[String, float]`, ensuring keys are strings and values are floats.
+    *   `VARIANT`: A pass-through for when no specific conversion is needed, or the type is inherently `Variant`.
+*   **`convert(value: Variant, property_type: PropertyType, default_value: Variant = null) -> Variant`:** The main static method used for conversion.
+    *   Takes the input `value`, the target `property_type`, and an optional `default_value`.
+    *   Uses an internal registry of converter functions (`Callable`s) for each `PropertyType`.
+    *   Handles `null` inputs gracefully by returning the `default_value`.
+    *   If conversion fails or the type is unknown, it issues a warning and returns the `default_value`.
+*   **Extensibility:** While it includes built-in converters for common types, it also has a `register_converter(property_type: PropertyType, converter: Callable)` method to allow for new custom types and their conversion logic to be added.
+*   **Specialized Dictionary Conversion:** The `_convert_to_need_dict` method is a good example of its capability to handle complex dictionary transformations, ensuring that dictionaries representing need modifications are correctly typed for use by components (e.g., converting `{"0": 25.0}` or `{"hunger": 25.0}` to `{Needs.Need.HUNGER: 25.0}`).
 
-The NEED_DICT type showcases the system's power - it converts dictionaries with string or integer keys into properly typed Dictionary[Needs.Need, float] that components can use directly.
+This system is integral to the `ItemComponent`'s property specification pattern, enabling components to declare their required data types and have the `TypeConverters` handle the actual conversion from raw configuration data.
 
 ## Component Implementation
 
 ### Creating a New Component
 
-When creating a component, you define its configurable properties in `_init()` and use them in `_component_ready()`:
+When creating a component, you define its configurable properties in `_init()` using `PropertySpec` (which specifies the `TypeConverters.PropertyType`) and then use the automatically converted, typed properties in methods like `_component_ready()`:
 
 ```gdscript
 class_name CustomItemComponent extends ItemComponent
@@ -255,17 +258,22 @@ The exit process reverses this, finding a safe adjacent cell for the NPC.
 
 The item system uses Godot's resource system for configuration, enabling visual editing and version control benefits:
 
-#### ItemConfig Resource (item_config.gd)
-The main configuration for an item, containing display information and component setup.
+#### ItemConfig Resource (`src/field/items/item_config.gd`)
+The `ItemConfig` resource defines the properties for a specific type of item, including its appearance, collision, and attached components.
 
 ```
 ItemConfig extends Resource
-├── display_name: String - Human-readable name
-├── scene: PackedScene - Visual representation (must have Gamepiece root)
-└── components: Array[ItemComponentConfig] - Components to add
+    @export var item_name: String         # Unique name for the item type (e.g., "Apple", "Wooden Chair").
+    @export var sprite_texture: Texture2D # The texture for the item's sprite.
+    @export var sprite_hframes: int = 1   # Number of horizontal frames in the sprite_texture.
+    @export var sprite_vframes: int = 1   # Number of vertical frames in the sprite_texture.
+    @export var sprite_frame: int = 0     # The specific frame to display from the spritesheet.
+    @export var collision_shape: Shape2D  # The collision shape for the item.
+    @export var components: Array[ItemComponentConfig] # An array of configurations for components to be added to this item.
 ```
+The resource includes a `_validate()` method that checks if `item_name`, `sprite_texture`, and `collision_shape` are set, and also validates all its `ItemComponentConfig`s. This configuration is used by `ItemFactory` to create item instances and by `BaseItem` to initialize itself.
 
-#### ItemComponentConfig Resource (component_config.gd)
+#### ItemComponentConfig Resource (`src/field/items/components/component_config.gd`)
 Defines a single component to be added to an item.
 
 ```
@@ -277,18 +285,22 @@ ItemComponentConfig extends Resource
 
 ### Creating Items in the Editor
 
-The typical workflow for creating a new item:
+The typical workflow for creating a new item using the resource-based configuration:
 
-1. **Create the ItemConfig Resource**
-   - Right-click in FileSystem dock
-   - Choose "New Resource" → Search "ItemConfig"
-   - Save as `res://items/configs/my_item_config.tres`
+1.  **Create the `ItemConfig` Resource:**
+    *   In the FileSystem dock, right-click the desired folder (e.g., `res://items/configs/`).
+    *   Choose "New Resource..."
+    *   Search for and select `ItemConfig`.
+    *   Save the new resource (e.g., `my_new_item_config.tres`).
 
-2. **Set Basic Properties**
-   - Display Name: "My Item"
-   - Scene: Drag your item's `.tscn` file
+2.  **Configure `ItemConfig` Properties (in the Inspector):**
+    *   **`Item Name`**: Set a unique identifier for this item type (e.g., "MagicPotion", "OfficeDesk"). This name is used by `BaseItem` to set its node name and `display_name`.
+    *   **`Sprite Texture`**: Assign the `Texture2D` resource for the item's visual representation.
+    *   **`Sprite Hframes` / `Sprite Vframes` / `Sprite Frame`**: Configure these if your `sprite_texture` is a spritesheet to select the correct frame. Defaults are 1, 1, and 0 respectively.
+    *   **`Collision Shape`**: Assign a `Shape2D` resource (e.g., `RectangleShape2D`, `CircleShape2D`) that defines the item's physical boundaries for collision detection.
+    *   (The actual item scene, `res://src/field/items/base_item.tscn`, is used by `ItemFactory` as a template. The `BaseItem` script then applies these `ItemConfig` properties to its internal `Sprite2D` and `CollisionShape2D` nodes.)
 
-3. **Add Components**
+3.  **Add Components (in the `ItemConfig`'s `Components` array):**
    - In the components array, click "Add Element"
    - Choose "New ItemComponentConfig"
    - Set the component script (drag from FileSystem)
@@ -313,6 +325,30 @@ When configuring in the editor:
 - The type conversion system handles the conversion to proper enum types
 - Invalid properties show warnings with available property names
 - Default values are used for unconfigured properties
+
+### Item Factory (`src/field/items/item_factory.gd`)
+The `ItemFactory` is a static utility class responsible for creating `BaseItem` instances from `ItemConfig` resources.
+*   **`create_item(config: ItemConfig, gameboard: Gameboard, position: Vector2i = Vector2i.ZERO) -> BaseItem`**: This is the primary static method. It:
+    1.  Validates the provided `ItemConfig`.
+    2.  Instantiates the `BASE_ITEM_SCENE` (which is `res://src/field/items/base_item.tscn`).
+    3.  Assigns the `gameboard` reference and initial `position` (in cell coordinates, which `BaseItem` will convert to pixels) to the new item instance.
+    4.  Sets the `config` property on the `BaseItem`. The `BaseItem` then handles its own full initialization (sprite, collision, components) in its `_ready` or `_initialize_item` method using this config.
+*   **Specific Factory Methods:** It also includes helper methods like `create_apple(gameboard, position)` and `create_chair(gameboard, position)` that preload specific `ItemConfig` resources (e.g., `apple_config.tres`) and then call `create_item`.
+
+This factory simplifies the process of spawning new items in the game world.
+
+### Items Manager (`src/field/items/items_manager.gd`)
+The `ItemsManager` (extends `Node2D`) is responsible for managing all active item instances within a game scene.
+*   **Scene Organization:** It typically acts as a parent node for all spawned items, with `y_sort_enabled = true` to ensure correct 2D draw order based on Y position.
+*   **Item Spawning:**
+    *   `spawn_item(item: BaseItem)`: Adds a pre-created `BaseItem` instance as a child to the manager, bringing it into the active scene.
+    *   Provides helper methods like `spawn_apple()` and `spawn_chair()` which:
+        1.  Determine a random position on the linked `gameboard` using its `get_random_position()` utility method.
+        2.  Use `ItemFactory` to create the specific item instance with the chosen configuration and position.
+        3.  Call its own `spawn_item()` method to add the new item to the scene.
+*   **Gameboard Reference:** Requires a `gameboard: Gameboard` reference to determine valid spawning positions.
+
+This node centralizes runtime item management and facilitates dynamic item placement.
 
 ## Best Practices
 
