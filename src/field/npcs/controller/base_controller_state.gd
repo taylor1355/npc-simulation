@@ -37,13 +37,13 @@ func is_movement_allowed() -> bool:
 	return false
 
 # Called when an interaction request is accepted
-func on_interaction_accepted(request: InteractionRequest) -> void:
+func on_interaction_accepted(request: InteractionBid) -> void:
 	controller.event_log.append(NpcEvent.create_error_event(
 		"Interaction accepted in unexpected state: %s" % state_name
 	))
 
 # Called when an interaction request is rejected
-func on_interaction_rejected(request: InteractionRequest, reason: String) -> void:
+func on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 	controller.event_log.append(NpcEvent.create_error_event(
 		"Interaction rejected in unexpected state: %s" % state_name
 	))

@@ -2,7 +2,7 @@ extends BaseControllerState
 
 class_name ControllerRequestingState
 
-var interaction_request: InteractionRequest
+var interaction_request: InteractionBid
 var target_item: ItemController
 var interaction_name: String
 
@@ -32,8 +32,7 @@ func enter(action_name: String = "", parameters: Dictionary = {}) -> void:
 			return
 
 		var interaction_obj = self.target_item.interactions[self.interaction_name] # Renamed
-		self.interaction_request = interaction_obj.create_start_request(controller)
-		self.interaction_request.item_controller = self.target_item
+		self.interaction_request = interaction_obj.create_start_bid(controller)
 		
 		controller.current_request = self.interaction_request # NpcController tracks this
 		
@@ -59,10 +58,10 @@ func get_context_data() -> Dictionary:
 		"item_name": target_item.name if target_item else "",
 		"item_position": {"x": target_item._gamepiece.cell.x, "y": target_item._gamepiece.cell.y} if target_item else {},
 		"interaction_name": interaction_name,
-		"request_type": InteractionRequest.RequestType.keys()[interaction_request.request_type] if interaction_request else ""
+		"request_type": InteractionBid.BidType.keys()[interaction_request.bid_type] if interaction_request else ""
 	}
 
-func on_interaction_accepted(request: InteractionRequest) -> void:
+func on_interaction_accepted(request: InteractionBid) -> void:
 	if interaction_request != request:
 		push_error("Accepted request doesn't match current request")
 		# Potentially go to Idle, but for now, just log and return if it's a different request.
@@ -95,7 +94,7 @@ func on_interaction_accepted(request: InteractionRequest) -> void:
 		NpcEvent.Type.INTERACTION_STARTED
 	))
 
-func on_interaction_rejected(request: InteractionRequest, reason: String) -> void:
+func on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 	# Log rejection
 	controller.event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
 	

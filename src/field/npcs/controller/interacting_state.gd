@@ -30,8 +30,7 @@ func _try_cancel_interaction() -> void:
 	if not interaction or not controller.current_request:
 		return
 	
-	var request = interaction.create_cancel_request(controller)
-	request.item_controller = controller.current_request.item_controller
+	var request = interaction.create_cancel_bid(controller)
 	
 	# Log the cancel request
 	controller.event_log.append(NpcEvent.create_interaction_request_event(request))

@@ -20,33 +20,30 @@ func _init(p_type: Type, p_payload: Dictionary[String, Variant]) -> void:
 	type = p_type
 	payload = p_payload
 
-static func create_interaction_request_event(request: InteractionRequest) -> NpcEvent:
+static func create_interaction_request_event(request: InteractionBid) -> NpcEvent:
 	return NpcEvent.new(
 		Type.INTERACTION_REQUEST_PENDING,
 		{
-			"interaction_name": request.interaction_name,
-			"item_name": request.item_controller.name if request.item_controller else &"",
-			"request_type": request.request_type
+			"interaction_name": request.interaction.name,
+			"request_type": request.bid_type
 		}
 	)
 
-static func create_interaction_rejected_event(request: InteractionRequest, reason: String = "") -> NpcEvent:
+static func create_interaction_rejected_event(request: InteractionBid, reason: String = "") -> NpcEvent:
 	return NpcEvent.new(
 		Type.INTERACTION_REQUEST_REJECTED,
 		{
-			"interaction_name": request.interaction_name,
-			"item_name": request.item_controller.name if request.item_controller else &"",
-			"request_type": request.request_type,
+			"interaction_name": request.interaction.name,
+			"request_type": request.bid_type,
 			"reason": reason
 		}
 	)
 
-static func create_interaction_update_event(request: InteractionRequest, update_type: Type) -> NpcEvent:
+static func create_interaction_update_event(request: InteractionBid, update_type: Type) -> NpcEvent:
 	return NpcEvent.new(
 		update_type,
 		{
-			"interaction_name": request.interaction_name,
-			"item_name": request.item_controller.name if request.item_controller else &""
+			"interaction_name": request.interaction.name
 		}
 	)
 
@@ -56,7 +53,7 @@ static func create_observation_event(
 	needs: Dictionary[String, float],
 	movement_locked: bool,
 	current_interaction: Interaction = null,
-	current_request: InteractionRequest = null,
+	current_request: InteractionBid = null,
 	controller_state: Dictionary = {}
 ) -> NpcEvent:
 	var p_payload: Dictionary[String, Variant] = {
@@ -69,11 +66,7 @@ static func create_observation_event(
 	}
 	
 	if current_interaction:
-		var item_name = current_request.item_controller.name if current_request.item_controller else &""
-		var item_cell = current_request.item_controller._gamepiece.cell if current_request.item_controller else Vector2i()
 		p_payload.current_interaction = current_interaction.to_dict()
-		p_payload.current_interaction["item_name"] = item_name
-		p_payload.current_interaction["item_cell"] = item_cell
 	
 	return NpcEvent.new(Type.OBSERVATION, p_payload)
 

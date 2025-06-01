@@ -1,34 +1,47 @@
 class_name Interaction extends RefCounted
 
-const RequestType = preload("res://src/field/interactions/interaction_request.gd").RequestType
+const BidType = preload("res://src/field/interactions/interaction_bid.gd").BidType
 
 var name: String
 var description: String
 var needs_filled: Array[Needs.Need]  # Needs this interaction will increase
 var needs_drained: Array[Needs.Need] # Needs this interaction will decrease
+var duration: float = 0.0
+var requires_adjacency: bool = true
 
-signal start_request(request: InteractionRequest)
-signal cancel_request(request: InteractionRequest)
+signal start_request(request: InteractionBid)
+signal cancel_request(request: InteractionBid)
 
 
-func _init(_name: String, _description: String, _fills: Array[Needs.Need] = [], _drains: Array[Needs.Need] = []):
+func _init(_name: String, _description: String, _fills: Array[Needs.Need] = [], _drains: Array[Needs.Need] = [], _duration: float = 0.0, _requires_adjacency: bool = true):
 	name = _name
 	description = _description
 	needs_filled = _fills
 	needs_drained = _drains
+	duration = _duration
+	requires_adjacency = _requires_adjacency
 
 
+func can_start_with(npc: NpcController, item: ItemController) -> bool:
+	# Basic validation - can be overridden by specific interaction types
+	if requires_adjacency:
+		var npc_cell = npc._gamepiece.cell
+		var item_cell = item._gamepiece.cell
+		var distance = abs(npc_cell.x - item_cell.x) + abs(npc_cell.y - item_cell.y)
+		return distance <= 1
+	return true
 
-func create_start_request(npc: NpcController, arguments: Dictionary[String, Variant] = {}) -> InteractionRequest:
-	return _create_request(RequestType.START, npc, arguments)
+
+func create_start_bid(npc: NpcController) -> InteractionBid:
+	return _create_bid(BidType.START, npc)
 
 
-func create_cancel_request(npc: NpcController, arguments: Dictionary[String, Variant] = {}) -> InteractionRequest:
-	return _create_request(RequestType.CANCEL, npc, arguments)
+func create_cancel_bid(npc: NpcController) -> InteractionBid:
+	return _create_bid(BidType.CANCEL, npc)
 
 
-func _create_request(request_type: RequestType, npc: NpcController, arguments: Dictionary[String, Variant]) -> InteractionRequest:
-	return InteractionRequest.new(name, request_type, npc, arguments)
+func _create_bid(bid_type: BidType, npc: NpcController) -> InteractionBid:
+	return InteractionBid.new(self, bid_type, npc)
 
 # Serialization method for backend communication
 func to_dict() -> Dictionary[String, Variant]:

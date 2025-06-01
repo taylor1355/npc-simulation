@@ -48,21 +48,21 @@ func _ready() -> void:
 	interaction.cancel_request.connect(_handle_sit_cancel_request)
 
 
-func _handle_sit_start_request(request: InteractionRequest) -> void:
+func _handle_sit_start_request(request: InteractionBid) -> void:
 	# Verify chair is unoccupied
 	if current_npc:
 		request.reject("Chair is already occupied")
 		return
 		
 	# Verify NPC is adjacent to chair
-	var npc_cell = request.npc_controller._gamepiece.cell
+	var npc_cell = request.bidder._gamepiece.cell
 	var chair_cell = item_controller._gamepiece.cell
 	if npc_cell.distance_to(chair_cell) > 1:
 		request.reject("Too far from chair")
 		return
 
 	request.accept()
-	current_npc = request.npc_controller
+	current_npc = request.bidder
 	
 	# Lock NPC movement and prepare chair
 	current_npc.set_movement_locked(true)
@@ -82,8 +82,8 @@ func _handle_sit_start_request(request: InteractionRequest) -> void:
 	need_modifier._handle_modify_start_request(request)
 
 
-func _handle_sit_cancel_request(request: InteractionRequest) -> void:
-	if current_npc and current_npc == request.npc_controller:
+func _handle_sit_cancel_request(request: InteractionBid) -> void:
+	if current_npc and current_npc == request.bidder:
 		request.accept()
 		_finish_interaction()
 	else:

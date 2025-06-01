@@ -2,134 +2,7 @@
 
 ## High Leverage Issues (Quick Wins)
 
-### 1. NPC Controller State Machine Cleanup
-**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
-
-**Problem**: Critical architectural issue in `npc_controller.gd` with implicit state tracking and mixed concerns:
-
-**Current State Issues**:
-```gdscript
-# Scattered implicit state variables:
-var movement_locked: bool = false
-var is_wandering: bool = false
-var current_interaction: Interaction = null
-var current_request: InteractionRequest = null
-var decision_timer: float = 0.0
-
-# State transitions buried in action handling:
-match action_name:
-    "move_to":
-        is_wandering = false  # Implicit state change
-    "interact_with":
-        is_wandering = false  # Another implicit state change
-    # No clear state validation or transition logic
-```
-
-**Root Problems**:
-- Controller state (pathing, interaction coordination) mixed with NPC state (motivations, decisions)
-- No explicit state enum - states inferred from variable combinations
-- State transitions scattered throughout `_on_action_chosen()` method
-- No state validation - can end up in invalid states
-- Backend gets no explicit controller state information
-
-**Proposed Solution**:
-```gdscript
-# Explicit controller state machine
-enum ControllerState {
-    IDLE,           # Ready for new actions
-    MOVING,         # Currently pathfinding/moving
-    REQUESTING,     # Waiting for interaction acceptance/rejection
-    INTERACTING,    # Actively in an interaction
-    WANDERING       # Random movement mode
-}
-
-class_name NpcControllerState extends RefCounted:
-    var state: ControllerState = ControllerState.IDLE
-    var movement_locked: bool = false
-    var destination: Vector2i
-    var current_interaction: Interaction
-    var current_request: InteractionRequest
-    
-    func can_transition_to(new_state: ControllerState) -> bool:
-        # Explicit state transition validation
-    
-    func transition_to(new_state: ControllerState) -> void:
-        # Validated state transitions with logging
-
-# Separate high-level NPC state for backend
-class_name NpcInternalState extends RefCounted:
-    var working_memory: String
-    var personality_traits: Array[String]
-```
-
-**Benefits**: 
-- Clear separation of coordination vs decision-making concerns
-- Explicit state tracking enables better debugging and backend integration
-- State validation prevents invalid combinations
-- Controller state can be serialized and passed to backend
-- Cleaner, more maintainable state transitions
-
-### 2. Move InteractionRequest State to Interaction
-**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
-
-**Problem**: `InteractionRequest` has accumulated too much responsibility and state that belongs in `Interaction`:
-
-**Current Issues**:
-```gdscript
-# InteractionRequest has too much state:
-var interaction_name: String          # Duplicates Interaction.name
-var npc_controller: NpcController     # Runtime state
-var item_controller: ItemController   # Runtime state  
-var arguments: Dictionary[String, Variant]  # Could be in Interaction
-var status: Status                    # Runtime state
-# Plus signals for accept/reject
-
-# Usage shows the problem:
-request.item_controller = target_item  # Assigning after creation
-current_request = request              # Storing for later cleanup
-```
-
-**Root Problems**:
-- `InteractionRequest` mixing configuration (what) with runtime state (who, when, status)
-- Multiple sources of truth for interaction data
-- Difficult to reuse interaction logic between different NPCs
-- Status tracking scattered between request and interaction
-
-**Proposed Refactor**:
-```gdscript
-# Minimal InteractionRequest - just a bid
-class_name InteractionBid extends RefCounted:
-    var interaction: Interaction      # Reference to the actual interaction
-    var bidder: NpcController        # Who wants to interact
-    var bid_type: BidType            # START or CANCEL
-    var status: BidStatus            # PENDING, ACCEPTED, REJECTED
-    # Signals stay here as they're about the bid process
-
-# Enhanced Interaction with more state
-class_name Interaction extends RefCounted:
-    var name: String
-    var description: String
-    var needs_filled: Array[Needs.Need]
-    var needs_drained: Array[Needs.Need]
-    var parameters: InteractionParameters  # Typed parameters instead of Dictionary
-    var duration: float = 0.0
-    var requires_adjacency: bool = true
-    # Interaction-specific validation logic
-    
-    func can_start_with(npc: NpcController, item: ItemController) -> bool:
-        # All validation logic here
-    
-    func start_interaction(npc: NpcController, item: ItemController) -> InteractionSession:
-        # Returns active session object for tracking
-```
-
-**Benefits**: 
-- Clear separation between bidding process and interaction logic
-- Easier to test and reuse interactions
-- Centralized interaction validation
-- Simpler request lifecycle management
-
-### 3. Debug Logging Cleanup and Standardization
+### 1. Debug Logging Cleanup and Standardization
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
 
 **Problem**: 64+ instances of inconsistent logging patterns throughout codebase with no centralized control:
@@ -171,7 +44,7 @@ static func error(msg: String, context: String = "") -> void:
 2. MCP client (standardize error reporting)
 3. Component validation (consistent error messages)
 
-### 4. Complete FieldEvents -> EventBus Rename  
+### 2. Complete FieldEvents -> EventBus Rename  
 **Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥🔥🔥
 
 **Problem**: `FieldEvents` was intended to be renamed to `EventBus` but was made a subclass as a temporary hack:
@@ -195,7 +68,7 @@ extends EventBus
 
 ## Medium Leverage Issues
 
-### 5. Variant Usage Investigation and Struct-like Classes
+### 3. Variant Usage Investigation and Struct-like Classes
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: 23+ instances where `Dictionary[String, Variant]` obscures contracts:
@@ -214,9 +87,9 @@ var payload: Dictionary[String, Variant]
 {"position": pos, "needs": needs, "seen_items": items}  # OBSERVATION
 {"interaction_name": name, "reason": reason}            # REJECTED
 
-# InteractionRequest.arguments - vague purpose
-var arguments: Dictionary[String, Variant] = {}
-# Currently unused in code - unclear what it's for
+# Interaction parameters - loosely typed
+var parameters: Dictionary[String, Variant] = {}
+# Different interactions need different parameters
 ```
 
 **Proposed Struct-like Classes**:
@@ -247,7 +120,7 @@ class_name InteractionEventPayload extends RefCounted:
 
 **Benefits**: Self-documenting code, better IDE support, compile-time validation, clearer interfaces
 
-### 6. Terminology Taxonomy and Naming Clarity
+### 4. Terminology Taxonomy and Naming Clarity
 **Impact**: High | **Effort**: High | **Leverage**: 🔥🔥🔥
 
 **Problem**: Significant overloading of core terms creates confusion:
@@ -282,7 +155,6 @@ NpcEvent -> NpcLifecycleEvent         # Backend lifecycle tracking
 GamepieceEvents -> GamepieceEventFactory  # Factory pattern clearer
 
 # Clear request/response taxonomy  
-InteractionRequest -> InteractionBid   # Bidding metaphor
 NpcRequest -> NpcObservationBatch     # Batch of observations
 NpcResponse -> NpcDecision            # Backend decision
 
@@ -292,7 +164,7 @@ Action -> NpcBehaviorAction           # NPC behavior decisions
 # Rename interaction capabilities to avoid confusion
 ```
 
-### 7. Event Handling Pattern Consolidation
+### 5. Event Handling Pattern Consolidation
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: 15+ instances of repetitive event filtering pattern throughout codebase:
@@ -341,7 +213,7 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 ## Lower Leverage Issues
 
-### 8. @tool Annotation Audit
+### 6. @tool Annotation Audit
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
 
 **Problem**: Many files use `@tool` unnecessarily, risking production build issues:
@@ -358,12 +230,12 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 **Fix**: Remove @tool annotations where they're not needed for legitimate editor functionality.
 
-### 9. Physics Layer Constants  
+### 7. Physics Layer Constants  
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥
 
 **Problem**: Physics layer masks hardcoded in multiple places.
 
-### 10. Vision Manager Initialization Issue
+### 8. Vision Manager Initialization Issue
 **Impact**: Low | **Effort**: High | **Leverage**: 🔥
 
 **Problem**: TODO about `get_overlapping_areas()` timing issue with physics initialization.
@@ -371,37 +243,35 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 ## Implementation Priority
 
 ### Phase 1: Core Architecture 
-1. **NPC Controller State Machine** - Central to system, enables other improvements
-2. **InteractionRequest State Move** - Core interaction architecture cleanup
-3. **FieldEvents -> EventBus Rename** - Remove temporary hack
+1. **FieldEvents -> EventBus Rename** - Remove temporary hack
+2. **Debug Logging Standardization** - Major maintainability improvement
 
 ### Phase 2: Type Safety & Patterns
-4. **Debug Logging Standardization** - Major maintainability improvement  
-5. **Variant Usage Investigation** - Better type contracts
-6. **Event Handling Consolidation** - Reduce boilerplate
+3. **Variant Usage Investigation** - Better type contracts
+4. **Event Handling Consolidation** - Reduce boilerplate
 
 ### Phase 3: Large Refactoring
-7. **Terminology Taxonomy** - Major naming clarity project
-8. **@tool Annotation Audit** - Production safety
-9. **Physics Layer Constants** - Minor cleanup
+5. **Terminology Taxonomy** - Major naming clarity project
+6. **@tool Annotation Audit** - Production safety
+7. **Physics Layer Constants** - Minor cleanup
+8. **Vision Manager Initialization** - Physics timing issues
 
 ## Risk Assessment
 
 **Low Risk**: FieldEvents rename, @tool cleanup, constants
-**Medium Risk**: State machine refactor, logging changes, struct classes, pattern consolidation
-**High Risk**: Terminology changes (affects many interfaces), interaction architecture changes
+**Medium Risk**: Logging changes, struct classes, pattern consolidation  
+**High Risk**: Terminology changes (affects many interfaces)
 
 ## Success Metrics
 
-- **Architecture Quality**: Explicit state machines with validation
-- **Code Clarity**: Clear separation between coordination and decision-making
+- **Code Clarity**: Clear separation between components and systems
 - **Type Safety**: Replace generic Variants with explicit contracts where appropriate
 - **Maintainability**: Centralized logging, consistent patterns
 - **Developer Experience**: Clear naming, better IDE support
-- **System Reliability**: Validated state transitions, clearer interaction lifecycle
+- **System Reliability**: Clearer component interfaces and event handling
 
 ## Conclusion
 
-The code audit revealed that the highest-leverage improvements target core architectural issues: the implicit state machine in NPC controller and the confused responsibility split between InteractionRequest and Interaction. These changes will significantly improve system reliability and maintainability. The terminology overloading is a real problem that affects developer productivity, but should be tackled after the core architectural issues are resolved.
+The highest-leverage improvements now focus on code quality and maintainability. With the interaction system recently refactored, priorities shift to establishing consistent patterns (logging, event handling) and improving type safety. The terminology overloading remains a significant issue affecting developer productivity.
 
-Key insight: Focus on explicit state management and clear responsibility boundaries first, as these provide the foundation for all other improvements and enable better debugging and testing.
+Key insight: Establishing consistent patterns and clear contracts will provide the foundation for sustainable growth of the codebase.

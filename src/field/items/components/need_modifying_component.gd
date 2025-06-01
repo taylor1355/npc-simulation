@@ -77,14 +77,14 @@ func _finish_interaction() -> void:
 	interaction_finished.emit(INTERACTION_NAME, {})
 
 
-func _handle_modify_start_request(request: InteractionRequest) -> void:
+func _handle_modify_start_request(request: InteractionBid) -> void:
 	request.accept()
-	current_npc = request.npc_controller
+	current_npc = request.bidder
 	accumulated_deltas.clear()
 
 
-func _handle_modify_cancel_request(request: InteractionRequest) -> void:
-	if current_npc and current_npc == request.npc_controller:
+func _handle_modify_cancel_request(request: InteractionBid) -> void:
+	if current_npc and current_npc == request.bidder:
 		request.accept()
 		_finish_interaction()
 	else:

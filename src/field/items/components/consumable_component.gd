@@ -82,13 +82,13 @@ func _finish_interaction() -> void:
 			GamepieceEvents.create_destroyed(item_controller._gamepiece)
 		)
 
-func _handle_consume_start_request(request: InteractionRequest) -> void:
+func _handle_consume_start_request(request: InteractionBid) -> void:
 	if current_npc:
 		request.reject("Already consuming")
 		return
 
 	request.accept()
-	current_npc = request.npc_controller
+	current_npc = request.bidder
 	
 	# Rotate NPC to face the item being consumed
 	var direction_vec = Vector2(item_controller._gamepiece.cell - current_npc._gamepiece.cell)
@@ -96,8 +96,8 @@ func _handle_consume_start_request(request: InteractionRequest) -> void:
 	
 	need_modifying._handle_modify_start_request(request)
 
-func _handle_consume_cancel_request(request: InteractionRequest) -> void:
-	if current_npc and current_npc == request.npc_controller:
+func _handle_consume_cancel_request(request: InteractionBid) -> void:
+	if current_npc and current_npc == request.bidder:
 		request.accept()
 		_finish_interaction()
 	else:

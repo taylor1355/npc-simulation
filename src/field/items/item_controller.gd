@@ -49,27 +49,30 @@ func _process(delta: float) -> void:
     if current_interaction:
         interaction_time += delta
 
-func request_interaction(request: InteractionRequest) -> void:
-    request = request as InteractionRequest
+func request_interaction(request: InteractionBid) -> void:
+    request = request as InteractionBid
     if current_interaction == null:
-        request.item_controller = self
-
-        var interaction = interactions.get(request.interaction_name, null)
+        var interaction = interactions.get(request.interaction.name, null)
         if not interaction:
             request.reject("Interaction not found")
+            return
+
+        # Validate interaction can start
+        if not interaction.can_start_with(request.bidder, self):
+            request.reject("Interaction requirements not met")
             return
 
         # Connect to request status changes
         request.accepted.connect(
             func():
                 current_interaction = interaction
-                interacting_npc = request.npc_controller
+                interacting_npc = request.bidder
                 interaction_time = 0.0
         )
 
-        if request.request_type == InteractionRequest.RequestType.START:
+        if request.bid_type == InteractionBid.BidType.START:
             interaction.start_request.emit(request)
-        elif request.request_type == InteractionRequest.RequestType.CANCEL:
+        elif request.bid_type == InteractionBid.BidType.CANCEL:
             interaction.cancel_request.emit(request)
         else:
             request.reject("Invalid request type")

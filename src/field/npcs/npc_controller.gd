@@ -30,7 +30,7 @@ var movement_locked: bool = false
 # Current state data
 var destination: Vector2i
 var current_interaction: Interaction = null
-var current_request: InteractionRequest = null
+var current_request: InteractionBid = null
 
 @onready var _vision_manager: VisionManager = $VisionArea as VisionManager
 
@@ -241,10 +241,10 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 
 
 # Interaction callbacks that delegate to current state
-func _on_interaction_accepted(request: InteractionRequest) -> void:
+func _on_interaction_accepted(request: InteractionBid) -> void:
 	state_machine.current_state.on_interaction_accepted(request)
 
-func _on_interaction_rejected(request: InteractionRequest, reason: String) -> void:
+func _on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 	state_machine.current_state.on_interaction_rejected(request, reason)
 
 func _on_interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary) -> void:
