@@ -9,7 +9,7 @@ func _ready():
 	parent_gamepiece = get_gamepiece(self)
 	area_entered.connect(_on_area_entered)
 	area_exited.connect(_on_area_exited)
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.GAMEPIECE_DESTROYED):
 				_on_gamepiece_removed(event as GamepieceEvents.DestroyedEvent)

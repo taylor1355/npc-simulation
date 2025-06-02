@@ -6,7 +6,7 @@ var focused_gamepiece: Gamepiece = null
 
 
 func _ready() -> void:
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.GAMEPIECE_PATH_SET):
 				_on_gamepiece_path_set(event as GamepieceEvents.PathSetEvent)

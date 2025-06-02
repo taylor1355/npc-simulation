@@ -8,8 +8,8 @@ The `Event` class is the foundation for all specific event types in the system.
 *   **`timestamp: float`**: Automatically records the Unix time when the event was created.
 *   **`is_type(type: Type) -> bool`**: A utility method to check if an event instance matches a specific `Event.Type`.
 
-### Event Bus (`FieldEvents` Singleton, implemented in `event_bus.gd`, extended by `field_events.gd`)
-The global event bus, typically accessed via an autoload singleton named `FieldEvents` (which is an instance of `field_events.gd`, extending `event_bus.gd`), is responsible for dispatching all game events. The core logic resides in `event_bus.gd`.
+### Event Bus (`EventBus` Singleton, implemented in `event_bus.gd`, extended by `field_events.gd`)
+The global event bus, typically accessed via an autoload singleton named `EventBus` (which is an instance of `field_events.gd`, extending `event_bus.gd`), is responsible for dispatching all game events. The core logic resides in `event_bus.gd`.
 
 **Key Features & Responsibilities:**
 *   **Central Dispatch:** Provides a `dispatch(event: Event)` method. When called, it first emits the generic `event_dispatched(event: Event)` signal.
@@ -82,8 +82,8 @@ Events related to grid cell interactions, typically from UI or selection systems
 
 ### Event Dispatch
 ```gdscript
-# Through FieldEvents singleton
-FieldEvents.dispatch(
+# Through EventBus singleton
+EventBus.dispatch(
     GamepieceEvents.create_cell_changed(
         gamepiece,  # Source entity
         old_cell   # Previous position
@@ -94,14 +94,14 @@ FieldEvents.dispatch(
 ### Event Handling
 ```gdscript
 # Generic handler with type check
-FieldEvents.event_dispatched.connect(
+EventBus.event_dispatched.connect(
     func(event: Event):
         if event.is_type(Event.Type.GAMEPIECE_CLICKED):
             handle_click(event as GamepieceEvents.ClickedEvent)
 )
 
 # Specific event handler
-FieldEvents.gamepiece_clicked.connect(handle_click)
+EventBus.gamepiece_clicked.connect(handle_click)
 ```
 
 ### Frame Tracking

@@ -106,7 +106,7 @@ func _on_gamepiece_arriving(excess_distance: float) -> void:
 			and excess_distance > 0:
 		_current_waypoint_index += 1
 		var waypoint: = _waypoints[_current_waypoint_index]
-		if is_cell_blocked(waypoint) or FieldEvents.did_gp_move_to_cell_this_frame(waypoint):
+		if is_cell_blocked(waypoint) or EventBus.did_gp_move_to_cell_this_frame(waypoint):
 			set_process(true)
 			return
 		

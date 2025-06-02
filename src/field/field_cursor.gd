@@ -33,7 +33,7 @@ var focus: = Gameboard.INVALID_CELL:
 func _ready() -> void:
 	assert(gameboard, "\n%s::initialize error - Invalid Gameboard reference!" % name)
 	
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.INPUT_PAUSED):
 				_on_input_paused(event as SystemEvents.InputPausedEvent)
@@ -50,7 +50,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		
 		var cell = _get_cell_under_mouse()
 		selected.emit(cell)
-		FieldEvents.dispatch(
+		EventBus.dispatch(
 			CellEvent.create_select(cell)
 		)
 
@@ -86,7 +86,7 @@ func set_focus(value: Vector2i) -> void:
 	
 	focus_changed.emit(old_focus, focus)
 	if focus != Gameboard.INVALID_CELL:
-		FieldEvents.dispatch(
+		EventBus.dispatch(
 			CellEvent.create_highlight(focus)
 		)
 

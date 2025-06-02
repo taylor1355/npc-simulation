@@ -37,7 +37,7 @@ src/
 - Configuration is data-driven through Godot resources (ItemConfig, ItemComponentConfig)
 
 ### Event-Driven Communication
-- Central EventBus (currently FieldEvents) dispatches all game events
+- Central EventBus dispatches all game events
 - Events are strongly-typed with specific event classes
 - Frame-based tracking ensures consistent timing
 
@@ -85,11 +85,11 @@ src/
 ```gdscript
 # Direct connection for specific events
 func _ready():
-    FieldEvents.gamepiece_clicked.connect(_on_gamepiece_clicked)
+    EventBus.gamepiece_clicked.connect(_on_gamepiece_clicked)
 
 # Generic connection with type checking
 func _ready():
-    FieldEvents.event_dispatched.connect(
+    EventBus.event_dispatched.connect(
         func(event: Event):
             if event.is_type(Event.Type.GAMEPIECE_CLICKED):
                 handle_click(event as GamepieceEvents.ClickedEvent)
@@ -167,10 +167,9 @@ func _component_ready():
 - Enable debug logging in NPC scenes
 - Use mock backend for predictable behavior
 - Check Working Memory panel in UI
-- Monitor event flow with FieldEvents logging
+- Monitor event flow with EventBus logging
 
 ## Current Technical Debt
-- FieldEvents should be renamed to EventBus
 - Inconsistent debug logging patterns
 - Some terminology overloading (Event, Request, Action)
 - Need better separation between interaction bidding and execution
@@ -187,14 +186,21 @@ func _component_ready():
 - Pathfinding caches results when possible
 - Event system uses signals (efficient in Godot)
 
+## Pre-Commit Workflow
+Before suggesting a commit, always:
+1. Run `git diff` to review all changes
+2. Verify the changes match what was intended
+3. Check for any unintended modifications
+4. Only then suggest a commit message
+
 ## Commit Message Style
-- **First line**: Concise description of what changed (no justifications)
+- **First line**: What changed in the fewest words possible (while still being sufficiently comprehensive)
 - **Empty line**: Always leave a blank line after the header
-- **Details**: Add bullet points explaining:
-  - Why the change was made (separation of concerns, performance, etc.)
-  - What the new design accomplishes
-  - Any significant implementation details
-  - API changes or breaking changes
+- **Details**: Add bullet points with concrete technical details:
+  - Specific files/systems affected with brief context
+  - Technical reason for the change (not buzzwords)
+  - Breaking changes or compatibility notes
+  - Bug fixes should explain the root cause
 - **Examples**:
   ```
   Refactor InteractionRequest to InteractionBid

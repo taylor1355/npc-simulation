@@ -29,7 +29,7 @@ func create_npc(
 		# Clear cache to force backend fetch
 		_npc_cache.erase(npc_id)
 		# Dispatch created event
-		FieldEvents.dispatch(NpcClientEvents.create_created(npc_id))
+		EventBus.dispatch(NpcClientEvents.create_created(npc_id))
 	else:
 		error.emit(create_result.get("message", "Unknown error creating NPC"))
 
@@ -44,7 +44,7 @@ func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 	
 	if response.status == NpcResponse.Status.SUCCESS:
 		var action_name = Action.Type.keys()[response.action].to_lower()
-		FieldEvents.dispatch(NpcClientEvents.create_action_chosen(npc_id, action_name, response.parameters))
+		EventBus.dispatch(NpcClientEvents.create_action_chosen(npc_id, action_name, response.parameters))
 		# Get updated working memory after observation
 		get_npc_info(npc_id)
 	else:
@@ -55,7 +55,7 @@ func cleanup_npc(npc_id: String) -> void:
 	_npc_cache.erase(npc_id)
 	var result = _backend.cleanup_agent(npc_id)
 	if result.status == "removed":
-		FieldEvents.dispatch(NpcClientEvents.create_removed(npc_id))
+		EventBus.dispatch(NpcClientEvents.create_removed(npc_id))
 	else:
 		error.emit(result.get("message", "Unknown error cleaning up NPC"))
 
@@ -63,7 +63,7 @@ func cleanup_npc(npc_id: String) -> void:
 func get_npc_info(npc_id: String) -> void:
 	# Check cache first
 	if _npc_cache.has(npc_id) and not _npc_cache[npc_id].working_memory.is_empty():
-		FieldEvents.dispatch(NpcClientEvents.create_info_received(
+		EventBus.dispatch(NpcClientEvents.create_info_received(
 			npc_id,
 			_npc_cache[npc_id].traits,
 			_npc_cache[npc_id].working_memory
@@ -79,6 +79,6 @@ func get_npc_info(npc_id: String) -> void:
 		_npc_cache[npc_id].traits = result.traits
 		_npc_cache[npc_id].working_memory = result.working_memory
 		
-		FieldEvents.dispatch(NpcClientEvents.create_info_received(npc_id, result.traits, result.working_memory))
+		EventBus.dispatch(NpcClientEvents.create_info_received(npc_id, result.traits, result.working_memory))
 	else:
 		error.emit(result.get("message", "Unknown error getting NPC info"))

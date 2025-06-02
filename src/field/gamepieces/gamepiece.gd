@@ -119,16 +119,16 @@ func _ready() -> void:
 		cell_changed.connect(
 			func(old_cell: Vector2): 
 				var event = GamepieceEvents.create_cell_changed(self, old_cell)
-				FieldEvents.dispatch(event)
+				EventBus.dispatch(event)
 		)
 		_click_area.clicked.connect(
 			func(): 
 				var event = GamepieceEvents.create_clicked(self)
-				FieldEvents.dispatch(event)
+				EventBus.dispatch(event)
 		)
 
 		# Set up gamepiece to be deleted on gamepiece_destroyed event
-		FieldEvents.gamepiece_destroyed.connect(
+		EventBus.gamepiece_destroyed.connect(
 			func(event: GamepieceEvents.DestroyedEvent):
 				if event.gamepiece == self:
 					queue_free()

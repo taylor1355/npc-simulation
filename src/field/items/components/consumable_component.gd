@@ -78,7 +78,7 @@ func _finish_interaction() -> void:
 	current_npc = null
 	
 	if percent_left <= 0.0:
-		FieldEvents.dispatch(
+		EventBus.dispatch(
 			GamepieceEvents.create_destroyed(item_controller._gamepiece)
 		)
 

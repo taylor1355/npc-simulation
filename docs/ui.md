@@ -31,7 +31,7 @@ Base Panel (gamepiece_panel.gd):
 │   ├── activate()/deactivate(): Processing
 │   └── _update_display(): Content refresh
 └── Event Handling:
-    └── Listens for `FOCUSED_GAMEPIECE_CHANGED` from `FieldEvents` to update its content based on the newly focused gamepiece.
+    └── Listens for `FOCUSED_GAMEPIECE_CHANGED` from `EventBus` to update its content based on the newly focused gamepiece.
 ```
 
 ### Need Display (need_bar.gd, need_bar.tscn)

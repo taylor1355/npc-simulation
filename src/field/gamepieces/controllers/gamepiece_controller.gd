@@ -86,18 +86,18 @@ func _ready() -> void:
 		_gameboard = _gamepiece.gameboard
 		assert(_gameboard, "%s error: invalid Gameboard object!" % name)
 		
-		FieldEvents.input_paused.connect(_on_input_paused)
+		EventBus.input_paused.connect(_on_input_paused)
 		
 		_gamepiece.arriving.connect(_on_gamepiece_arriving)
 		_gamepiece.arrived.connect(_on_gamepiece_arrived)
 		
 		# The controller will be notified of any changes in the gameboard and respond accordingly.
-		FieldEvents.event_dispatched.connect(
+		EventBus.event_dispatched.connect(
 			func(event: Event):
 				if event.is_type(Event.Type.GAMEPIECE_CELL_CHANGED):
 					_on_gamepiece_cell_changed(event as GamepieceEvents.CellChangedEvent)
 		)
-		FieldEvents.terrain_changed.connect(_on_terrain_passability_changed)
+		EventBus.terrain_changed.connect(_on_terrain_passability_changed)
 		
 		# Update pathfinding when movement blocking changes
 		for gamepiece in get_tree().get_nodes_in_group("_GAMEPIECE_GROUP"):
@@ -168,7 +168,7 @@ func is_cell_blocked(cell: Vector2i) -> bool:
 	# There is one last check to make. It is possible that a gamepiece has decided to move to cell 
 	# THIS frame. It's collision shape will not move until next frame, so the events manager may
 	# have flagged this cell as 'targeted this frame'.
-	return FieldEvents.did_gp_move_to_cell_this_frame(cell)
+	return EventBus.did_gp_move_to_cell_this_frame(cell)
 
 ## Find all collision matching [member gamepiece_mask] at a given cell.
 func get_collisions(cell: Vector2i) -> Array[Dictionary]:
@@ -247,7 +247,7 @@ func _on_gamepiece_arriving(excess_distance: float) -> void:
 	if not _waypoints.is_empty() and not is_paused:
 		while not _waypoints.is_empty() and excess_distance > 0:
 			if is_cell_blocked(_waypoints[0]) \
-					or FieldEvents.did_gp_move_to_cell_this_frame(_waypoints[0]):
+					or EventBus.did_gp_move_to_cell_this_frame(_waypoints[0]):
 				return
 			
 			_current_waypoint = _waypoints.pop_front()

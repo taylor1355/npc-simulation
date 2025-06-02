@@ -32,7 +32,7 @@ func _update_display() -> void:
 	text += "\nNeed Changes When Consumed:\n"
 	for need_id in consumable.need_deltas:
 		var delta = consumable.need_deltas[need_id]
-		text += "- %s: %+.1f\n" % [need_id.capitalize(), delta]
+		text += "- %s: %+.1f\n" % [Needs.get_display_name(need_id), delta]
 		
 	if consumable.current_npc:
 		text += "\nCurrently being consumed by: " + consumable.current_npc._gamepiece.name

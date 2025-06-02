@@ -14,7 +14,7 @@ func is_compatible_with(controller: GamepieceController) -> bool:
 
 func _ready() -> void:
 	# Listen for focus changes
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.event_type == Event.Type.FOCUSED_GAMEPIECE_CHANGED:
 				_on_focused_gamepiece_changed(event)

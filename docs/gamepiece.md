@@ -51,7 +51,7 @@ The `GamepieceController` (extends `Node2D`) is responsible for managing the beh
     *   Maintains a list of child `GamepieceComponent`s.
     *   Provides `get_component(type: GDScript)`, `has_component(type: GDScript)`, and `add_component_node(component: GamepieceComponent)`.
 *   **State & Event Handling:**
-    *   Responds to game events like `FieldEvents.input_paused`, `FieldEvents.terrain_changed`, and `GamepieceEvents.CellChangedEvent` to update its state or pathfinding data.
+    *   Responds to game events like `EventBus.input_paused`, `EventBus.terrain_changed`, and `GamepieceEvents.CellChangedEvent` to update its state or pathfinding data.
     *   Connects to parent `_gamepiece` signals (`arriving`, `arrived`) to manage path following.
 *   **Configuration Exports:**
     *   `@export_flags_2d_physics var terrain_mask` (default `0x2`).

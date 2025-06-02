@@ -25,7 +25,7 @@ func _ready() -> void:
 	items_manager.spawn_chair()
 	items_manager.spawn_apple()
 
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.GAMEPIECE_CLICKED):
 				_on_gamepiece_clicked(event as GamepieceEvents.ClickedEvent)
@@ -47,7 +47,7 @@ func _ready() -> void:
 	
 	# Emit initial focus event if there's a focused gamepiece
 	if focused_game_piece:
-		FieldEvents.dispatch(
+		EventBus.dispatch(
 			GamepieceEvents.create_focused(focused_game_piece)
 		)
 
@@ -69,6 +69,6 @@ func set_focused_game_piece(value: Gamepiece) -> void:
 	
 	Camera.gamepiece = focused_game_piece
 
-	FieldEvents.dispatch(
+	EventBus.dispatch(
 		GamepieceEvents.create_focused(focused_game_piece)
 	)

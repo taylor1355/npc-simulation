@@ -40,7 +40,7 @@ func _ready():
 	mcp_client.connection_error.connect(_on_connection_error)
 	
 	# Connect to event bus 
-	FieldEvents.event_dispatched.connect(_on_field_event)
+	EventBus.event_dispatched.connect(_on_field_event)
 	
 	# Add a direct callback for a sanity check
 	log_message("Setting up manual callback test")
@@ -63,9 +63,9 @@ func _setup_direct_callback_test():
 	direct_timer.wait_time = 5.0
 	direct_timer.one_shot = true
 	direct_timer.timeout.connect(func():
-		log_message("⚠️ Testing direct FieldEvents dispatch")
+		log_message("⚠️ Testing direct EventBus dispatch")
 		var direct_event = NpcClientEvents.create_created(test_npc_id)
-		FieldEvents.dispatch(direct_event)
+		EventBus.dispatch(direct_event)
 	)
 	direct_timer.start()
 

@@ -147,7 +147,7 @@ func cleanup_npc(npc_id: String) -> void:
 func get_npc_info(npc_id: String, callback: Callable = Callable()) -> void:
 	# Check cache first
 	if _npc_cache.has(npc_id) and not _npc_cache[npc_id].working_memory.is_empty():
-		FieldEvents.dispatch(NpcClientEvents.create_info_received(
+		EventBus.dispatch(NpcClientEvents.create_info_received(
 			npc_id,
 			_npc_cache[npc_id].traits,
 			_npc_cache[npc_id].working_memory
@@ -260,7 +260,7 @@ func _on_create_npc_response(response: Dictionary, npc_id: String) -> void:
 		var event = NpcClientEvents.create_created(npc_id)
 		if debug_mode:
 			print("Dispatching CreatedEvent for NPC %s" % npc_id)
-		FieldEvents.dispatch(event)
+		EventBus.dispatch(event)
 	else:
 		var error_msg = "Failed to create NPC %s. Status: %s. Message: %s" % [
 			npc_id, 
@@ -288,7 +288,7 @@ func _on_process_observation_response(response: Dictionary, npc_id: String) -> v
 			var action_chosen_event = NpcClientEvents.create_action_chosen(npc_id, action_name, parameters)
 			if debug_mode:
 				print("Dispatching ActionChosenEvent for NPC %s: action=%s" % [npc_id, action_name])
-			FieldEvents.dispatch(action_chosen_event)
+			EventBus.dispatch(action_chosen_event)
 		
 		# Get NPC info with callback
 		get_npc_info(npc_id, dispatch_action_callback)
@@ -303,7 +303,7 @@ func _on_cleanup_npc_response(response: Dictionary, npc_id: String) -> void:
 		var event = NpcClientEvents.create_removed(npc_id)
 		if debug_mode:
 			print("Dispatching RemovedEvent for NPC %s" % npc_id)
-		FieldEvents.dispatch(event)
+		EventBus.dispatch(event)
 	else:
 		print("Warning: Unexpected cleanup_npc response status: %s" % response.get("status", "none"))
 
@@ -330,7 +330,7 @@ func _on_get_npc_info_response(response: Dictionary, context: Dictionary) -> voi
 		)
 		if debug_mode:
 			print("Dispatching InfoReceivedEvent for NPC %s" % npc_id)
-		FieldEvents.dispatch(event)
+		EventBus.dispatch(event)
 		
 		# Execute callback if provided in context
 		if context.has("callback") and context["callback"] is Callable and context["callback"].is_valid():

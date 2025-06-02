@@ -15,7 +15,7 @@ func _ready():
 	$ProgressBar.mouse_filter = MOUSE_FILTER_IGNORE
 	
 	if not Engine.is_editor_hint():
-		FieldEvents.event_dispatched.connect(
+		EventBus.event_dispatched.connect(
 			func(event: Event):
 				if event.is_type(Event.Type.NPC_NEED_CHANGED):
 					_on_npc_need_changed(event as NpcEvents.NeedChangedEvent)

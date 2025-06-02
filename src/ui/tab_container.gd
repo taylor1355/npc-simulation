@@ -22,7 +22,7 @@ func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
 	
 	# Listen for focus changes to update panels
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.event_type == Event.Type.FOCUSED_GAMEPIECE_CHANGED:
 				_on_focused_gamepiece_changed(event)

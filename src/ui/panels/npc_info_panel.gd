@@ -7,7 +7,7 @@ func is_compatible_with(controller: GamepieceController) -> bool:
 
 func _setup() -> void:
 	# Listen for NPC info events
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.NPC_INFO_RECEIVED):
 				_on_npc_info_received(event as NpcClientEvents.InfoReceivedEvent)

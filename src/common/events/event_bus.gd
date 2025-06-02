@@ -1,4 +1,4 @@
-class_name EventBus extends Node
+class_name EventBusNode extends Node
 
 ## Bus that handles event dispatching
 ## - event types improve maintainability over using raw signals

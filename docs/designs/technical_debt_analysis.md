@@ -44,31 +44,10 @@ static func error(msg: String, context: String = "") -> void:
 2. MCP client (standardize error reporting)
 3. Component validation (consistent error messages)
 
-### 2. Complete FieldEvents -> EventBus Rename  
-**Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥🔥🔥
-
-**Problem**: `FieldEvents` was intended to be renamed to `EventBus` but was made a subclass as a temporary hack:
-```gdscript
-# src/common/field_events.gd - Current temporary solution
-## Global event bus for field-related events
-extends EventBus
-```
-
-**Investigation Findings**:
-- 43+ references to FieldEvents throughout codebase need updating
-- The inheritance pattern works but wasn't the intended final design
-- Should be a straightforward rename operation
-
-**Solution**: 
-1. Rename `field_events.gd` to `event_bus.gd` 
-2. Update all 43+ references from `FieldEvents` to `EventBus`
-3. Remove the inheritance and make it the concrete implementation
-
-**Benefits**: Cleaner architecture, removes temporary hack, more intuitive naming
 
 ## Medium Leverage Issues
 
-### 3. Variant Usage Investigation and Struct-like Classes
+### 2. Variant Usage Investigation and Struct-like Classes
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: 23+ instances where `Dictionary[String, Variant]` obscures contracts:
@@ -120,7 +99,7 @@ class_name InteractionEventPayload extends RefCounted:
 
 **Benefits**: Self-documenting code, better IDE support, compile-time validation, clearer interfaces
 
-### 4. Terminology Taxonomy and Naming Clarity
+### 3. Terminology Taxonomy and Naming Clarity
 **Impact**: High | **Effort**: High | **Leverage**: 🔥🔥🔥
 
 **Problem**: Significant overloading of core terms creates confusion:
@@ -164,7 +143,7 @@ Action -> NpcBehaviorAction           # NPC behavior decisions
 # Rename interaction capabilities to avoid confusion
 ```
 
-### 5. Event Handling Pattern Consolidation
+### 4. Event Handling Pattern Consolidation
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: 15+ instances of repetitive event filtering pattern throughout codebase:
@@ -172,7 +151,7 @@ Action -> NpcBehaviorAction           # NPC behavior decisions
 **Current Repetitive Pattern**:
 ```gdscript
 # Found in multiple files (ui panels, vision_manager, npc_controller, etc.):
-FieldEvents.event_dispatched.connect(
+EventBus.event_dispatched.connect(
     func(event: Event):
         if event.is_type(Event.Type.SOME_TYPE):
             _handle_event(event as SomeEvent)
@@ -193,14 +172,14 @@ class_name EventSubscriber
 extends RefCounted
 
 static func subscribe_to_type(type: Event.Type, handler: Callable) -> void:
-    FieldEvents.event_dispatched.connect(
+    EventBus.event_dispatched.connect(
         func(event: Event):
             if event.is_type(type):
                 handler.call(event)
     )
 
 static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> void:
-    FieldEvents.event_dispatched.connect(
+    EventBus.event_dispatched.connect(
         func(event: Event):
             for event_type in types:
                 if event.is_type(event_type):
@@ -213,7 +192,7 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 ## Lower Leverage Issues
 
-### 6. @tool Annotation Audit
+### 5. @tool Annotation Audit
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
 
 **Problem**: Many files use `@tool` unnecessarily, risking production build issues:
@@ -230,12 +209,12 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 **Fix**: Remove @tool annotations where they're not needed for legitimate editor functionality.
 
-### 7. Physics Layer Constants  
+### 6. Physics Layer Constants  
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥
 
 **Problem**: Physics layer masks hardcoded in multiple places.
 
-### 8. Vision Manager Initialization Issue
+### 7. Vision Manager Initialization Issue
 **Impact**: Low | **Effort**: High | **Leverage**: 🔥
 
 **Problem**: TODO about `get_overlapping_areas()` timing issue with physics initialization.
@@ -243,22 +222,21 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 ## Implementation Priority
 
 ### Phase 1: Core Architecture 
-1. **FieldEvents -> EventBus Rename** - Remove temporary hack
-2. **Debug Logging Standardization** - Major maintainability improvement
+1. **Debug Logging Standardization** - Major maintainability improvement
 
 ### Phase 2: Type Safety & Patterns
-3. **Variant Usage Investigation** - Better type contracts
-4. **Event Handling Consolidation** - Reduce boilerplate
+2. **Variant Usage Investigation** - Better type contracts
+3. **Event Handling Consolidation** - Reduce boilerplate
 
 ### Phase 3: Large Refactoring
-5. **Terminology Taxonomy** - Major naming clarity project
-6. **@tool Annotation Audit** - Production safety
-7. **Physics Layer Constants** - Minor cleanup
-8. **Vision Manager Initialization** - Physics timing issues
+4. **Terminology Taxonomy** - Major naming clarity project
+5. **@tool Annotation Audit** - Production safety
+6. **Physics Layer Constants** - Minor cleanup
+7. **Vision Manager Initialization** - Physics timing issues
 
 ## Risk Assessment
 
-**Low Risk**: FieldEvents rename, @tool cleanup, constants
+**Low Risk**: @tool cleanup, constants
 **Medium Risk**: Logging changes, struct classes, pattern consolidation  
 **High Risk**: Terminology changes (affects many interfaces)
 

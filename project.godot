@@ -18,7 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 Camera="*res://src/field/field_camera.gd"
-FieldEvents="*res://src/common/field_events.gd"
+EventBus="*res://src/common/events/event_bus.gd"
 Globals="*res://src/common/globals.gd"
 
 [dialogic]

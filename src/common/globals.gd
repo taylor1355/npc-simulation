@@ -4,7 +4,7 @@ var focused_gamepiece: Gamepiece = null
 var npc_client: MockNpcClient = null
 
 func _ready() -> void:
-	FieldEvents.event_dispatched.connect(
+	EventBus.event_dispatched.connect(
 		func(event: Event):
 			if event.is_type(Event.Type.FOCUSED_GAMEPIECE_CHANGED):
 				_on_focused_gamepiece_changed(event as GamepieceEvents.FocusedEvent)

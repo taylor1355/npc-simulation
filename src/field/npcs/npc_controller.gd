@@ -57,7 +57,7 @@ func _ready() -> void:
 		state_machine.state_changed.connect(_on_state_changed)
 		
 		# Listen for NPC client events
-		FieldEvents.event_dispatched.connect(
+		EventBus.event_dispatched.connect(
 			func(event: Event):
 				match event.event_type:
 					Event.Type.NPC_CREATED:
@@ -81,7 +81,7 @@ func _ready() -> void:
 			func(need_name: String, new_value: float): 
 				need_changed.emit(need_name, new_value)
 				var event = NpcEvents.create_need_changed(_gamepiece, need_name, new_value)
-				FieldEvents.dispatch(event)
+				EventBus.dispatch(event)
 		)
 		
 		# Wait a frame for the gameboard and physics engine to be fully setup. Once the physics 
@@ -144,7 +144,7 @@ func set_new_destination(new_destination = null) -> void:
 		destination = new_destination as Vector2i
 
 	var event = GamepieceEvents.create_path_set(_gamepiece, destination)
-	FieldEvents.dispatch.call_deferred(event)
+	EventBus.dispatch.call_deferred(event)
 	travel_to_cell(destination, true)
 
 

@@ -31,7 +31,7 @@ func _update_display() -> void:
 	if sittable.current_npc:
 		text += sittable.current_npc._gamepiece.name
  
-	var energy_rate = sittable.need_modifier.need_rates[Needs.get_display_name(Needs.Need.ENERGY)]
+	var energy_rate = sittable.need_modifier.need_rates[Needs.Need.ENERGY]
 	text += "\nEnergy regeneration rate: +%.1f per second" % energy_rate
 		
 	if sittable._is_exiting:

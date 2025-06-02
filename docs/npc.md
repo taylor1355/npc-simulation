@@ -54,7 +54,7 @@ The NPC Need System simulates basic physiological and psychological requirements
 *   **`NpcController` Integration:**
     *   Initializes its `NeedsManager`.
     *   Includes current need values (from `NeedsManager.get_all_needs()`) in observation data.
-    *   Connects to `NeedsManager.need_changed`. When this local signal is received, `NpcController` emits its own `need_changed` signal and then dispatches a global event using `FieldEvents.dispatch(NpcEvents.create_need_changed(_gamepiece, need_name, new_value))`.
+    *   Connects to `NeedsManager.need_changed`. When this local signal is received, `NpcController` emits its own `need_changed` signal and then dispatches a global event using `EventBus.dispatch(NpcEvents.create_need_changed(_gamepiece, need_name, new_value))`.
 
 *   **`NEED_CHANGED` Event (Global):**
     *   Created by `NpcEvents.create_need_changed(gamepiece, need_name, new_value)`.
@@ -163,7 +163,7 @@ NpcController              McpNpcClient (GDScript)     McpSdkClient (C#)       M
     │                        │                           │                           │                       │    (action to take)     │
     │                        │                           │                           │                       │                         │
     │◄── NpcClientEvents.ActionChosenEvent ◄─ Emit Godot Signal ◄─── Return C# Task ◄───── Return C# Task ◄───┤
-    │    (from FieldEvents)  │                           │                           │                       │                         │
+    │    (from EventBus)  │                           │                           │                       │                         │
     │                        │                           │                           │                       │                         │
     ├─ state_machine.handle_action() ┐                   │                           │                       │                         │
     │  (executes move/interact etc.)│                   │                           │                       │                         │
