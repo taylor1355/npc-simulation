@@ -121,7 +121,7 @@ static func get_action_description(action_type: Type) -> Dictionary[String, Vari
 
 ## Get a list of all available action descriptions
 static func get_all_action_descriptions() -> Array[Dictionary]:
-	var descriptions = []
+	var descriptions: Array[Dictionary] = []
 	for i in range(Type.size()):
 		descriptions.append(get_action_description(i))
 	return descriptions

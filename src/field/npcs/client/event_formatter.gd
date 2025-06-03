@@ -68,20 +68,21 @@ func format_events_as_observation(events: Array[NpcEvent], npc_position: Vector2
 			if not item.interactions.is_empty():
 				observation_text += "Interactions:\n"
 				
-				for interaction_name in item.interactions:
-					var interaction = item.interactions[interaction_name]
+				for interaction_name: String in item.interactions:
+					# Note: interaction is a Dictionary from Interaction.to_dict(), not an Interaction object
+					var interaction: Dictionary = item.interactions[interaction_name]
 					observation_text += "- **%s**: %s" % [interaction.name, interaction.description]
 					
 					# Add needs affected with sign only
-					var effects = []
+					var effects: Array[String] = []
 					
 					if not interaction.needs_filled.is_empty():
-						for need in interaction.needs_filled:
-							effects.append("%s (+)" % Needs.get_display_name(need).capitalize())
+						for need: String in interaction.needs_filled:
+							effects.append("%s (+)" % need.capitalize())
 					
 					if not interaction.needs_drained.is_empty():
-						for need in interaction.needs_drained:
-							effects.append("%s (-)" % Needs.get_display_name(need).capitalize())
+						for need: String in interaction.needs_drained:
+							effects.append("%s (-)" % need.capitalize())
 					
 					if not effects.is_empty():
 						observation_text += " Effects: %s" % ", ".join(effects)

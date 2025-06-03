@@ -44,10 +44,12 @@ func _create_bid(bid_type: BidType, npc: NpcController) -> InteractionBid:
 	return InteractionBid.new(self, bid_type, npc)
 
 # Serialization method for backend communication
+## Converts this interaction to a dictionary for serialization
+## Note: needs_filled and needs_drained are converted from enums to strings
 func to_dict() -> Dictionary[String, Variant]:
 	return {
 		"name": name,
 		"description": description,
-		"needs_filled": needs_filled.map(func(need): return Needs.get_display_name(need)),
-		"needs_drained": needs_drained.map(func(need): return Needs.get_display_name(need))
+		"needs_filled": needs_filled.map(func(need: Needs.Need) -> String: return Needs.get_display_name(need)),
+		"needs_drained": needs_drained.map(func(need: Needs.Need) -> String: return Needs.get_display_name(need))
 	}

@@ -4,9 +4,10 @@ const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 
 # Backend NPC state
 var npc_id: String
-var npc_client: MockNpcClient
+var npc_client: NpcClientBase
 var event_log: Array[NpcEvent] = []
 var last_processed_event_index: int = -1
+var is_switching_backend: bool = false
 
 var is_active: = false:
 	set(value):
@@ -70,6 +71,8 @@ func _ready() -> void:
 						_on_focused_gamepiece_changed(
 							(event as GamepieceEvents.FocusedEvent).gamepiece
 						)
+					Event.Type.BACKEND_SWITCHED:
+						_on_backend_switched(event as SystemEvents.BackendSwitchedEvent)
 		)
 		
 		# Initialize needs manager
@@ -219,7 +222,8 @@ func _on_npc_created(event: NpcClientEvents.CreatedEvent) -> void:
 		npc_client.get_npc_info(npc_id)
 
 func _on_npc_removed(event: NpcClientEvents.RemovedEvent) -> void:
-	if event.npc_id == npc_id:
+	# Don't clear NPC ID if we're in the middle of switching backends
+	if not is_switching_backend and event.npc_id == npc_id:
 		npc_id = ""
 
 func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
@@ -238,6 +242,53 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 	
 	# Delegate to state machine
 	state_machine.handle_action(action_name, parameters)
+
+func _on_backend_switched(event: SystemEvents.BackendSwitchedEvent) -> void:
+	print("[NPC %s] Backend switching to %s" % [npc_id, NpcClientFactory.get_backend_name(event.backend_type)])
+	
+	# Set flag to prevent NPC ID from being cleared during cleanup
+	is_switching_backend = true
+	
+	# Disconnect from old client
+	if npc_client and npc_client.error.is_connected(_on_npc_error):
+		npc_client.error.disconnect(_on_npc_error)
+	
+	# Remove the NPC from the old backend
+	if npc_client and npc_id:
+		npc_client.cleanup_npc(npc_id)
+	
+	# Get the new client from factory
+	npc_client = NpcClientFactory.get_shared_client()
+	
+	# Update the global reference
+	Globals.npc_client = npc_client
+	
+	# Ensure the new client is in the scene tree
+	if not npc_client.is_inside_tree():
+		# The client needs to be in the tree to function properly
+		# Find a suitable parent - ideally the same parent as the old client
+		var parent = get_parent()
+		while parent and parent.name != "Field":
+			parent = parent.get_parent()
+		
+		if parent:
+			parent.add_child(npc_client)
+		else:
+			# Fallback: add to the tree root
+			get_tree().root.add_child(npc_client)
+	
+	npc_client.error.connect(_on_npc_error)
+	
+	# Re-create the NPC in the new backend
+	if npc_id and _gamepiece:
+		npc_client.create_npc(
+			npc_id,
+			["curious", "active"], # Default traits - same as initial creation
+			"I am a new NPC in this world." # Initial memory
+		)
+	
+	# Clear the flag now that switching is complete
+	is_switching_backend = false
 
 
 # Interaction callbacks that delegate to current state

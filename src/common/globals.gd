@@ -1,7 +1,7 @@
 extends Node
 
 var focused_gamepiece: Gamepiece = null
-var npc_client: MockNpcClient = null
+var npc_client: NpcClientBase = null
 
 func _ready() -> void:
 	EventBus.event_dispatched.connect(
