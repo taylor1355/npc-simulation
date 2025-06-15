@@ -41,37 +41,65 @@ func process_observation(request: NpcRequest) -> NpcResponse:
 			
 		match event.type:
 			NpcEvent.Type.OBSERVATION:
-				needs = event.payload.needs
-				seen_items = event.payload.seen_items
-				agent.movement_locked = event.payload.movement_locked
-				agent.current_observation = event.payload
+				if event.payload is CompositeObservation:
+					# Extract data from composite observation
+					var status_obs = event.payload.find_observation(StatusObservation)
+					if status_obs:
+						agent.movement_locked = status_obs.movement_locked
+						agent.current_observation = status_obs
+						
+						# Update state based on current interaction
+						if not status_obs.current_interaction.is_empty():
+							if not (agent.current_state is InteractingState):
+								agent.change_state(InteractingState)
+						elif agent.current_state is InteractingState:
+							agent.change_state(IdleState)
+					
+					var needs_obs = event.payload.find_observation(NeedsObservation)
+					if needs_obs:
+						needs = needs_obs.needs
+					
+					var vision_obs = event.payload.find_observation(VisionObservation)
+					if vision_obs:
+						seen_items = vision_obs.visible_entities
+				else:
+					push_warning("Unexpected observation type: " + str(event.payload))
 				
-				# Update state based on current interaction
-				if event.payload.current_interaction:
-					if not (agent.current_state is InteractingState):
-						agent.change_state(InteractingState)
-				elif agent.current_state is InteractingState:
-					agent.change_state(IdleState)
+				# Store the composite observation for state decisions
+				agent.current_observation = event.payload
 			NpcEvent.Type.ERROR:
-				agent.add_observation("Error: " + event.payload.message)
+				if event.payload is ErrorObservation:
+					agent.add_observation("Error: " + event.payload.message)
 			NpcEvent.Type.INTERACTION_REQUEST_PENDING:
-				agent.add_observation("Requesting interaction: %s" % event.payload.interaction_name)
+				if event.payload is InteractionRequestObservation:
+					agent.add_observation("Requesting interaction: %s" % event.payload.interaction_name)
 			NpcEvent.Type.INTERACTION_REQUEST_REJECTED:
-				agent.add_observation("Interaction request rejected: %s (%s)" % [
-					event.payload.interaction_name,
-					event.payload.reason
-				])
-				# Go back to idle if we were requesting an interaction
-				if agent.current_state is RequestingInteractionState:
-					agent.change_state(IdleState)
+				if event.payload is InteractionRejectedObservation:
+					agent.add_observation("Interaction request rejected: %s (%s)" % [
+						event.payload.interaction_name,
+						event.payload.reason
+					])
+					# Go back to idle if we were requesting an interaction
+					if agent.current_state is RequestingInteractionState:
+						agent.change_state(IdleState)
 			NpcEvent.Type.INTERACTION_STARTED:
-				agent.add_observation("Interaction started: %s" % event.payload.interaction_name)
+				if event.payload is InteractionUpdateObservation:
+					agent.add_observation("Interaction started: %s" % event.payload.interaction_name)
+			NpcEvent.Type.INTERACTION_OBSERVATION:
+				if event.payload is ConversationObservation:
+					var conv_obs = event.payload as ConversationObservation
+					agent.add_observation("In conversation with %d participants" % conv_obs.participants.size())
+					
+					# Log recent messages
+					for msg in conv_obs.conversation_history.slice(-3):
+						agent.add_observation("%s said: %s" % [msg["speaker"], msg["message"]])
 			NpcEvent.Type.INTERACTION_CANCELED, NpcEvent.Type.INTERACTION_FINISHED:
 				agent.idle_timer = MOVEMENT_COOLDOWN
 				
-				# Log appropriate message
-				var action = "canceled" if event.type == NpcEvent.Type.INTERACTION_CANCELED else "finished"
-				agent.add_observation("Interaction %s: %s" % [action, event.payload.interaction_name])
+				if event.payload is InteractionUpdateObservation:
+					# Log appropriate message
+					var action = "canceled" if event.type == NpcEvent.Type.INTERACTION_CANCELED else "finished"
+					agent.add_observation("Interaction %s: %s" % [action, event.payload.interaction_name])
 		
 		agent.last_processed_event_timestamp = event.timestamp
 	

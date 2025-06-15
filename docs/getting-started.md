@@ -1,20 +1,22 @@
 # Getting Started
 
 ## Setup Requirements
-- Godot 4.4
+- Godot 4.3 or later
 - Git repository access
 - Project cloned locally
+- Optional: MCP server for AI backend (mock backend included)
 
 ## Quick Start
-1. Open project in Godot 4.4
+1. Open project in Godot
 2. Open main scene (main.tscn)
 3. Run the project (F5)
 4. Navigate the view:
    - Right-click drag to pan camera
    - Mouse wheel to zoom in/out
    - Press A to anchor camera to selected NPC
-5. Click NPCs to view their state
-6. Watch them interact with items
+5. Click NPCs to view their state in UI panels
+6. Watch NPCs autonomously interact with items
+7. Press ` (backtick) to toggle debug console
 
 ## System Architecture
 
@@ -38,88 +40,89 @@ Gamepiece (gamepiece.gd, gamepiece.tscn)
 ```
 
 ### Component System
-The project utilizes a component-based architecture, particularly for items, to allow for flexible and reusable behaviors.
+The project uses a unified component architecture for both items and NPCs.
 
-General Gamepiece Structure:
-├── `Gamepiece` (`src/field/gamepieces/gamepiece.gd`): The base entity. Visuals are often handled by child nodes like `Sprite2D` and `AnimationPlayer`.
-└── `GamepieceController` (`src/field/gamepieces/controllers/gamepiece_controller.gd`): Manages the gamepiece's behavior. Specialized controllers (like `NpcController`, `ItemController`) extend this.
-    └── `GamepieceComponent` (`src/field/gamepieces/controllers/gamepiece_component.gd`): Base class for components that can be attached to a `GamepieceController` to extend its functionality.
+```
+Component Hierarchy:
+├── GamepieceComponent (Base for all controller components)
+└── EntityComponent (Unified base for interactive entities)
+    ├── ItemComponent (Item-specific functionality)
+    │   ├── ConsumableComponent (Food, drinks)
+    │   ├── SittableComponent (Chairs, benches)
+    │   └── NeedModifyingComponent (Continuous effects)
+    └── NpcComponent (NPC-specific functionality)
+        └── ConversableComponent (Multi-party conversations)
 
-Item System Components (primarily in `src/field/items/components/`):
-├── `BaseItem` (`src/field/items/base_item.tscn`, `src/field/items/base_item.gd`): The base scene/script for all items. It's a specialized `Gamepiece`.
-│   └── `ItemController` (`src/field/items/item_controller.gd`): Attached to `BaseItem`, manages item-specific logic and components.
-├── `ItemConfig` (Resource - `src/field/items/item_config.gd`): Defines an item's properties, including visual setup (sprite, collision) and which `ItemComponent`s it has with their configurations.
-└── `ItemComponent` (`src/field/items/components/item_component.gd`): Base class for all item-specific logic modules (e.g., `ConsumableComponent`, `SittableComponent`). These extend `GamepieceComponent` and are added to the `ItemController`.
-
-Key Characteristics of Item Components:
-- Defined by scripts extending `ItemComponent`.
-- Configured through `ItemConfig` and `ItemComponentConfig` resources.
-- Added to an `ItemController` at runtime based on the `ItemConfig`.
-- Can define custom properties (using `PropertySpec`) and `Interaction`s.
-- Can be nested if a component itself instantiates other components (though less common for item components).
+Key Features:
+├── PropertySpec System
+│   ├── Type-safe configuration
+│   ├── Automatic validation
+│   └── Editor-friendly setup
+├── InteractionFactory Pattern
+│   ├── Components provide factories
+│   ├── Factories create interactions
+│   └── Supports multi-party interactions
+└── Lifecycle Management
+    ├── _component_ready() for initialization
+    ├── Properties auto-configured before ready
+    └── Cached interaction factories
 ```
 
 ## Key Concepts
 
 ### NPC Architecture
 ```
-NPC System:
-├── Controller (npc_controller.gd)
-│   ├── Recurring decision cycle
-│   ├── Need system
-│   │   ├── Types: hunger, hygiene, fun, energy
-│   │   ├── Value tracking
-│   │   └── Automatic decay
-│   └── Vision-based decisions
-├── Client Layer (Interface to backend decision-making)
-│   ├── GDScript API: `NpcClientBase` (`src/field/npcs/client/npc_client_base.gd`) defines the interface.
-│   │   └── `McpNpcClient` (`src/field/npcs/client/mcp_npc_client.gd`) is the primary implementation, acting as a facade to the C# layer for MCP communication. It handles state caching & event dispatching related to client operations.
-│   └── C# MCP Bridge:
-│       ├── `McpSdkClient.cs` (`src/field/npcs/client/McpSdkClient.cs`): Godot Node (C#) bridging GDScript calls to the service proxy.
-│       └── `McpServiceProxy.cs` (`src/field/npcs/client/McpServiceProxy.cs`): Pure C# class for direct MCP SDK interaction and connection management.
-└── Backend (MCP Server)
-    └── Decision making
+Three-Tier System:
+├── Controller Layer (npc_controller.gd)
+│   ├── State Machine (6 states)
+│   │   ├── IDLE, MOVING, REQUESTING
+│   │   ├── INTERACTING, WANDERING
+│   │   └── WAITING
+│   ├── Decision Cycle (every 3 seconds)
+│   │   ├── Gather observations
+│   │   ├── Send to backend
+│   │   └── Execute returned action
+│   └── Component Management
+├── Client Layer (Backend Communication)
+│   ├── McpNpcClient (GDScript facade)
+│   ├── McpSdkClient (C# bridge)
+│   └── McpServiceProxy (MCP SDK wrapper)
+└── Backend (Decision Making)
+    ├── MCP Server (production)
+    └── Mock Backend (testing)
 
-Features:
-├── Needs Management
-│   ├── Configurable decay
-│   └── Component-based updates
-├── Vision System
-│   ├── Item detection
-│   └── Distance sorting
+Core Systems:
+├── Observation System
+│   ├── CompositeObservation bundles
+│   ├── Needs, Vision, Status reports
+│   └── Streaming for conversations
 ├── Interaction System
-│   ├── Request validation
-│   ├── State tracking
-│   └── Event logging
-└── Movement System
-    ├── Pathfinding
-    ├── Destination management
-    └── Movement locking
+│   ├── Bid-based requests
+│   ├── Factory pattern
+│   └── Multi-party support
+└── Need System
+    ├── HUNGER, HYGIENE, FUN, ENERGY
+    ├── Decay over time
+    └── Drive decisions
 ```
 
 ### Event System
 ```
-Event Flow:
-├── NPC Events
-│   ├── Interaction lifecycle
-│   │   ├── REQUEST_PENDING
-│   │   ├── REQUEST_REJECTED
-│   │   ├── STARTED
-│   │   ├── CANCELED
-│   │   └── FINISHED
-│   └── OBSERVATION
-├── Response System
-│   ├── SUCCESS/ERROR status
-│   └── Action types:
-│       ├── MOVE_TO
-│       ├── INTERACT_WITH
-│       ├── WANDER
-│       ├── WAIT
-│       ├── CONTINUE
-│       └── CANCEL_INTERACTION
-└── Field Events
-    ├── Global dispatch
-    └── System-wide updates
+EventBus Architecture:
+├── Strongly-Typed Events
+│   ├── Event base class
+│   ├── Type enumeration
+│   └── Frame tracking
+├── Event Categories
+│   ├── GamepieceEvents (movement, clicks)
+│   ├── NpcEvents (needs, state changes)
+│   ├── ConversationEvents (invites, messages)
+│   ├── SystemEvents (pause, terrain)
+│   └── NpcClientEvents (backend responses)
+└── Usage Patterns
+    ├── Direct signal connection
+    ├── Generic event handling
+    └── Type-based filtering
 ```
 
 ## Project Structure
@@ -142,24 +145,35 @@ docs/           # System documentation
 ## Development Guidelines
 
 ### Best Practices
-1. Use get_controller() for controller access
-2. Follow event-driven communication
-3. Implement proper cleanup
-4. Document new components
+1. Use EntityComponent for new interactive features
+2. Define properties with PropertySpec
+3. Create InteractionFactory for custom interactions
+4. Follow event-driven communication via EventBus
+5. Implement proper cleanup in _exit_tree()
+6. Use mock backend for testing
 
 ### Common Patterns
-```
-Item Creation:
-1. Create ItemConfig resource
-2. Configure properties
-3. Add component configs
-4. Place in editor or spawn at runtime
+```gdscript
+# Component Definition
+extends ItemComponent
 
-Event Handling:
-1. Connect in _ready()
-2. Type-check events
-3. Cast to specific type
-4. Handle appropriately
+func _init():
+    PROPERTY_SPECS["my_prop"] = PropertySpec.new(
+        "my_prop", 
+        TypeConverters.PropertyType.FLOAT,
+        1.0
+    )
+
+func _create_interaction_factories() -> Array[InteractionFactory]:
+    return [MyFactory.new(self)]
+
+# Event Handling
+EventBus.event_dispatched.connect(_on_event)
+
+func _on_event(event: Event):
+    if event.is_type(Event.Type.GAMEPIECE_CLICKED):
+        var click_event = event as GamepieceEvents.ClickedEvent
+        # Handle click
 ```
 
 ## Next Steps

@@ -2,6 +2,9 @@ class_name NpcController extends GamepieceController
 
 const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 
+func get_entity_type() -> String:
+	return "npc"
+
 # Backend NPC state
 var npc_id: String
 var npc_client: NpcClientBase
@@ -108,6 +111,10 @@ func _ready() -> void:
 		
 		# Start behavior after a frame to ensure everything is set up
 		await get_tree().process_frame
+		
+		# Initialize components after everything else is set up
+		_initialize_components()
+		
 		decide_behavior()
 
 
@@ -181,18 +188,39 @@ func decide_behavior() -> void:
 	# Get visible items and prepare data for backend
 	var seen_items := _vision_manager.get_items_by_distance()
 	var item_data: Array[Dictionary] = []
+	print("[NPC %s] decide_behavior: Found %d visible items" % [npc_id, seen_items.size()])
+	
 	for item in seen_items:
-		var interaction_dicts = {}
-		for interaction_name in item.interactions:
-			var interaction = item.interactions[interaction_name]
-			interaction_dicts[interaction_name] = interaction.to_dict()
+		var interaction_dicts = item.get_available_interactions()
+		print("[NPC %s] Processing item '%s' at %s with %d interactions" % [npc_id, item.get_display_name(), item._gamepiece.cell, interaction_dicts.size()])
 		
-		item_data.append({
-			"name": item.name,
+		var item_entry = {
+			"name": item.get_display_name(),
 			"cell": item._gamepiece.cell,
 			"distance_to_npc": _gamepiece.cell.distance_to(item._gamepiece.cell),
 			"interactions": interaction_dicts,
 			"current_interaction": item.current_interaction
+		}
+		item_data.append(item_entry)
+		print("[NPC %s] Added item entry: %s" % [npc_id, item_entry])
+	
+	print("[NPC %s] Total item_data array: %s" % [npc_id, item_data])
+	
+	# Get visible NPCs and prepare data for backend
+	var seen_npcs := _vision_manager.get_npcs_by_distance()
+	var npc_data: Array[Dictionary] = []
+	for npc in seen_npcs:
+		# TODO: This is inefficient - creating temporary interactions just to get their data
+		# Should refactor to have factories provide this data directly
+		var npc_interaction_dicts = npc.get_available_interactions()
+		
+		npc_data.append({
+			"npc_id": npc.npc_id,
+			"name": npc.get_display_name(),
+			"cell": npc._gamepiece.cell,
+			"distance_to_npc": _gamepiece.cell.distance_to(npc._gamepiece.cell),
+			"interactions": npc_interaction_dicts,
+			"current_interaction": npc.current_interaction
 		})
 	
 	# Add observation event
@@ -203,7 +231,8 @@ func decide_behavior() -> void:
 		movement_locked,
 		current_interaction,
 		current_request,
-		state_machine.get_state_info()
+		state_machine.get_state_info(),
+		npc_data
 	))
 	
 	# Get unprocessed events
@@ -314,7 +343,7 @@ func _on_gamepiece_arrived() -> void:
 func _find_item_by_name(item_name: String) -> ItemController:
 	var seen_items = _vision_manager.get_items_by_distance()
 	for item in seen_items:
-		if item.name == item_name:
+		if item.get_display_name() == item_name:
 			return item
 	return null
 
@@ -322,3 +351,48 @@ func _on_focused_gamepiece_changed(new_focused_gamepiece: Gamepiece) -> void:
 	if new_focused_gamepiece == _gamepiece:
 		needs_manager.reemit_all_needs()
 		npc_client.get_npc_info(npc_id)
+
+
+################
+### Components ###
+################
+func add_component_node(component: GamepieceComponent) -> void:
+	super.add_component_node(component)
+	
+	# Handle NPC-specific component setup
+	# Note: interaction factories are now collected in the base GamepieceController class
+
+func _initialize_components() -> void:
+	# Find all NPC components that are children
+	for child in get_children():
+		if child is NpcComponent or child is EntityComponent:
+			add_component_node(child)
+
+func _on_component_interaction_finished(interaction_name: String, payload: Dictionary) -> void:
+	# Handle component interaction completion
+	print("[NPC %s] Component interaction '%s' finished" % [npc_id, interaction_name])
+	
+	# Clear interaction state if this was the current interaction
+	if current_interaction and current_interaction.name == interaction_name:
+		current_interaction = null
+
+# get_available_interactions() is now inherited from GamepieceController
+
+## Handle incoming interaction bids (so NPCs can be conversation targets)
+func handle_interaction_bid(request: InteractionBid) -> void:
+	# For now, NPCs can only handle multi-party bids (conversations)
+	# Single-party interactions with NPCs could be added later
+	if request is MultiPartyBid:
+		# Let the state machine handle the bid
+		# This allows NPCs to accept/reject based on their current state
+		state_machine.current_state.on_interaction_bid(request)
+	else:
+		request.reject("NPCs currently only support multi-party interactions")
+
+## Find an NPC by name or ID from visible NPCs
+func _find_npc_by_name(npc_name: String) -> NpcController:
+	var seen_npcs = _vision_manager.get_npcs_by_distance()
+	for npc in seen_npcs:
+		if npc.get_display_name() == npc_name or npc.npc_id == npc_name:
+			return npc
+	return null

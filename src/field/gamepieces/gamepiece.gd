@@ -156,6 +156,10 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _physics_process(delta: float) -> void:
+	# Don't run physics in the editor
+	if Engine.is_editor_hint():
+		return
+		
 	var move_distance: = move_speed * delta
 	
 	# We need to let others know that the gamepiece will arrive at the end of its path THIS frame.

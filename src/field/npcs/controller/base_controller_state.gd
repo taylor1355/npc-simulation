@@ -48,6 +48,14 @@ func on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 		"Interaction rejected in unexpected state: %s" % state_name
 	))
 
+# Handle incoming interaction bids
+func on_interaction_bid(bid: MultiPartyBid) -> void:
+	# Default behavior: accept conversations with high probability
+	if bid.interaction_name == "conversation" and randf() < 0.8:
+		bid.add_participant_response(controller, true)
+	else:
+		bid.add_participant_response(controller, false, "Not interested right now")
+
 # Called when an interaction finishes
 func on_interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary) -> void:
 	pass

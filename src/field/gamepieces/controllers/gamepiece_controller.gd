@@ -1,4 +1,3 @@
-@tool
 ## Base controller responsible for the pathfinding state and movement of a gamepiece.
 ##
 ## A controller is responsible for all gamepiece behaviour, especially movement. The base controller
@@ -28,6 +27,18 @@ const BLOCKING_PROPERTY: = "blocks_movement"
 ## movement for the parent [Gamepiece].
 var pathfinder: Pathfinder
 
+## The type of entity this controller manages. Override in subclasses.
+func get_entity_type() -> String:
+	return "gamepiece"
+
+## Get the current cell position of the gamepiece.
+func get_cell_position() -> Vector2i:
+	return _gamepiece.cell if _gamepiece else Vector2i.ZERO
+
+## Get the display name of the gamepiece.
+func get_display_name() -> String:
+	return _gamepiece.display_name if _gamepiece else ""
+
 # Keep track of cells that need an update and do so as a batch before the next path search.
 var _cells_to_update: PackedVector2Array = []
 
@@ -55,6 +66,9 @@ var _current_waypoint: Vector2i
 
 var components: Array[GamepieceComponent] = []
 
+## Collection of interaction factories from EntityComponents
+var interaction_factories: Dictionary[String, InteractionFactory] = {}
+
 func get_component(type: GDScript) -> GamepieceComponent:
 	for component in components:
 		if component.get_script() == type:
@@ -69,6 +83,23 @@ func add_component_node(component: GamepieceComponent) -> void:
 		components.append(component)
 	if not component.is_inside_tree():
 		add_child(component)
+	
+	# Only collect interaction factories at runtime
+	# CRITICAL: This was causing 30+ second editor freezes
+	if Engine.is_editor_hint():
+		return
+		
+	# Collect interaction factories from EntityComponent
+	if component is EntityComponent:
+		component.interaction_finished.connect(_on_component_interaction_finished)
+		
+		# Collect interaction factories from component
+		for factory in component.get_interaction_factories():
+			var factory_name = factory.get_interaction_name()
+			if interaction_factories.has(factory_name):
+				push_error("Duplicate interaction factory found: %s in component: %s" % [factory_name, component.get_component_name()])
+			else:
+				interaction_factories[factory_name] = factory
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -273,3 +304,27 @@ func _on_terrain_passability_changed() -> void:
 # When a gamepiece's blocks_movement changes, update pathfinding
 func _on_blocks_movement_changed() -> void:
 	_find_all_blocked_cells()
+
+## Returns available interactions in a format compatible with the vision system
+func get_available_interactions() -> Dictionary:
+	# Don't create interactions in the editor
+	if Engine.is_editor_hint():
+		return {}
+		
+	# Return interaction data in same format as Interaction.to_dict() for vision system
+	var available = {}
+	
+	for name in interaction_factories:
+		var factory = interaction_factories[name]
+		# Create temporary interaction to get its data
+		# NOTE: This is marked as inefficient but maintains consistency
+		var temp_interaction = factory.create_interaction({"requester": null, "target": self})
+		if temp_interaction:
+			available[name] = temp_interaction.to_dict()
+	
+	return available
+
+## Called when a component's interaction finishes. Override in subclasses if needed.
+func _on_component_interaction_finished(interaction_name: String, payload: Dictionary) -> void:
+	# Override in subclasses if needed
+	pass

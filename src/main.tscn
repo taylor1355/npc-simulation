@@ -196,7 +196,7 @@ y_sort_enabled = true
 y_sort_enabled = true
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(279, 152)
+position = Vector2(240, 194)
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]

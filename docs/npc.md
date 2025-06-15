@@ -18,20 +18,23 @@ The controller manages the NPC's physical presence in the world, its interaction
 ```
 Key Features:
 ├── Decision Making Cycle (every `DECISION_INTERVAL` = 3.0s)
-│   ├── Gathers observations (current needs, visible items via `VisionManager`, etc.)
+│   ├── Gathers observations via CompositeObservation
 │   ├── Sends observations to `NpcClientBase` implementation (e.g., `McpNpcClient`)
 │   └── Receives actions and delegates to `ControllerStateMachine`
-├── Movement Control
-│   ├── Pathfinding integration (via `GamepieceController`)
-│   ├── Destination management (`destination` property)
-│   └── Movement locking (`movement_locked` property)
+├── State Machine Management
+│   ├── States: IDLE, MOVING, REQUESTING, INTERACTING, WANDERING, WAITING
+│   ├── State transitions with action context
+│   └── Movement locking per state
 ├── Interaction Management
-│   ├── Holds `current_interaction` and `current_request`
-│   └── Delegates `_on_interaction_accepted`, `_on_interaction_rejected`, `_on_interaction_finished` to current state in `ControllerStateMachine`
+│   ├── Holds `current_interaction` and `current_bid`
+│   ├── Supports multi-party interactions via MultiPartyBid
+│   └── Delegates lifecycle events to current state
 ├── Vision System Integration
-│   └── Uses `VisionManager` (`$VisionArea`) to perceive items
-└── Needs Management
-    └── Instantiates and manages `NeedsManager`
+│   └── Uses `VisionManager` (`$VisionArea`) to perceive items and NPCs
+├── Needs Management
+│   └── Instantiates and manages `NeedsManager`
+└── Component Support
+    └── Manages NPC-specific components (e.g., ConversableComponent)
 ```
 
 ### Need System
@@ -65,6 +68,41 @@ The NPC Need System simulates basic physiological and psychological requirements
     *   Used by systems like UI to react to need changes.
 
 This system ensures that an NPC's internal state (its needs) influences its behavior through the decision-making process and that changes to this state are communicated effectively throughout the game.
+
+### Observation System
+The observation system provides structured data about the NPC's state and environment to the decision-making backend. All observations inherit from the base `Observation` class and are typically bundled together using `CompositeObservation`.
+
+**Core Observation Types:**
+
+*   **`CompositeObservation`**: Container for multiple observations, allowing the backend to receive comprehensive state updates in a single package.
+
+*   **`NeedsObservation`**: Reports all NPC needs as percentages (0-100), critical for need-based decision making.
+
+*   **`VisionObservation`**: Lists all visible entities (items and NPCs) with:
+    *   Position and name
+    *   Available interactions and their factories
+    *   Need effects (+ for fill, - for drain) for each interaction
+
+*   **`StatusObservation`**: Reports NPC's current state including:
+    *   Position and movement lock status
+    *   Current interaction details
+    *   Controller state (from state machine)
+    *   Conversation info when applicable
+
+*   **`ConversationObservation`**: Extends `StreamingObservation` for ongoing conversations:
+    *   Tracks participants and conversation ID
+    *   Maintains recent message history (last 5 messages)
+    *   Sent when messages are added or participants change
+
+**Event-Based Observations:**
+
+*   **`InteractionRequestObservation`**: Tracks interaction bid status (START/CANCEL)
+*   **`InteractionRejectedObservation`**: Reports failed interaction attempts with reasons
+*   **`InteractionUpdateObservation`**: Tracks interaction lifecycle (started, canceled, finished)
+*   **`ErrorObservation`**: Simple error reporting to backend
+
+**Integration:**
+The `NpcController` creates a `CompositeObservation` during each decision cycle, populating it with current state data. The `EventFormatter` converts these observations into a format suitable for the backend.
 
 ### Client Layer
 The Client Layer serves as the interface between the NPC simulation logic (in GDScript) and the external MCP (Model Context Protocol) backend. It's responsible for abstracting the complexities of network communication, data serialization, and connection management. This layer is composed of GDScript and C# components.
@@ -128,11 +166,13 @@ The Action System defines the set of behaviors an NPC can be instructed to perfo
 
 *   **`Action.Type` (`src/field/npcs/action.gd`):** This enum defines all possible actions an NPC can take:
     *   `MOVE_TO`: Navigate to a specific cell.
-    *   `INTERACT_WITH`: Engage with a specified item.
+    *   `INTERACT_WITH`: Engage with a specified item or NPC.
     *   `WANDER`: Move to a random valid location.
     *   `WAIT`: Remain idle for a period.
-    *   `CONTINUE_ACTION`: Continue with the current ongoing action, if applicable (this allows the backend to explicitly state the NPC should continue its current task).
+    *   `CONTINUE_ACTION`: Continue with the current ongoing action.
     *   `CANCEL_INTERACTION`: Stop the current interaction.
+    *   `START_CONVERSATION`: Initiate a multi-party conversation (TODO: needs proper implementation).
+    *   `ACT_IN_INTERACTION`: Perform an action within the current interaction with validated parameters.
 
 *   **`NpcResponse` (`src/field/npcs/npc_response.gd`):** This class structures the decision received from the backend. While the backend primarily communicates the chosen action and parameters through the `NpcClientEvents.ActionChosenEvent` (which is what the `NpcController` consumes), `NpcResponse` itself defines a standard structure that includes:
     *   `status`: An enum `Status { SUCCESS, ERROR }`.
@@ -174,35 +214,43 @@ NpcController              McpNpcClient (GDScript)     McpSdkClient (C#)       M
 ```
 
 ### Interaction Flow
-Interactions are managed by the `NpcController`'s current state within its `ControllerStateMachine`.
+Interactions are managed by the `NpcController`'s current state within its `ControllerStateMachine` using a bidding system.
 ```
-Start Interaction (Simplified):
+Start Interaction:
 1. NPC's current state (in ControllerStateMachine) decides to interact.
-2. State creates an InteractionRequest.
-3. State calls item_controller.request_interaction(request).
-4. ItemController and its components validate the request.
-5. If accepted by item:
-   ├── ItemController emits request.accepted().
-   ├── NPC's state (connected to request.accepted) handles acceptance:
-   │   ├── Sets NpcController.current_interaction, NpcController.current_request.
-   │   └── Logs NpcEvent.INTERACTION_STARTED (or similar via NpcEvents factory).
-   │   └── Transitions to an "interacting" state.
-6. If rejected by item:
-   ├── ItemController emits request.rejected(reason).
-   ├── NPC's state (connected to request.rejected) handles rejection:
-   │   └── Logs NpcEvent.INTERACTION_REQUEST_REJECTED.
-   │   └── Triggers new decision cycle in NpcController.
+2. State creates an InteractionBid (or MultiPartyBid for conversations).
+3. State calls target_controller.request_interaction(bid).
+4. Target controller and its components validate the bid.
+5. If accepted by target:
+   ├── Controller uses InteractionFactory to create Interaction.
+   ├── Bid emits accepted signal.
+   ├── NPC's state (connected to bid.accepted) handles acceptance:
+   │   ├── Sets NpcController.current_interaction, NpcController.current_bid.
+   │   └── Logs interaction started event.
+   │   └── Transitions to INTERACTING state.
+6. If rejected by target:
+   ├── Bid emits rejected signal with reason.
+   ├── NPC's state (connected to bid.rejected) handles rejection:
+   │   └── Logs InteractionRejectedObservation.
+   │   └── Returns to appropriate state (e.g., IDLE).
 
-Cancel Interaction (Simplified):
-1. NPC's current state (or NpcController) decides to cancel.
-2. Creates a cancel InteractionRequest.
-3. Item validates cancellation.
-4. If accepted:
-   ├── Logs NpcEvent.INTERACTION_CANCELED.
-   ├── Clears NpcController.current_interaction, NpcController.current_request.
-   └── Triggers new decision cycle.
-5. If rejected (rare for cancel):
-   └── Log reason.
+Multi-Party Interactions:
+1. Initiator creates MultiPartyBid with invited participants.
+2. Each invited NPC receives InteractionRequestObservation.
+3. Invited NPCs can accept or reject within timeout.
+4. If all accept:
+   ├── Multi-party interaction created (e.g., ConversationInteraction).
+   ├── All participants transition to INTERACTING state.
+5. If any reject or timeout:
+   └── Entire bid is rejected.
+
+Cancel Interaction:
+1. NPC's state creates CANCEL bid.
+2. Target validates cancellation.
+3. If accepted:
+   ├── Interaction ends, cleanup performed.
+   ├── Clears NpcController.current_interaction, current_bid.
+   └── Transitions back to IDLE state.
 ```
 Interaction lifecycle events (`REQUEST_PENDING`, `STARTED`, `FINISHED`, etc.) are created using `NpcEvent` factory methods and become part of the `event_log` for the backend.
 

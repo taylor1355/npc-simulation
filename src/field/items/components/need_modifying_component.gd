@@ -53,10 +53,9 @@ func _ready() -> void:
 
 	item_controller = get_parent() as ItemController
 
-	var interaction = Interaction.new(INTERACTION_NAME, "Modify needs.")
-	interactions[interaction.name] = interaction
-	interaction.start_request.connect(_handle_modify_start_request)
-	interaction.cancel_request.connect(_handle_modify_cancel_request)
+	# NeedModifyingComponent no longer creates its own interaction
+	# It is used by other components (like ConsumableComponent and SittableComponent)
+	# that handle the interaction lifecycle
 
 
 func _process(delta_t: float) -> void:
@@ -78,14 +77,10 @@ func _finish_interaction() -> void:
 
 
 func _handle_modify_start_request(request: InteractionBid) -> void:
-	request.accept()
 	current_npc = request.bidder
 	accumulated_deltas.clear()
 
 
 func _handle_modify_cancel_request(request: InteractionBid) -> void:
 	if current_npc and current_npc == request.bidder:
-		request.accept()
 		_finish_interaction()
-	else:
-		request.reject("Not modifying needs")

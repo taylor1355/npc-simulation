@@ -162,3 +162,23 @@ static func _convert_to_typed_float_dict(value: Variant) -> Dictionary[String, f
 			push_warning("Skipping invalid typed_float_dict entry: %s = %s" % [k, value[k]])
 	
 	return typed_dict
+
+# Convert PropertyType enum to string
+static func property_type_to_string(property_type: PropertyType) -> String:
+	match property_type:
+		PropertyType.FLOAT:
+			return "float"
+		PropertyType.INT:
+			return "int"
+		PropertyType.STRING:
+			return "string"
+		PropertyType.BOOL:
+			return "bool"
+		PropertyType.NEED_DICT:
+			return "need_dict"
+		PropertyType.TYPED_FLOAT_DICT:
+			return "typed_float_dict"
+		PropertyType.VARIANT:
+			return "variant"
+		_:
+			return "unknown"

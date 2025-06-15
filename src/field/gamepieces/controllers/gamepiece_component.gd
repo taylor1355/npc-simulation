@@ -1,4 +1,3 @@
-@tool
 class_name GamepieceComponent extends Node2D
 
 var controller: GamepieceController

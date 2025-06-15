@@ -192,36 +192,53 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 ## Lower Leverage Issues
 
-### 5. @tool Annotation Audit
-**Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
-
-**Problem**: Many files use `@tool` unnecessarily, risking production build issues:
-
-**Files Using @tool**:
-- `src/field/items/item_controller.gd`
-- `src/field/items/base_item.gd`  
-- `src/ui/need_bar.gd`
-- Several other files
-
-**Risk**: @tool annotation can cause issues in production builds and makes debugging harder since scripts run in editor context.
-
-**Audit Needed**: Check each @tool usage to determine if it's actually needed for editor functionality (like custom inspectors, gizmos, or editor-only behavior).
-
-**Fix**: Remove @tool annotations where they're not needed for legitimate editor functionality.
-
-### 6. Physics Layer Constants  
+### 5. Physics Layer Constants  
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥
 
 **Problem**: Physics layer masks hardcoded in multiple places.
 
-### 7. Vision Manager Initialization Issue
+### 6. Vision Manager Initialization Issue
 **Impact**: Low | **Effort**: High | **Leverage**: 🔥
 
 **Problem**: TODO about `get_overlapping_areas()` timing issue with physics initialization.
 
+### 7. NPC and Item Interaction Handling Inconsistency
+**Impact**: High | **Effort**: High | **Leverage**: 🔥🔥
+
+**Problem**: NPCs and Items handle interactions differently, creating complexity and duplication:
+- Items use `handle_interaction_bid()` method
+- NPCs don't have this method, requiring special handling in RequestingState
+- `_on_interaction_finished` signal connection differs between items and NPCs
+- Vision system treats NPCs and items differently (separate arrays)
+- Parameters like "item_name" assume only items can be interaction targets
+
+**Current Issues**:
+```gdscript
+# RequestingState has to check target type
+if target_controller is ItemController:
+    target_controller.interaction_finished.connect(...)
+else:
+    # Different handling for NPCs
+    interaction_obj.interaction_ended.connect(...)
+
+# Vision observation separates entities unnecessarily
+{
+    "visible_items": [...],
+    "visible_npcs": [...]  # Should be unified as "visible_entities"
+}
+```
+
+**Solution**: Unify interaction handling at GamepieceController level:
+- Move `handle_interaction_bid()` to GamepieceController base class
+- Standardize interaction lifecycle signals
+- Treat all entities uniformly in vision and interaction systems
+- Use generic "target" terminology instead of "item" specific naming
+
+**Benefits**: Simpler code, true entity polymorphism, easier to add new entity types
+
 ## Implementation Priority
 
-### Phase 1: Core Architecture 
+### Phase 1: Critical Issues
 1. **Debug Logging Standardization** - Major maintainability improvement
 
 ### Phase 2: Type Safety & Patterns
@@ -230,13 +247,14 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 ### Phase 3: Large Refactoring
 4. **Terminology Taxonomy** - Major naming clarity project
-5. **@tool Annotation Audit** - Production safety
+5. **NPC and Item Interaction Unification** - Major architectural improvement
 6. **Physics Layer Constants** - Minor cleanup
 7. **Vision Manager Initialization** - Physics timing issues
+8. **Need Effect Data Flow** - Centralize need logic (see below)
 
 ## Risk Assessment
 
-**Low Risk**: @tool cleanup, constants
+**Low Risk**: Constants
 **Medium Risk**: Logging changes, struct classes, pattern consolidation  
 **High Risk**: Terminology changes (affects many interfaces)
 
@@ -247,6 +265,139 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 - **Maintainability**: Centralized logging, consistent patterns
 - **Developer Experience**: Clear naming, better IDE support
 - **System Reliability**: Clearer component interfaces and event handling
+
+### 8. Need Effect Data Flow Complexity
+**Impact**: High | **Effort**: High | **Leverage**: 🔥🔥
+
+**Problem**: Need effect information is scattered across multiple layers with complex data transformations:
+
+**Current Data Flow**:
+```
+ConsumableComponent.need_deltas → NeedModifyingComponent.need_rates → 
+Interaction.needs_filled/drained → Interaction.to_dict() → 
+VisionObservation → MockNpcBackend
+```
+
+**Issues**:
+- Components store need effects in different formats (deltas vs rates)
+- Interaction creation is inefficient (creates temporary objects for data extraction)
+- Need logic spread across multiple files instead of centralized in needs.gd/needs_manager.gd
+- Backend only sees binary filled/drained, not actual rates
+- Interaction factories are created repeatedly instead of being cached
+- ItemController.get_available_interactions() creates temporary interactions just to get their data
+
+**Long-term Solution**: 
+Centralize need effect evaluation in Needs class, make components expose need effects directly without going through interaction creation. This would eliminate the complex data transformation chain and improve performance.
+
+**Partial Fix Applied**:
+- Added caching to EntityComponent base class to prevent repeated factory creation
+- Components now override `_create_interaction_factories()` instead of `get_interaction_factories()`
+- This reduces ConsumableComponent factory spam from hundreds to once per component
+- Still need to address temporary interaction creation for data extraction
+
+### 9. Debug Print Statements Cleanup
+**Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
+
+**Problem**: Debug print statements scattered throughout codebase:
+- `npc_controller.gd` line 196: prints component interaction completion
+- Various other debug prints that should use proper logging
+- No centralized control over debug output
+
+**Solution**: Remove or convert to proper logging system (see Debug Logging Standardization)
+
+### 10. Game Clock System
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
+
+**Problem**: Using `OS.get_ticks_msec()` for timestamps prevents proper game pause/speed control:
+- `conversation_interaction.gd` uses system time for message timestamps
+- Cannot pause or speed up game time
+- Makes replays and save/load more complex
+
+**Solution**: Implement centralized game clock that supports:
+- Pause functionality
+- Speed multipliers
+- Consistent time across all systems
+- Proper serialization for save/load
+
+### 11. Vision Observation Entity Separation
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
+
+**Problem**: VisionObservation separates items and NPCs into different arrays:
+```gdscript
+{
+    "visible_items": [...],
+    "visible_npcs": [...]
+}
+```
+
+**Issues**:
+- Requires special handling for each entity type
+- Duplicates logic for similar operations
+- Makes it harder to add new entity types
+
+**Solution**: Unify into single array with type field:
+```gdscript
+{
+    "visible_entities": [
+        {"type": "item", "name": "Chair", ...},
+        {"type": "npc", "name": "Alice", ...}
+    ]
+}
+```
+
+### 12. Conversation State Validation
+**Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
+
+**Problem**: No validation to ensure conversation constraints:
+- NPCs can potentially move while in conversations
+- No check to prevent joining multiple conversations
+- State consistency not enforced
+
+**Solution**: Add validation checks in:
+- Movement system to check conversation state
+- Conversation join logic to check existing conversations
+- State machine transitions
+
+### 13. Gamepiece Identification System
+**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥
+
+**Problem**: Gamepieces currently use `display_name` for both UI display and identification, which creates ambiguity:
+
+**Current Issues**:
+- Multiple items can have the same display_name (e.g., multiple "Chair" items)
+- Code uses display_name for finding specific items (_find_item_by_name)
+- No unique identifier for gamepieces beyond instance_id
+- Confusion between node name and display_name properties
+
+**Example Problem**:
+```gdscript
+# Multiple chairs with same name
+func _find_item_by_name(item_name: String) -> ItemController:
+    for item in seen_items:
+        if item._gamepiece.display_name == item_name:  # Returns first match only!
+            return item
+```
+
+**Proposed Solution**:
+```gdscript
+class_name Gamepiece extends Node2D
+
+## Unique identifier for this gamepiece instance
+@export var gamepiece_id: String = ""  # Auto-generated if empty
+
+## Display name shown in UI. May not be unique.
+@export var display_name: String = ""
+
+func _ready():
+    if gamepiece_id.is_empty():
+        gamepiece_id = IdGenerator.generate_id("gamepiece")
+```
+
+**Benefits**:
+- Clear separation between identification (gamepiece_id) and display (display_name)
+- Ability to have multiple items with same display name
+- Unambiguous references in code
+- Better support for save/load systems in the future
 
 ## Conclusion
 

@@ -36,18 +36,26 @@ func _on_gamepiece_removed(event: GamepieceEvents.DestroyedEvent):
 
 
 func _add_gamepiece(gamepiece: Gamepiece):
+	print("[VisionManager] Adding gamepiece: %s (parent: %s)" % [gamepiece.name, parent_gamepiece.name if parent_gamepiece else "unknown"])
+	
 	for child in gamepiece.get_children():
 		if child is NpcController:
 			seen_npcs[gamepiece] = child
+			print("[VisionManager] Added NPC: %s" % gamepiece.name)
 		elif child is ItemController:
 			seen_items[gamepiece] = child
+			print("[VisionManager] Added Item: %s" % gamepiece.name)
 
 
 func _remove_gamepiece(gamepiece: Gamepiece):
+	print("[VisionManager] Removing gamepiece: %s" % gamepiece.name)
+	
 	if seen_npcs.has(gamepiece):
 		seen_npcs.erase(gamepiece)
+		print("[VisionManager] Removed NPC: %s" % gamepiece.name)
 	elif seen_items.has(gamepiece):
 		seen_items.erase(gamepiece)
+		print("[VisionManager] Removed Item: %s" % gamepiece.name)
 
 
 func get_gamepiece(area: Area2D) -> Gamepiece:
@@ -67,5 +75,11 @@ func _sort_controllers_by_distance(controllers: Array) -> void:
 
 func get_items_by_distance() -> Array[ItemController]:
 	var item_controllers := seen_items.values()
+	print("[VisionManager] get_items_by_distance called, found %d items: %s" % [item_controllers.size(), item_controllers.map(func(item): return item.get_display_name())])
 	_sort_controllers_by_distance(item_controllers)
 	return item_controllers
+
+func get_npcs_by_distance() -> Array[NpcController]:
+	var npc_controllers := seen_npcs.values()
+	_sort_controllers_by_distance(npc_controllers)
+	return npc_controllers

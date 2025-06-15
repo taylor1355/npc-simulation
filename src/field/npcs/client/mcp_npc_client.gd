@@ -107,7 +107,10 @@ func process_observation(npc_id: String, events: Array[NpcEvent]) -> void:
 	
 	for event in events:
 		if event.type == NpcEvent.Type.OBSERVATION:
-			npc_position = event.payload.get("position", Vector2i.ZERO)
+			if event.payload is CompositeObservation:
+				var status_obs = event.payload.find_observation(StatusObservation)
+				if status_obs:
+					npc_position = status_obs.position
 			break
 	
 	# Format events as text observation

@@ -25,7 +25,7 @@ func _update_display() -> void:
 		
 	var npc_controller := current_controller as NpcController
 	if npc_controller and npc_controller.npc_id:
-		var text = "[b]Name:[/b] " + npc_controller._gamepiece.display_name + "\n"
+		var text = "[b]Name:[/b] " + npc_controller.get_display_name() + "\n"
 		text += "Loading traits..."
 		traits_text.text = text
 		npc_controller.npc_client.get_npc_info(npc_controller.npc_id)
@@ -36,7 +36,7 @@ func _on_npc_info_received(event: NpcClientEvents.InfoReceivedEvent) -> void:
 	if not current_controller or event.npc_id != current_controller.npc_id:
 		return
 		
-	var text = "[b]Name:[/b] " + current_controller._gamepiece.display_name + "\n"
+	var text = "[b]Name:[/b] " + current_controller.get_display_name() + "\n"
 	text += "[b]Traits:[/b] "
 	
 	var traits_str := ""

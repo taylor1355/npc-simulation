@@ -16,6 +16,8 @@ var last_update_time: float
 var last_processed_event_timestamp: float = 0.0
 var movement_locked: bool = false
 var current_observation = null  # Latest observation payload
+var last_conversation_time: float = 0.0
+var conversation_cooldown: float = 10.0  # Don't start new conversations for 10 seconds
 
 func change_state(new_state_type) -> void:
 	# Get state names for logging
@@ -74,6 +76,10 @@ func update_state_from_action(action: Action) -> void:
 			change_state(IdleState)
 		Action.Type.CANCEL_INTERACTION:
 			change_state(IdleState)
+		Action.Type.START_CONVERSATION:
+			# Starting a conversation transitions to interacting state
+			# The actual conversation setup happens in the NPC controller
+			change_state(InteractingState)
 		_:
 			push_error("[%s] Unknown action: %s" % [id, action.format_action()])
 

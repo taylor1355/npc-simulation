@@ -57,13 +57,59 @@ The `GamepieceController` (extends `Node2D`) is responsible for managing the beh
     *   `@export_flags_2d_physics var terrain_mask` (default `0x2`).
     *   `@export_flags_2d_physics var gamepiece_mask` (default `0x1`).
 
-### Components (`src/field/gamepieces/controllers/gamepiece_component.gd`)
-The `GamepieceComponent` class (extends `Node2D`) is the base class for all components that add specific functionalities or behaviors to a `GamepieceController`.
+### Components
+
+#### GamepieceComponent (`src/field/gamepieces/controllers/gamepiece_component.gd`)
+The `GamepieceComponent` class (extends `Node2D`) is the base class for controller-level components.
 *   **Controller Link:** In its `_ready()` method, it automatically searches its ancestor nodes to find and store a reference to its `controller: GamepieceController`.
-*   **Extensibility:** Designed to be inherited by specialized components (e.g., `ItemComponent`).
+*   **Extensibility:** Designed to be inherited by specialized components (e.g., movement components).
 *   **Utility:**
     *   `get_component_name() -> String`: Returns a human-readable name derived from its script's filename.
     *   `_setup() -> void`: A virtual method that can be overridden by subclasses for additional initialization after the `controller` reference is set.
+
+#### EntityComponent (`src/field/gamepieces/components/entity_component.gd`)
+The `EntityComponent` class (extends `GamepieceComponent`) is the new unified base for all components that add interactive functionality to entities (items and NPCs).
+
+**Key Features:**
+*   **Property System:**
+    *   `PROPERTY_SPECS: Dictionary[String, PropertySpec]`: Defines configurable properties with type safety
+    *   `configure_properties(properties: Dictionary)`: Batch property configuration with validation
+    *   Automatic type conversion using PropertySpec pattern
+*   **Interaction System:**
+    *   `interactions: Dictionary[String, Interaction]`: Available interactions
+    *   `get_interaction_factories() -> Array[InteractionFactory]`: Returns factories for creating interactions
+    *   `_create_interaction_factories()`: Override to provide custom factories
+    *   Factories are cached for performance
+*   **Lifecycle:**
+    *   `_component_ready()`: Override instead of `_ready()` for component initialization
+    *   Properties are automatically processed before `_component_ready()` is called
+*   **Controller Access:**
+    *   `get_entity_controller() -> GamepieceController`: Returns the parent controller
+
+**Usage Pattern:**
+```gdscript
+extends EntityComponent  # For items: extends ItemComponent
+                        # For NPCs: extends NpcComponent
+
+func _init():
+    # Define properties with type specifications
+    PROPERTY_SPECS["my_property"] = PropertySpec.new(
+        "my_property",
+        TypeConverters.PropertyType.FLOAT,
+        1.0,  # default value
+        "Description for editor"
+    )
+
+var my_property: float = 1.0  # Will be auto-configured
+
+func _component_ready():
+    # Properties are already configured here
+    pass
+
+func _create_interaction_factories() -> Array[InteractionFactory]:
+    # Return factories that create interactions for this component
+    return [MyInteractionFactory.new(self)]
+```
 
 ### Animation (`gamepiece.tscn`)
 ```

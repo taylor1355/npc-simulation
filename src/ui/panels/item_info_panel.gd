@@ -29,7 +29,7 @@ func _update_display() -> void:
 	if not item_controller:
 		return
 		
-	var text = "[b]Name:[/b] " + item_controller._gamepiece.display_name + "\n"
+	var text = "[b]Name:[/b] " + item_controller.get_display_name() + "\n"
 	text += "[b]Components:[/b]\n"
 	
 	# Reset and build component text
@@ -41,7 +41,7 @@ func _update_display() -> void:
 	if item_controller.current_interaction:
 		text += "\nCurrent Interaction: " + item_controller.current_interaction.name
 		if item_controller.interacting_npc:
-			text += " (with " + item_controller.interacting_npc._gamepiece.display_name + ")"
+			text += " (with " + item_controller.interacting_npc.get_display_name() + ")"
 			text += "\nDuration: %.1f seconds" % item_controller.interaction_time
 			
 	info_text.text = text

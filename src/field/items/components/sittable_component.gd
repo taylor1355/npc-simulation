@@ -10,9 +10,6 @@ func _init():
 		"Rate of energy regeneration per second while sitting"
 	)
 
-func _get_timestamp_str() -> String:
-	return "%.2f" % Time.get_unix_time_from_system()
-
 var energy_regeneration_rate: float = 10.0
 var current_npc: NpcController = null
 var item_controller: ItemController
@@ -22,9 +19,35 @@ var need_modifier: NeedModifyingComponent
 var _is_exiting := false
 
 
+# Inner factory class
+class SitInteractionFactory extends InteractionFactory:
+	var sittable_component: SittableComponent
+
+	func get_interaction_name() -> String:
+		return "sit"
+
+	func get_interaction_description() -> String:
+		return "Sit in this chair. Effects per second: %s" % [
+			sittable_component.need_modifier.get_effects_description()
+		]
+
+	func create_interaction(context: Dictionary = {}) -> Interaction:
+		var interaction = Interaction.new(
+			get_interaction_name(),
+			get_interaction_description(),
+			true
+		)
+		
+		# Sitting fills energy need
+		interaction.needs_filled.append(Needs.Need.ENERGY)
+		interaction.need_rates[Needs.Need.ENERGY] = sittable_component.energy_regeneration_rate
+		
+		interaction.on_start_handler = sittable_component._on_sit_start
+		interaction.on_end_handler = sittable_component._on_sit_end
+		return interaction
+
 func _ready() -> void:
 	super._ready()
-
 	item_controller = get_parent() as ItemController
 	
 	# Create the need modifying component for energy regeneration
@@ -33,64 +56,45 @@ func _ready() -> void:
 	need_modifier.need_rates[Needs.Need.ENERGY] = energy_regeneration_rate
 	add_child(need_modifier)
 
-	var description = "Sit in this chair. Effects per second: %s" % [
-		need_modifier.get_effects_description()
-	]
-	
-	var interaction = Interaction.new(
-		INTERACTION_NAME,
-		description,
-		need_modifier.get_filled_needs(),
-		need_modifier.get_drained_needs()
-	)
-	interactions[interaction.name] = interaction
-	interaction.start_request.connect(_handle_sit_start_request)
-	interaction.cancel_request.connect(_handle_sit_cancel_request)
+func _create_interaction_factories() -> Array[InteractionFactory]:
+	var factory = SitInteractionFactory.new()
+	factory.sittable_component = self
+	return [factory]
 
-
-func _handle_sit_start_request(request: InteractionBid) -> void:
+func _on_sit_start(interaction: Interaction, context: Dictionary) -> void:
+	var participant = interaction.participants[0]
 	# Verify chair is unoccupied
 	if current_npc:
-		request.reject("Chair is already occupied")
 		return
 		
 	# Verify NPC is adjacent to chair
-	var npc_cell = request.bidder._gamepiece.cell
+	var npc_cell = participant._gamepiece.cell
 	var chair_cell = item_controller._gamepiece.cell
 	if npc_cell.distance_to(chair_cell) > 1:
-		request.reject("Too far from chair")
 		return
 
-	request.accept()
-	current_npc = request.bidder
+	current_npc = participant
 	
 	# Lock NPC movement and prepare chair
-	current_npc.set_movement_locked(true)
+	participant.set_movement_locked(true)
 	item_controller._gamepiece.blocks_movement = false
 	await item_controller.get_tree().physics_frame
 	
 	# Move NPC to chair and set z-index since they're in the same cell
-	current_npc._gamepiece.cell = chair_cell
-	current_npc._gamepiece.direction = item_controller._gamepiece.direction
-	current_npc._gamepiece.z_index = item_controller._gamepiece.z_index + 1
+	participant._gamepiece.cell = chair_cell
+	participant._gamepiece.direction = item_controller._gamepiece.direction
+	participant._gamepiece.z_index = item_controller._gamepiece.z_index + 1
 	
 	# Re-enable chair blocking
 	await item_controller.get_tree().physics_frame
 	item_controller._gamepiece.blocks_movement = true
 	
 	# Start energy regeneration
-	need_modifier._handle_modify_start_request(request)
+	var bid = context.get("bid")
+	if bid:
+		need_modifier._handle_modify_start_request(bid)
 
-
-func _handle_sit_cancel_request(request: InteractionBid) -> void:
-	if current_npc and current_npc == request.bidder:
-		request.accept()
-		_finish_interaction()
-	else:
-		request.reject("Not sitting in chair")
-
-
-func _finish_interaction() -> void:
+func _on_sit_end(interaction: Interaction, context: Dictionary) -> void:
 	if not current_npc or _is_exiting:
 		return
 		
@@ -131,12 +135,9 @@ func _finish_interaction() -> void:
 	current_npc = null
 	_is_exiting = false
 	
-	# Defer movement unlock and interaction finish to let NPC settle
+	# Defer movement unlock to let NPC settle
 	call_deferred("_complete_exit", npc)
-
 
 func _complete_exit(npc: NpcController) -> void:
 	if is_instance_valid(npc):
 		npc.set_movement_locked(false)
-
-	interaction_finished.emit(INTERACTION_NAME, {})

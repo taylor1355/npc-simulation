@@ -1,157 +1,207 @@
 # Interaction System
 
-## Core Components
+## 1. Overview
 
-### Base Interaction (`src/field/interactions/interaction.gd`)
-The `Interaction` class (extends `RefCounted`) defines a specific way an NPC can interact with an item. Instances of this class are typically created and managed by `ItemComponent`s and registered with the `ItemController`.
+The interaction system manages all interactions between NPCs and game world objects. It is designed to be flexible and maintainable, allowing developers to easily define new ways for NPCs to interact with items and each other.
+
+The core of the system is a generic `Interaction` class that acts as a configurable container for interaction logic. Instead of subclassing `Interaction` for every new behavior, components provide the logic directly by assigning their own methods as handlers to the interaction's lifecycle hooks. This is managed through a standardized `InteractionFactory` pattern.
+
+### System Components
+```
+Interaction System
+├── NpcController (controller/npc_controller.gd) - Initiates and manages interactions via its state machine.
+├── Interaction (interactions/interaction.gd) - A generic class that orchestrates an interaction's lifecycle.
+├── InteractionFactory (interactions/interaction_factory.gd) - A factory interface for creating configured Interaction instances.
+├── InteractionBid (interactions/interaction_bid.gd) - Manages interaction requests with bidding process.
+└── Item/Npc Components (e.g., sittable_component.gd) - Define and implement the actual interaction logic.
+```
+
+## 2. Core Components
+
+### Interaction (`src/field/interactions/interaction.gd`)
+The `Interaction` class is a generic, `RefCounted` object that defines a specific way an NPC can interact with an object. It does not contain behavior-specific logic itself; instead, it orchestrates the interaction lifecycle by invoking `Callable` handlers provided by the component that created it.
 
 **Key Properties:**
 *   `name: String`: A unique identifier for the interaction (e.g., "consume", "sit").
-*   `description: String`: A human-readable description (e.g., "Consume this item", "Sit on the chair").
-*   `needs_filled: Array[Needs.Need]`: An array of `Needs.Need` enums that this interaction helps satisfy.
-*   `needs_drained: Array[Needs.Need]`: An array of `Needs.Need` enums that this interaction depletes.
+*   `description: String`: A human-readable description, which can be updated dynamically.
+*   `max_participants: int`: The maximum number of NPCs that can participate (default is 1).
+*   `requires_adjacency: bool`: If `true`, the NPC must be next to the target object to interact.
+*   `needs_filled: Dictionary[String, float]`: Needs that will be filled when participating.
+*   `needs_drained: Dictionary[String, float]`: Needs that will be drained when participating.
+*   `action_parameter_specs: Dictionary[String, PropertySpec]`: Type-safe parameter specifications for actions.
 
-**Key Signals:**
-*   `start_request(request: InteractionRequest)`: Emitted when an NPC attempts to start this interaction. Connected to by the component that implements the interaction logic.
-*   `cancel_request(request: InteractionRequest)`: Emitted when an NPC attempts to cancel this interaction.
+**Lifecycle Handlers (`Callable`):**
+These are the core of the new system. A component assigns its own methods to these handlers to inject logic into the interaction's lifecycle.
+*   `on_start_handler`: Called when the interaction begins.
+*   `on_end_handler`: Called when the interaction concludes.
+*   `on_participant_joined_handler`: Called when a new participant is added.
+*   `on_participant_left_handler`: Called when a participant leaves.
 
-**Factory Methods:**
-*   `create_start_request(npc: NpcController, arguments: Dictionary = {}) -> InteractionRequest`: Creates an `InteractionRequest` of type `START`.
-*   `create_cancel_request(npc: NpcController, arguments: Dictionary = {}) -> InteractionRequest`: Creates an `InteractionRequest` of type `CANCEL`.
+**Key Methods:**
+*   `act_in_interaction(action_name: String, params: Dictionary)`: Execute actions within the interaction with parameter validation.
+*   `send_observation(observation: Observation)`: Send observations to all participants (for streaming interactions).
 
-**Serialization:**
-*   `to_dict() -> Dictionary`: Returns a dictionary representation of the interaction, including its name, description, and stringified need effects, useful for backend communication.
-
-### Request System (`src/field/interactions/interaction_request.gd`)
-The `InteractionRequest` class (extends `RefCounted`) represents an NPC's attempt to start or cancel an interaction with an item.
+### InteractionBid (`src/field/interactions/interaction_bid.gd`)
+The `InteractionBid` class manages the request and acceptance process for starting or canceling interactions. It uses a bidding pattern where NPCs can bid to start an interaction, and the target (item or other NPC) can accept or reject the bid.
 
 **Key Properties:**
-*   `interaction_name: String`: The name of the interaction being requested.
-*   `request_type: RequestType`: An enum (`START` or `CANCEL`).
-*   `status: Status`: An enum (`PENDING`, `ACCEPTED`, or `REJECTED`), initialized to `PENDING`.
-*   `npc_controller: NpcController`: The NPC making the request.
-*   `item_controller: ItemController`: The target item of the request. This is typically assigned by the `ItemController` when it begins processing the request, not during the `InteractionRequest`'s initialization.
-*   `arguments: Dictionary[String, Variant]`: Any additional data or parameters for the request.
+*   `bid_type: BidType`: Either START or CANCEL
+*   `bidder: NpcController`: The NPC making the bid
+*   `target: GamepieceController`: The target of the interaction
+*   `status: BidStatus`: PENDING, ACCEPTED, or REJECTED
+*   `interaction_name: String`: Name of the interaction being bid on
 
-**Key Signals:**
-*   `accepted()`: Emitted when the request is accepted (by calling `request.accept()`).
-*   `rejected(reason: String)`: Emitted when the request is rejected (by calling `request.reject(reason)`).
+**Multi-Party Support:**
+The `MultiPartyBid` class extends `InteractionBid` to support interactions with multiple participants, such as conversations.
 
-**Methods:**
-*   `accept()`: Sets status to `ACCEPTED` and emits `accepted`.
-*   `reject(reason: String)`: Sets status to `REJECTED` and emits `rejected`.
+### InteractionFactory (`src/field/interactions/interaction_factory.gd`)
+This is a simple interface (`RefCounted`) that standardizes the creation of `Interaction` objects. Components that provide interactions must implement a class that extends this interface.
 
-## Integration Flow
+**Key Methods:**
+*   `create_interaction(context: Dictionary = {}) -> Interaction`: The core method. It is responsible for instantiating a generic `Interaction`, configuring it (e.g., setting its name and description), and assigning the component's methods to the interaction's `Callable` handlers.
+*   `get_interaction_name() -> String`: Returns the unique name of the interaction.
+*   `get_interaction_description() -> String`: Returns a description for the interaction.
+*   `is_multi_party() -> bool`: Returns whether this factory creates multi-party interactions (default: false).
 
-### Request Creation
-An `ItemComponent` typically defines and registers `Interaction` objects with its parent `ItemController` during its setup.
-```gdscript
-# Example within an ItemComponent's _setup() or _ready() method:
-func _component_ready(): # Or _setup() if ItemComponent uses that
-    var interaction = Interaction.new(
-        "consume",                                 # Interaction name
-        "Consume this item to satisfy hunger.",    # Description
-        [Needs.Need.HUNGER],                       # Needs filled
-        []                                         # Needs drained (optional, defaults to empty)
-    )
-    
-    # Register with the ItemController (controller is a reference to ItemController)
-    controller.interactions[interaction.name] = interaction 
-    
-    # Connect component's handler to the interaction's signal
-    interaction.start_request.connect(_on_my_interaction_start)
-    interaction.cancel_request.connect(_on_my_interaction_cancel)
+## 3. Integration Flow
 
-func _on_my_interaction_start(request: InteractionRequest):
-    # Component-specific logic to handle start request
-    if _can_start_consuming(request):
-        request.accept()
-        # ... start consuming logic ...
-    else:
-        request.reject("Cannot consume right now.")
-```
-
-### Request Processing
-The general flow for an NPC starting an interaction with an item:
+The system is designed around a clear separation of responsibilities: components define the logic, factories create configured interactions, and the NPC controller drives the lifecycle.
 
 ```mermaid
 sequenceDiagram
     actor NPC
+    participant Component (e.g., SittableComponent)
+    participant InteractionFactory
+    participant InteractionBid
+    participant Interaction
     participant ItemController
-    participant InteractionLogic (e.g., Component)
 
-    NPC->>ItemController: Calls item_controller.request_interaction(InteractionRequest)
-    Note over NPC,ItemController: NPC creates InteractionRequest first using Interaction.create_start_request()
+    NPC->>Component: Requests available interactions
+    Component->>InteractionFactory: get_interaction_factories()
+    InteractionFactory-->>NPC: Returns factory instance
 
-    ItemController->>ItemController: Initial validation (e.g., not busy?)
-    alt Initial validation fails (Item busy)
-        ItemController-->>NPC: request.reject(reason) is called directly
-    else Initial validation passes
-        Note over ItemController: ItemController assigns request.item_controller = self
-        Note over ItemController: ItemController connects internal handler to request.accepted signal
-        ItemController->>InteractionLogic: Emits specific_interaction.start_request(request)
+    NPC->>InteractionBid: Creates bid to start interaction
+    InteractionBid-->>ItemController: Bid submitted
+    ItemController->>Component: Evaluates bid
+    Component-->>InteractionBid: accept() or reject()
+
+    alt Bid Accepted
+        ItemController->>InteractionFactory: create_interaction()
+        InteractionFactory->>Interaction: new()
+        Note over InteractionFactory, Interaction: Assigns component methods to<br/>interaction.on_start_handler, etc.
+        Interaction-->>ItemController: Returns configured Interaction
         
-        InteractionLogic->>InteractionLogic: Component-specific validation (e.g., can_start_interaction?)
-        alt Component validation passes
-            InteractionLogic-->>NPC: request.accept() is called
-            Note over InteractionLogic, NPC: This triggers ItemController's internal accepted handler AND NPC's accepted handler
-            InteractionLogic->>InteractionLogic: Component sets up its internal state for interaction
-        else Component validation fails
-            InteractionLogic-->>NPC: request.reject(reason) is called
-            Note over InteractionLogic, NPC: This triggers NPC's rejected handler
-        end
+        ItemController->>Interaction: Calls _on_start()
+        Interaction->>Component: Executes on_start_handler
+        
+        Note over Interaction, Component: ...Interaction is ongoing...
+        
+        ItemController->>Interaction: Calls _on_end()
+        Interaction->>Component: Executes on_end_handler
+    else Bid Rejected
+        InteractionBid-->>NPC: Notifies rejection
     end
 ```
 
-**Detailed Steps (Start Flow):**
+### Setup and Usage Example
 
-1.  **NPC Initiates:**
-    *   The `NpcController` (or one of its states) identifies a target `ItemController` and the desired `Interaction` (e.g., by accessing `item_controller.interactions["interaction_name"]`).
-    *   It creates an `InteractionRequest` using `interaction.create_start_request(npc_controller, arguments)`. The request's status is initially `PENDING`.
-    *   The NPC logic then calls `item_controller.request_interaction(the_new_request)`.
+Here is how `SittableComponent` implements the pattern.
 
-2.  **ItemController Processes Initial Request (`ItemController.request_interaction` method):**
-    *   The `ItemController` receives the `InteractionRequest`.
-    *   It performs item-level validation:
-        *   Checks if an `current_interaction` is already in progress. If so, it calls `request.reject("An interaction is already in progress")` and the flow stops here for this request.
-        *   It assigns `request.item_controller = self` so the request knows its target item.
-        *   It retrieves the specific `Interaction` object from its own `interactions` dictionary using `request.interaction_name`. If not found, it calls `request.reject("Interaction not found")`.
-    *   If these initial checks pass, the `ItemController` connects an internal lambda function to the `request.accepted` signal. This lambda is responsible for setting `item_controller.current_interaction = interaction` and `item_controller.interacting_npc = request.npc_controller` if the request is ultimately accepted by the component.
-    *   Then, the `ItemController` emits the specific `Interaction` object's signal: `interaction.start_request.emit(request)`. This delegates the detailed validation and logic to the `ItemComponent` that defined and handles this particular interaction.
+1.  **Define the Factory:** An inner class `SitInteractionFactory` is defined inside `SittableComponent`.
 
-3.  **Component Handles Interaction Logic & Validation:**
-    *   The `ItemComponent` responsible for this `interaction` (which previously connected its own handler, e.g., `_on_consume_start`, to this specific `interaction.start_request` signal) receives the signal along with the `InteractionRequest`.
-    *   This component's handler performs its specific validation logic (e.g., checking if the NPC meets certain criteria, if the component has resources, etc.).
-    *   Based on its validation:
-        *   If valid, it calls `request.accept()`.
-        *   If invalid, it calls `request.reject(reason_string)`.
+2.  **Implement `create_interaction`:**
+    ```gdscript
+    # Inside SitInteractionFactory
+    func create_interaction(context: Dictionary = {}) -> Interaction:
+        var interaction = Interaction.new(
+            get_interaction_name(),
+            get_interaction_description(),
+            true # requires_adjacency
+        )
+        # Assign the component's methods as handlers
+        interaction.on_start_handler = sittable_component._on_sit_start
+        interaction.on_end_handler = sittable_component._on_sit_end
+        return interaction
+    ```
 
-4.  **Outcome & NPC Reaction:**
-    *   If `request.accept()` was called by the component:
-        *   The `request.accepted` signal is emitted.
-        *   The `ItemController`'s internal handler (connected in Step 2) executes, updating `current_interaction` and `interacting_npc` on the `ItemController`.
-        *   The `NpcController` (which should also have connected its own handlers to `request.accepted`) is notified and proceeds with the interaction (e.g., moves to the item, updates its internal state, logs an `NpcEvent.INTERACTION_STARTED`).
-    *   If `request.reject()` was called (either by the `ItemController` in Step 2 or by the component in Step 3):
-        *   The `request.rejected` signal is emitted with a reason.
-        *   The `NpcController` (connected to `request.rejected`) handles the rejection (e.g., logs an `NpcEvent.INTERACTION_REQUEST_REJECTED`, makes a new decision).
+3.  **Implement Component Logic:** The `SittableComponent` has the methods that will be used as handlers.
+    ```gdscript
+    # Inside SittableComponent
+    func _on_sit_start(interaction: Interaction, context: Dictionary) -> void:
+        # Logic to make the NPC sit down...
+        var participant = interaction.participants[0]
+        current_npc = participant
+        participant.set_movement_locked(true)
+        # ...and so on.
 
-**Cancel Flow:**
-The cancellation flow is similar:
-1.  NPC (or system) creates a `cancel_request`.
-2.  The `Interaction` (or its component) and `ItemController` validate if cancellation is possible/appropriate.
-3.  If accepted, state is cleaned up. If rejected, the reason is typically logged.
+    func _on_sit_end(interaction: Interaction, context: Dictionary) -> void:
+        # Logic to make the NPC stand up...
+        if not current_npc or _is_exiting:
+            return
+        # ...and so on.
+    ```
 
-### State Management
-```
-Item Controller:
-├── interactions: Dictionary
-├── current_interaction: Interaction
-├── interacting_npc: NpcController
-└── interaction_time: float
+4.  **Expose the Factory:** The component provides its factory to the rest of the system.
+    ```gdscript
+    # Inside SittableComponent
+    func get_interaction_factories() -> Array[InteractionFactory]:
+        var factory = SitInteractionFactory.new()
+        factory.sittable_component = self
+        return [factory]
+    ```
 
-Component:
-├── Tracks specific state
-├── Handles validation
-├── Manages cleanup
-└── Emits completion
-```
+This pattern ensures that the `SittableComponent` retains full control over the logic and state associated with sitting, while the `Interaction` object remains a generic and reusable part of the core system.
+
+## 4. Bidding Process
+
+The interaction system uses a bidding mechanism to manage interaction requests:
+
+1. **Bid Creation**: When an NPC wants to interact, it creates an `InteractionBid` with:
+   - The interaction name (e.g., "sit", "consume")
+   - The bid type (START or CANCEL)
+   - The bidder (the NPC)
+   - The target (the item or other NPC)
+
+2. **Bid Evaluation**: The target's controller evaluates the bid:
+   - Checks if the interaction is available
+   - Verifies preconditions (e.g., adjacency, availability)
+   - Accepts or rejects the bid with a reason
+
+3. **Interaction Creation**: If the bid is accepted:
+   - The controller uses the appropriate `InteractionFactory` to create an `Interaction`
+   - The interaction is started with the participants
+   - The lifecycle handlers are invoked
+
+4. **Multi-Party Interactions**: For interactions involving multiple NPCs:
+   - A `MultiPartyBid` is created with invited participants
+   - Each invited NPC can accept or reject the invitation
+   - The interaction starts only when all participants accept
+   - If any participant rejects, the entire bid is rejected
+
+This bidding system provides a clean separation between the request to interact and the actual interaction execution, allowing for proper validation and state management.
+
+## 5. Specialized Interaction Types
+
+### StreamingInteraction (`src/field/interactions/streaming_interaction.gd`)
+A base class for interactions that need to send ongoing observations to participants.
+
+**Key Features:**
+- Extends the base `Interaction` class
+- Provides infrastructure for sending observations
+- Subclasses override `_generate_observation_for_participant()`
+- Used for interactions with continuous updates
+
+### ConversationInteraction (`src/field/interactions/conversation_interaction.gd`)
+Manages multi-party conversations between NPCs.
+
+**Key Features:**
+- Extends `StreamingInteraction`
+- Supports 2-10 participants
+- Tracks conversation history (last 5 messages)
+- No adjacency requirement
+- Locks movement during conversation
+- Generates unique conversation IDs
+- Sends `ConversationObservation` updates when messages are added
+
+**Usage:**
+Created by the `ConversableComponent` when NPCs start conversations through the multi-party bidding process.

@@ -2,44 +2,100 @@
 
 ## Overview
 
-A 2D NPC simulation built with Godot, where NPCs interact with items and navigate a game world. Features include:
-- Needs-driven NPC behavior
-- Component-based item system
-- Grid-based movement and pathfinding
-- Event-driven architecture
+A 2D NPC simulation built with Godot 4.3+, where NPCs autonomously interact with items and each other based on their needs. The project features:
+- Needs-driven NPC behavior with backend decision-making
+- Component-based architecture using the EntityComponent system
+- Grid-based movement with A* pathfinding
+- Event-driven communication via EventBus
+- Multi-party interactions including conversations
+- Observation system for structured state reporting
 
 ## Getting Started
 
-1. First Steps
-   - See getting-started.md for setup and quick start
+1. **Setup and Running**
+   - See [getting-started.md](getting-started.md) for installation and quick start
+   - Use mock backend for testing without MCP server
+   - Press ` (backtick) for debug console
 
-2. Core Systems
-   - gameboard.md: Grid and pathfinding system
-   - gamepiece.md: Base entity framework
-   - collision.md: Physics and detection
-   - events.md: Communication system
-   - ui.md: User interface
+2. **Core Systems**
+   - [gameboard.md](gameboard.md): Grid management and pathfinding
+   - [gamepiece.md](gamepiece.md): Base entity framework with component support
+   - [collision.md](collision.md): Physics layers and detection
+   - [events.md](events.md): EventBus communication system
 
-3. Entity Systems
-   - npc.md: NPC behavior and needs
-   - items.md: Interactive objects
-   - interaction.md: Entity interactions
+3. **Entity Systems**
+   - [npc.md](npc.md): NPC behavior, state machine, and observation system
+   - [items.md](items.md): Component-based interactive objects
+   - [interaction.md](interaction.md): Bid-based interaction system with factories
+   - [conversation.md](conversation.md): Multi-party conversation protocol
 
-## System Architecture Overview
+4. **User Interface**
+   - [ui.md](ui.md): Debug panels and visualization
 
-The simulation is built upon several key interconnected systems:
+## Architecture Highlights
 
-*   **Core Infrastructure:**
-    *   **Gameboard (`gameboard.md`):** Manages the grid, cell-based positioning, and pathfinding.
-    *   **Gamepiece (`gamepiece.md`):** The base framework for all dynamic entities in the world, providing common functionalities like movement and component management.
-    *   **Events (`events.md`):** A global system for dispatching and handling various game events, enabling decoupled communication between different parts of the simulation.
-    *   **Collision (`collision.md`):** Handles physics-based detection and interactions.
+### Three-Tier NPC System
+1. **Controller**: Manages state machine, movement, and action execution
+2. **Client**: Handles backend communication (GDScript + C# bridge)
+3. **Backend**: Makes decisions based on observations (MCP server or mock)
 
-*   **Entity Systems:**
-    *   **NPCs (`npc.md`):** Manages Non-Player Characters, including their needs, decision-making processes (using a three-tier controller-client-backend architecture), and interactions.
-    *   **Items (`items.md`):** Defines interactive objects within the world, built with a flexible component-based design.
-    *   **Interaction (`interaction.md`):** Governs how NPCs and items (or other entities) engage with each other.
+### Component System
+- **EntityComponent**: Unified base for items and NPCs
+- **PropertySpec**: Type-safe property configuration
+- **InteractionFactory**: Pattern for creating interactions
+- Items and NPCs gain functionality through modular components
 
-*   **User Interface (`ui.md`):** Provides visual feedback and controls for observing and interacting with the simulation.
+### Interaction System
+- **InteractionBid**: Request/response pattern for starting interactions
+- **MultiPartyBid**: Protocol for group interactions like conversations
+- **Streaming interactions**: Support for ongoing observations
+- Factory pattern enables flexible interaction creation
 
-For a more detailed breakdown of the overall architecture and how these systems fit together, please refer to the [Getting Started Guide](getting-started.md). Specific details for each system can be found in their respective documentation files linked above.
+### Observation System
+NPCs gather and report structured observations:
+- **CompositeObservation**: Bundles multiple observation types
+- **Core observations**: Needs, vision, status, conversations
+- **Event observations**: Interaction lifecycle tracking
+- Formatted and sent to backend for decision-making
+
+## Key Patterns
+
+### Event-Driven Communication
+```gdscript
+# Direct signal connection
+EventBus.gamepiece_clicked.connect(_on_gamepiece_clicked)
+
+# Generic event handling
+EventBus.event_dispatched.connect(
+    func(event: Event):
+        if event.is_type(Event.Type.NPC_NEED_CHANGED):
+            handle_need_change(event)
+)
+```
+
+### Component Configuration
+```gdscript
+extends ItemComponent
+
+func _init():
+    PROPERTY_SPECS["my_property"] = PropertySpec.new(
+        "my_property",
+        TypeConverters.PropertyType.FLOAT,
+        1.0,
+        "Description"
+    )
+
+func _create_interaction_factories() -> Array[InteractionFactory]:
+    return [MyInteractionFactory.new(self)]
+```
+
+## Development Workflow
+
+1. **Adding New Items**: Create ItemConfig resource, add components, configure properties
+2. **Creating NPCs**: Configure needs, components, and backend connection
+3. **New Interactions**: Implement InteractionFactory, define lifecycle handlers
+4. **Testing**: Use mock backend for predictable behavior
+
+## Current Limitations
+
+See technical debt notes in individual documentation files and CLAUDE.md for known issues and planned improvements.

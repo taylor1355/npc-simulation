@@ -44,9 +44,9 @@ The controller enforces important constraints:
 - Interactions must be explicitly started and finished
 - Failed interactions trigger appropriate error events
 
-### Component System (item_component.gd)
+### Component System
 
-The component system introduces a powerful property specification pattern that eliminates the boilerplate traditionally required for type conversion and validation. This approach dramatically reduces the code needed to create new components while maintaining type safety.
+The component system is built on the EntityComponent base class, which provides a unified approach for both items and NPCs. This introduces a powerful property specification pattern that eliminates the boilerplate traditionally required for type conversion and validation.
 
 **Property Specification Pattern**
 
@@ -93,7 +93,7 @@ Components can then access these configured member variables directly in their l
 **Component Structure**
 
 ```
-ItemComponent (Base Class)
+EntityComponent (Base Class) extends GamepieceComponent
 ├── Property System
 │   ├── PROPERTY_SPECS: Dictionary[String, PropertySpec] - Declarative property definitions
 │   ├── configure_properties(properties: Dictionary) - Called by controller with config values
@@ -105,12 +105,17 @@ ItemComponent (Base Class)
 │       └── description: String - Documentation
 ├── Interaction Management
 │   ├── interactions: Dictionary[String, Interaction] - Component's available actions
-│   ├── interaction_finished signal - Emitted when interaction completes
-│   └── Interaction lifecycle hooks for request handling
+│   ├── get_interaction_factories() -> Array[InteractionFactory] - Returns factories (cached)
+│   ├── _create_interaction_factories() - Override to provide factories
+│   └── interaction_finished signal - Emitted when interaction completes
 └── Lifecycle Methods
     ├── _init() - Define PROPERTY_SPECS here
     ├── _component_ready() - Called after properties are configured
     └── Standard Godot lifecycle (_ready, _process, etc.)
+
+ItemComponent extends EntityComponent
+└── Adds item-specific functionality
+    └── get_item_controller() -> ItemController
 ```
 
 ### Type Conversion System (`src/field/items/components/type_converters.gd`)
@@ -167,27 +172,50 @@ var effect_strength: float = 10.0
 
 func _component_ready() -> void:
     # At this point, properties have been configured from ItemConfig
-    # Set up interactions using the configured values
-    
-    var interaction = Interaction.new(
-        "activate",
-        "Activate item (%.1fs)" % activation_time,
-        [],  # Filled needs
-        []   # Drained needs
-    )
-    
-    interactions[interaction.name] = interaction
-    interaction.start_request.connect(_on_activate_start)
-    interaction.cancel_request.connect(_on_activate_cancel)
+    # Components now use the factory pattern instead of direct setup
+    pass
 
-func _on_activate_start(request: InteractionRequest) -> void:
-    # Validate the request
-    if not _can_activate():
-        request.reject("Cannot activate right now")
-        return
+func _create_interaction_factories() -> Array[InteractionFactory]:
+    # Return factories that create interactions for this component
+    return [CustomInteractionFactory.new(self)]
+
+# Inner factory class
+class CustomInteractionFactory extends InteractionFactory:
+    var component: CustomItemComponent
     
-    request.accept()
+    func _init(comp: CustomItemComponent):
+        component = comp
+    
+    func get_interaction_name() -> String:
+        return "activate"
+    
+    func get_interaction_description() -> String:
+        return "Activate item (%.1fs)" % component.activation_time
+    
+    func create_interaction(context: Dictionary = {}) -> Interaction:
+        var interaction = Interaction.new(
+            get_interaction_name(),
+            get_interaction_description(),
+            {}, # needs_filled
+            {}, # needs_drained
+            true # requires_adjacency
+        )
+        
+        # Set up lifecycle handlers
+        interaction.on_start_handler = component._on_activate_start
+        interaction.on_end_handler = component._on_activate_end
+        
+        return interaction
+
+func _on_activate_start(interaction: Interaction, context: Dictionary) -> void:
+    # Validate and begin activation
+    if not _can_activate():
+        push_error("Cannot activate right now")
+        return
     # Begin activation process...
+
+func _on_activate_end(interaction: Interaction, context: Dictionary) -> void:
+    # Clean up activation
 ```
 
 ### Built-in Components
