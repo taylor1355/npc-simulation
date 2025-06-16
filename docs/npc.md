@@ -67,6 +67,15 @@ The NPC Need System simulates basic physiological and psychological requirements
         *   `new_value`: The updated floating-point value.
     *   Used by systems like UI to react to need changes.
 
+*   **`NPC_STATE_CHANGED` Event (Global):**
+    *   Created by `NpcEvents.create_state_changed(gamepiece, old_state_name, new_state_name, state)`.
+    *   Carries:
+        *   `npc`: The `Gamepiece` instance of the NPC.
+        *   `old_state_name`: Previous state name (e.g., "idle").
+        *   `new_state_name`: New state name (e.g., "interacting").
+        *   `new_state`: The `BaseControllerState` instance.
+    *   Used by UI systems to update state displays in real-time.
+
 This system ensures that an NPC's internal state (its needs) influences its behavior through the decision-making process and that changes to this state are communicated effectively throughout the game.
 
 ### Observation System

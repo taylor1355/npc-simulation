@@ -63,3 +63,7 @@ func on_interaction_finished(interaction_name: String, npc: NpcController, paylo
 # Get emoji representation of this state
 func get_state_emoji() -> String:
 	return "❓"  # Default emoji for unknown states
+
+# Get human-readable description of current state activity
+func get_state_description() -> String:
+	return ""  # Override in subclasses to provide state-specific details

@@ -147,3 +147,8 @@ func get_context_data() -> Dictionary:
 
 func get_state_emoji() -> String:
 	return interaction.get_interaction_emoji()
+
+func get_state_description() -> String:
+	if interaction and target_controller:
+		return "%s with %s" % [interaction.name.capitalize(), target_controller.get_display_name()]
+	return ""

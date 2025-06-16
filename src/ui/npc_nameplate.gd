@@ -22,8 +22,18 @@ func _ready() -> void:
 	if not _controller.is_node_ready():
 		await _controller.ready
 	
-	# Connect to display name updates and state changes
+	# Connect to display name updates
 	_connect_to_controller()
+	
+	# Listen for state changes via EventBus
+	EventBus.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.NPC_STATE_CHANGED):
+				var state_event = event as NpcEvents.StateChangedEvent
+				# Only update if this event is for our NPC
+				if state_event.npc == owner:
+					_update_state_emoji_from_state(state_event.new_state)
+	)
 
 func _connect_to_controller() -> void:
 	# Wait a frame for display name to be set
@@ -32,15 +42,10 @@ func _connect_to_controller() -> void:
 	# Set initial name
 	name_label.text = _controller.get_display_name()
 	
-	# Connect to state machine for emoji updates
-	if _controller.state_machine:
-		_controller.state_machine.state_changed.connect(_on_state_changed)
-		# Set initial emoji
-		_update_state_emoji()
-
-func _on_state_changed(_old_state: String, _new_state: String) -> void:
-	_update_state_emoji()
-
-func _update_state_emoji() -> void:
+	# Set initial emoji if state machine is ready
 	if _controller.state_machine and _controller.state_machine.current_state:
-		emoji_label.text = _controller.state_machine.current_state.get_state_emoji()
+		_update_state_emoji_from_state(_controller.state_machine.current_state)
+
+func _update_state_emoji_from_state(state: BaseControllerState) -> void:
+	if state:
+		emoji_label.text = state.get_state_emoji()

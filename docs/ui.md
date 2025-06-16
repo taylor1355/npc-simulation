@@ -6,7 +6,7 @@
 ```
 Panel Types:
 ├── Info Panels (priority 0)
-│   ├── NpcInfoPanel: NPC traits
+│   ├── NpcInfoPanel: NPC name, state, traits
 │   └── ItemInfoPanel: Item details
 ├── NPC Panels (priority 1)
 │   ├── NeedsPanel: Need bars
@@ -60,6 +60,21 @@ States:
 Updates:
 ├── On NPC selection
 └── On info received
+```
+
+### NPC Info Panel (npc_info_panel.gd)
+```
+Structure:
+├── Panel
+└── RichTextLabel (info text)
+Content:
+├── Name: NPC display name
+├── State: State emoji + name + description
+└── Traits: Comma-separated list
+Updates:
+├── On NPC selection
+├── On info received
+└── On state changed (via NPC_STATE_CHANGED event)
 ```
 
 ### Main UI (ui.tscn)

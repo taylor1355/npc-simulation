@@ -5,6 +5,22 @@ const GROUP_NAME: = "_NPC_CONTROLLER_GROUP"
 func get_entity_type() -> String:
 	return "npc"
 
+## Get formatted state information for UI display
+func get_state_info_text() -> String:
+	if not state_machine or not state_machine.current_state:
+		return ""
+	
+	var state = state_machine.current_state
+	var state_name = state.state_name.capitalize()
+	var emoji = state.get_state_emoji()
+	var description = state.get_state_description()
+	
+	var text = "%s %s" % [emoji, state_name]
+	if description:
+		text += " - %s" % description
+	
+	return text
+
 # Backend NPC state
 var npc_id: String
 var npc_client: NpcClientBase
@@ -59,6 +75,19 @@ func _ready() -> void:
 		# Initialize state machine
 		state_machine = ControllerStateMachine.new(self)
 		state_machine.state_changed.connect(_on_state_changed)
+		
+		# Forward state changes to EventBus
+		state_machine.state_changed.connect(
+			func(old_state_name: String, new_state_name: String):
+				if _gamepiece and state_machine.current_state:
+					var event = NpcEvents.create_state_changed(
+						_gamepiece,
+						old_state_name,
+						new_state_name,
+						state_machine.current_state
+					)
+					EventBus.dispatch(event)
+		)
 		
 		# Listen for NPC client events
 		EventBus.event_dispatched.connect(

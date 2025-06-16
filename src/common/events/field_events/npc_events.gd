@@ -22,9 +22,25 @@ class InteractionObservationEvent extends Event:
 		npc = piece
 		observation = obs
 
+class StateChangedEvent extends Event:
+	var npc: Gamepiece
+	var old_state_name: String
+	var new_state_name: String
+	var new_state: BaseControllerState
+	
+	func _init(piece: Gamepiece, old_name: String, new_name: String, state: BaseControllerState) -> void:
+		super(Type.NPC_STATE_CHANGED)
+		npc = piece
+		old_state_name = old_name
+		new_state_name = new_name
+		new_state = state
+
 ## Static factory methods
 static func create_need_changed(piece: Gamepiece, need: String, value: float) -> NeedChangedEvent:
 	return NeedChangedEvent.new(piece, need, value)
 
 static func create_interaction_observation(piece: Gamepiece, observation: Dictionary) -> InteractionObservationEvent:
 	return InteractionObservationEvent.new(piece, observation)
+
+static func create_state_changed(piece: Gamepiece, old_name: String, new_name: String, state: BaseControllerState) -> StateChangedEvent:
+	return StateChangedEvent.new(piece, old_name, new_name, state)
