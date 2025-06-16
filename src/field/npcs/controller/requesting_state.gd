@@ -238,3 +238,6 @@ func on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 	
 	# Trigger new decision
 	controller.decide_behavior()
+
+func get_state_emoji() -> String:
+	return "🤔"

@@ -159,9 +159,8 @@ region = Rect2(0, 85, 16, 16)
 
 [node name="Main" type="Node2D"]
 
-[node name="Field" type="Node2D" parent="." node_paths=PackedStringArray("focused_game_piece")]
+[node name="Field" type="Node2D" parent="."]
 script = ExtResource("1_4kyoj")
-focused_game_piece = NodePath("Entities/Npcs/Npc")
 gameboard = ExtResource("2_l26x2")
 
 [node name="TileLayers" type="Node2D" parent="Field"]
@@ -196,7 +195,6 @@ y_sort_enabled = true
 y_sort_enabled = true
 
 [node name="Npc" parent="Field/Entities/Npcs" instance=ExtResource("9_mkw52")]
-position = Vector2(240, 194)
 gameboard = ExtResource("2_l26x2")
 
 [node name="Items" type="Node2D" parent="Field/Entities"]

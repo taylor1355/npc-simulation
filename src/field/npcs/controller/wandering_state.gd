@@ -55,3 +55,6 @@ func get_context_data() -> Dictionary:
 
 func is_movement_allowed() -> bool:
 	return not controller.movement_locked
+
+func get_state_emoji() -> String:
+	return "🎲"

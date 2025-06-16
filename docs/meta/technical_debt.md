@@ -399,6 +399,35 @@ func _ready():
 - Unambiguous references in code
 - Better support for save/load systems in the future
 
+### 14. Interaction Base Class Responsibilities
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
+
+**Problem**: The Interaction base class contains logic that should be in subclasses:
+- `get_interaction_emoji()` has hardcoded interaction names in a match statement
+- Base class knows about specific interaction types (consume, sit, conversation)
+- Creates tight coupling between base and specific implementations
+
+**Current Issue**:
+```gdscript
+# Base class shouldn't know about specific interaction types
+func get_interaction_emoji() -> String:
+    match name:
+        "consume":
+            return "🍽️"
+        "sit":
+            return "🪑"
+        _:
+            return "🔧"
+```
+
+**Solution**: Make Interaction more abstract:
+- Move emoji logic to specific interaction subclasses
+- Create proper subclasses for consume/sit interactions instead of using base class
+- Base class should only contain truly generic interaction logic
+- Consider making base class abstract (if Godot 4.x supports it)
+
+**Benefits**: Better separation of concerns, easier to add new interaction types, more maintainable
+
 ## Conclusion
 
 The highest-leverage improvements now focus on code quality and maintainability. With the interaction system recently refactored, priorities shift to establishing consistent patterns (logging, event handling) and improving type safety. The terminology overloading remains a significant issue affecting developer productivity.

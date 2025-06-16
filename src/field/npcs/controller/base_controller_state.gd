@@ -59,3 +59,7 @@ func on_interaction_bid(bid: MultiPartyBid) -> void:
 # Called when an interaction finishes
 func on_interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary) -> void:
 	pass
+
+# Get emoji representation of this state
+func get_state_emoji() -> String:
+	return "❓"  # Default emoji for unknown states

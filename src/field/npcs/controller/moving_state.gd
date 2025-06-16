@@ -48,3 +48,6 @@ func get_context_data() -> Dictionary:
 		"destination": {"x": destination.x, "y": destination.y},
 		"allow_adjacent": allow_adjacent
 	}
+
+func get_state_emoji() -> String:
+	return "🚶"

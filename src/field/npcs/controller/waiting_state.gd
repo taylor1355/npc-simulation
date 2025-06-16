@@ -47,3 +47,6 @@ func get_context_data() -> Dictionary:
 		"duration": Time.get_unix_time_from_system() - started_at,
 		"reason": reason
 	}
+
+func get_state_emoji() -> String:
+	return "⏳"

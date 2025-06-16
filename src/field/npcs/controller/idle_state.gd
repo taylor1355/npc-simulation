@@ -75,3 +75,6 @@ func handle_action(action_name: String, parameters: Dictionary) -> bool:
 
 func is_movement_allowed() -> bool:
 	return not controller.movement_locked
+
+func get_state_emoji() -> String:
+	return "🧍"

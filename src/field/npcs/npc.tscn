@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://b4i22ohcw0fgd"]
+[gd_scene load_steps=7 format=3 uid="uid://b4i22ohcw0fgd"]
 
 [ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_uyrdv"]
 [ext_resource type="PackedScene" uid="uid://caxhff6by5nqu" path="res://src/field/gamepieces/animation/walking_gamepiece_animation.tscn" id="2_nt6uj"]
 [ext_resource type="Script" uid="uid://blk0h8ca6sctn" path="res://src/field/npcs/npc_controller.gd" id="3_xmgw3"]
 [ext_resource type="Script" uid="uid://1ii7x6rdlp4r" path="res://src/field/npcs/vision_manager.gd" id="4_uu4ol"]
+[ext_resource type="PackedScene" uid="uid://nameplate" path="res://src/ui/npc_nameplate.tscn" id="5_nplate"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8aea6"]
 radius = 132.004
@@ -12,6 +13,11 @@ radius = 132.004
 
 [node name="ControllerAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D" index="2"]
 remote_path = NodePath("../../../../Controller")
+
+[node name="NameplateAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D" index="3"]
+remote_path = NodePath("../../../../NameplateContainer")
+update_rotation = false
+update_scale = false
 
 [node name="Animation" parent="." index="1" instance=ExtResource("2_nt6uj")]
 
@@ -26,3 +32,8 @@ script = ExtResource("4_uu4ol")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Controller/VisionArea" index="0"]
 shape = SubResource("CircleShape2D_8aea6")
+
+[node name="NameplateContainer" type="Node2D" parent="." index="3"]
+
+[node name="Nameplate" parent="NameplateContainer" index="0" instance=ExtResource("5_nplate")]
+position = Vector2(0, -24)

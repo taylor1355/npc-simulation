@@ -144,3 +144,6 @@ func get_context_data() -> Dictionary:
 		"entity_type": target_controller.get_entity_type(),
 		"duration": Time.get_unix_time_from_system() - started_at
 	}
+
+func get_state_emoji() -> String:
+	return interaction.get_interaction_emoji()

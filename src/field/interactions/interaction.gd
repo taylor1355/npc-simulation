@@ -128,3 +128,12 @@ func to_dict() -> Dictionary[String, Variant]:
 		"need_rates": rates_dict,
 		"act_in_interaction_parameters": action_params
 	}
+
+func get_interaction_emoji() -> String:
+	match name:
+		"consume":
+			return "🍽️"
+		"sit":
+			return "🪑"
+		_:
+			return "🔧"

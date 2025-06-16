@@ -110,3 +110,6 @@ func _on_end() -> void:
 	ConversationLogger.log_conversation_event("ENDED", conversation_id, {
 		"duration": duration
 	})
+
+func get_interaction_emoji() -> String:
+	return "💬"

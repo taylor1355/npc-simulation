@@ -192,7 +192,7 @@ script = ExtResource("1_l0scw")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": SubResource("AnimationLibrary_67ks1")
+&"": SubResource("AnimationLibrary_67ks1")
 }
 autoplay = "idle"
 
