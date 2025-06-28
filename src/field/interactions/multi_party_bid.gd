@@ -7,7 +7,6 @@ var rejected_participants: Array[NpcController] = [] # NPCs who rejected
 var responses: Dictionary = {} # npc_id -> {accepted: bool, reason: String}
 var response_timeout: float = 5.0
 var timeout_timer: float = 0.0
-var interaction: Interaction # The interaction object for this bid
 
 # The host is the bidder (inherited from InteractionBid)
 # All participants includes host + invited_participants
@@ -27,7 +26,7 @@ func get_all_participants() -> Array[NpcController]:
 	all.append_array(invited_participants)
 	return all
 
-func add_participant_response(participant: NpcController, accepted: bool, reason: String = "") -> void:
+func add_participant_response(participant: NpcController, bid_accepted: bool, reason: String = "") -> void:
 	if participant == bidder:
 		push_error("Host cannot respond to their own bid")
 		return
@@ -37,11 +36,11 @@ func add_participant_response(participant: NpcController, accepted: bool, reason
 		return
 	
 	responses[participant.npc_id] = {
-		"accepted": accepted,
+		"accepted": bid_accepted,
 		"reason": reason
 	}
 	
-	if accepted:
+	if bid_accepted:
 		accepted_participants.append(participant)
 	else:
 		rejected_participants.append(participant)
@@ -83,8 +82,21 @@ func accept():
 	
 	super.accept()
 	
-	# Add all participants to the interaction
-	# Note: bidder (host) is added by RequestingState transition
+	# Connect each participant (including host) to the interaction's transition signal
+	# This allows them to transition to InteractingState when added to the interaction
+	var all_participants = [bidder] + accepted_participants
+	for participant in all_participants:
+		interaction.participant_should_transition.connect(
+			participant.state_machine.current_state.on_interaction_transition_requested,
+			Node.CONNECT_ONE_SHOT
+		)
+	
+	# Add all participants to the interaction (including host/bidder)
+	# First add the bidder (host) who initiated the interaction
+	if interaction.can_add_participant(bidder):
+		interaction.add_participant(bidder)
+	
+	# Then add all accepting participants
 	for participant in accepted_participants:
 		if interaction.can_add_participant(participant):
 			interaction.add_participant(participant)

@@ -118,3 +118,35 @@ func _on_end(context: Dictionary) -> void:
 
 func get_interaction_emoji() -> String:
 	return "💬"
+
+# Override to add participant state validation
+func send_observations() -> void:
+	# Validate participant states before sending observations
+	_validate_participant_states()
+	
+	# Call super to send observations
+	super.send_observations()
+
+func _validate_participant_states() -> void:
+	# Check if all participants are actually in conversation state
+	var invalid_participants: Array[NpcController] = []
+	
+	for participant in participants:
+		var state_machine = participant.state_machine
+		var is_in_conversation = (
+			state_machine.current_state is ControllerInteractingState and
+			participant.current_interaction == self
+		)
+		
+		if not is_in_conversation:
+			print("[CONVERSATION WARNING] Participant %s is not in conversation state (state: %s, interaction: %s)" % [
+				participant.npc_id,
+				state_machine.current_state.state_name if state_machine.current_state else "None",
+				participant.current_interaction.name if participant.current_interaction else "None"
+			])
+			invalid_participants.append(participant)
+	
+	# Remove participants who are not actually in the conversation
+	for invalid_participant in invalid_participants:
+		participants.erase(invalid_participant)
+		_on_participant_left(invalid_participant)

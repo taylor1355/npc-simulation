@@ -74,6 +74,10 @@ func on_interaction_transition_requested(participant: NpcController, interaction
 	if participant != controller:
 		return
 	
+	# If already in an interaction, properly end it first
+	if controller.current_interaction:
+		controller.current_interaction._on_end({})
+	
 	# Create appropriate context for multi-party interaction
 	var context = GroupInteractionContext.new(interaction)
 	var interacting_state = ControllerInteractingState.new(controller, interaction, context)

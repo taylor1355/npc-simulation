@@ -4,11 +4,13 @@ class_name InteractingState
 
 var conversation_turn_count: int = 0
 var sent_greeting: bool = false
+var sent_farewell: bool = false
 
 func enter() -> void:
 	super.enter()
 	conversation_turn_count = 0
 	sent_greeting = false
+	sent_farewell = false
 
 func update(_seen_items: Array, needs: Dictionary) -> Action:
 	# Get current interaction from observation
@@ -48,8 +50,8 @@ func _handle_conversation_update() -> Action:
 	
 	conversation_turn_count += 1
 	
-	# Leave after several turns
-	if conversation_turn_count > 4 and randf() < 0.3:
+	# If we already sent farewell, leave the conversation
+	if sent_farewell:
 		agent.last_conversation_time = Time.get_unix_time_from_system()
 		return Action.cancel_interaction()
 	
@@ -59,13 +61,24 @@ func _handle_conversation_update() -> Action:
 		message = ConversationPhrases.get_random_greeting()
 		sent_greeting = true
 		agent.add_observation("Sending greeting: %s" % message)
-	elif conversation_turn_count >= 4:
-		# Getting ready to leave
-		message = ConversationPhrases.get_random_farewell()
-		agent.add_observation("Sending farewell: %s" % message)
 	else:
-		message = ConversationPhrases.get_random_response()
-		agent.add_observation("Sending response: %s" % message)
+		# After greeting, chance to end conversation increases with each turn
+		var end_probability: float
+		match conversation_turn_count:
+			2, 3:  # After greeting exchange, low chance to end
+				end_probability = 0.15
+			4, 5:  # After some chat, moderate chance
+				end_probability = 0.4
+			_:     # After extended conversation, high chance
+				end_probability = 0.7
+		
+		if randf() < end_probability:
+			message = ConversationPhrases.get_random_farewell()
+			sent_farewell = true
+			agent.add_observation("Ending conversation with farewell: %s" % message)
+		else:
+			message = ConversationPhrases.get_random_response()
+			agent.add_observation("Sending response: %s" % message)
 	
 	return Action.new(
 		Action.Type.ACT_IN_INTERACTION,

@@ -14,7 +14,7 @@ func get_display_name() -> String:
 func get_position() -> Vector2i:
 	if target_controller:
 		return target_controller.get_cell_position()
-	return null
+	return super.get_position()
 
 func get_entity_type() -> String:
 	if target_controller:
@@ -76,7 +76,7 @@ func get_context_data(interaction: Interaction, duration: float) -> Dictionary:
 func is_valid_for_interaction(interaction: Interaction) -> bool:
 	return target_controller != null and interaction.max_participants == 1
 
-func setup_completion_signals(controller: NpcController, interaction: Interaction) -> void:
+func setup_completion_signals(controller: NpcController, _interaction: Interaction) -> void:
 	if target_controller:
 		target_controller.interaction_finished.connect(
 			controller._on_interaction_finished,

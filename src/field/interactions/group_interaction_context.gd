@@ -12,13 +12,18 @@ func get_display_name() -> String:
 	return "Unknown Group"
 
 func get_position() -> Vector2i:
-	# Multi-party interactions don't have a single position
-	return null
+	# By default, use the centroid of all participants
+	var centroid = Vector2i.ZERO
+	if not interaction or interaction.participants.size() == 0:
+		return centroid # No participants, return zero vector
+	for participant in interaction.participants:
+		centroid += participant.get_position()
+	return centroid / interaction.participants.size()
 
 func get_entity_type() -> String:
 	return "group"
 
-func handle_cancellation(interaction_ref: Interaction, controller: NpcController) -> void:
+func handle_cancellation(_interaction_ref: Interaction, controller: NpcController) -> void:
 	if not interaction:
 		push_warning("No interaction for cancellation")
 		return
@@ -54,7 +59,7 @@ func get_context_data(interaction_ref: Interaction, duration: float) -> Dictiona
 func is_valid_for_interaction(interaction_ref: Interaction) -> bool:
 	return interaction != null and interaction_ref != null and interaction_ref.max_participants > 1
 
-func setup_completion_signals(controller: NpcController, interaction_ref: Interaction) -> void:
+func setup_completion_signals(controller: NpcController, _interaction_ref: Interaction) -> void:
 	if interaction:
 		# For multi-party interactions, the interaction itself handles completion
 		# Check if the interaction has an interaction_ended signal

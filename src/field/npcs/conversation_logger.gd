@@ -8,7 +8,10 @@ static func log_conversation_event(event_type: String, conversation_id: String, 
 		"STARTED":
 			print("%s Started with participants: %s" % [log_entry, details.get("participants", [])])
 		"MESSAGE":
-			print("%s %s: %s" % [log_entry, details.get("speaker", "Unknown"), details.get("message", "")])
+			# Make messages more prominent with speakers' names
+			var speaker = details.get("speaker", "Unknown")
+			var message = details.get("message", "")
+			print("💬 [%s] %s: \"%s\"" % [conversation_id.substr(0, 8), speaker, message])
 		"PARTICIPANT_JOINED":
 			print("%s %s joined" % [log_entry, details.get("participant", "Unknown")])
 		"PARTICIPANT_LEFT":

@@ -99,3 +99,26 @@ func get_state_description() -> String:
 	if interaction and context:
 		return "%s with %s" % [interaction.name.capitalize(), context.get_display_name()]
 	return ""
+
+# Override bid handling to properly manage interaction transitions
+func on_interaction_bid(bid: MultiPartyBid) -> void:
+	# If this is a conversation bid, we should consider leaving our current interaction
+	if bid.interaction_name == "conversation":
+		# Only accept conversations if we're not already in one
+		if interaction and interaction.name == "conversation":
+			# Already in a conversation, reject
+			bid.add_participant_response(controller, false, "Already in a conversation")
+			return
+		
+		# For non-conversation interactions, accept conversation and cancel current interaction
+		if randf() < 0.8:  # High probability to join conversations
+			print("[%s] Leaving %s to join conversation" % [controller.npc_id, interaction.name])
+			# Cancel current interaction first
+			_try_cancel_interaction()
+			# Accept the conversation
+			bid.add_participant_response(controller, true)
+		else:
+			bid.add_participant_response(controller, false, "Too busy right now")
+	else:
+		# For other interaction types, reject while already interacting
+		bid.add_participant_response(controller, false, "Currently busy")
