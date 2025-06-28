@@ -290,3 +290,39 @@ The backend system, accessed via an `NpcClientBase` implementation (like `McpNpc
     *   Returns: Confirmation of cleanup.
 
 The `src/field/npcs/mock_backend/` directory contains a reference GDScript implementation, while the primary flow assumes an MCP server backend accessed via the C# SDK.
+
+## Controller State Machine
+
+### ControllerInteractingState (`src/field/npcs/controller/interacting_state.gd`)
+The `InteractingState` manages NPCs during active interactions using the polymorphic InteractionContext system. This unified approach handles both single-party (NPC-item) and multi-party (NPC-NPC) interactions consistently.
+
+**Key Features:**
+- Uses `InteractionContext` for polymorphic interaction handling
+- Supports context-specific cancellation logic
+- Provides interaction-specific state display
+- Handles act_in_interaction actions with parameter validation
+
+**Constructor:**
+- `_init(controller, interaction, context)`: Requires both `Interaction` and `InteractionContext` instances
+- Context is created via `Interaction.create_context(target_controller)` factory method
+
+**Supported Actions:**
+- `cancel_interaction`: Delegates to `context.handle_cancellation()`
+- `continue`: Maintains current interaction
+- `act_in_interaction`: Executes interaction-specific actions (e.g., sending messages in conversations)
+
+**Context Integration:**
+- `EntityInteractionContext`: For single-party interactions, wraps target controller
+- `GroupInteractionContext`: For multi-party interactions, wraps the interaction itself
+- Context provides display names, positions, and handles cancellation appropriately
+
+**State Display:**
+- `get_state_emoji()`: Returns interaction-specific emoji
+- `get_state_description()`: Shows interaction name and context display name
+- `get_context_data()`: Provides detailed information for observations
+
+**Multi-Party Interaction Handling:**
+The state can handle incoming conversation invitations while already interacting:
+- Rejects conversation bids if already in a conversation
+- Can leave current interaction to join conversations (80% probability)
+- Properly manages state transitions during interaction switching

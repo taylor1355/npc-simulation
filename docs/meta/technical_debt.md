@@ -246,18 +246,19 @@ func handle_interaction_bid(request: InteractionBid) -> void:
 ## Implementation Priority
 
 ### Phase 1: Critical Issues
-1. **Debug Logging Standardization** - Major maintainability improvement
+1. **Mock Backend Client Architecture Duplication** - Enables core business model
+2. **Debug Logging Standardization** - Major maintainability improvement
 
 ### Phase 2: Type Safety & Patterns
-2. **Variant Usage Investigation** - Better type contracts
-3. **Event Handling Consolidation** - Reduce boilerplate
+3. **Variant Usage Investigation** - Better type contracts
+4. **Event Handling Consolidation** - Reduce boilerplate
 
 ### Phase 3: Large Refactoring
-4. **Terminology Taxonomy** - Major naming clarity project
-5. **NPC and Item Interaction Unification** - Major architectural improvement
-6. **Physics Layer Constants** - Minor cleanup
-7. **Vision Manager Initialization** - Physics timing issues
-8. **Need Effect Data Flow** - Centralize need logic (see below)
+5. **Terminology Taxonomy** - Major naming clarity project
+6. **NPC and Item Interaction Unification** - Major architectural improvement
+7. **Physics Layer Constants** - Minor cleanup
+8. **Vision Manager Initialization** - Physics timing issues
+9. **Need Effect Data Flow** - Centralize need logic (see below)
 
 ## Risk Assessment
 
@@ -273,7 +274,7 @@ func handle_interaction_bid(request: InteractionBid) -> void:
 - **Developer Experience**: Clear naming, better IDE support
 - **System Reliability**: Clearer component interfaces and event handling
 
-### 8. Need Effect Data Flow Complexity
+### 9. Need Effect Data Flow Complexity
 **Impact**: High | **Effort**: High | **Leverage**: 🔥🔥
 
 **Problem**: Need effect information is scattered across multiple layers with complex data transformations:
@@ -302,7 +303,7 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 - This reduces ConsumableComponent factory spam from hundreds to once per component
 - Still need to address temporary interaction creation for data extraction
 
-### 9. Debug Print Statements Cleanup
+### 10. Debug Print Statements Cleanup
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
 
 **Problem**: Debug print statements scattered throughout codebase:
@@ -312,7 +313,7 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 
 **Solution**: Remove or convert to proper logging system (see Debug Logging Standardization)
 
-### 10. Game Clock System
+### 11. Game Clock System
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
 
 **Problem**: Using `OS.get_ticks_msec()` for timestamps prevents proper game pause/speed control:
@@ -326,7 +327,7 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 - Consistent time across all systems
 - Proper serialization for save/load
 
-### 11. Vision Observation Entity Separation
+### 12. Vision Observation Entity Separation
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
 
 **Problem**: VisionObservation separates items and NPCs into different arrays:
@@ -352,7 +353,7 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 }
 ```
 
-### 12. Conversation State Validation
+### 13. Conversation State Validation
 **Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
 
 **Problem**: No validation to ensure conversation constraints:
@@ -365,7 +366,7 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 - Conversation join logic to check existing conversations
 - State machine transitions
 
-### 13. Gamepiece Identification System
+### 14. Gamepiece Identification System
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: Gamepieces currently use `display_name` for both UI display and identification, which creates ambiguity:
@@ -406,7 +407,7 @@ func _ready():
 - Unambiguous references in code
 - Better support for save/load systems in the future
 
-### 14. Interaction Base Class Responsibilities
+### 15. Interaction Base Class Responsibilities
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
 
 **Problem**: The Interaction base class contains logic that should be in subclasses:
@@ -435,7 +436,7 @@ func get_interaction_emoji() -> String:
 
 **Benefits**: Better separation of concerns, easier to add new interaction types, more maintainable
 
-### 15. Interaction Factory Organization
+### 16. Interaction Factory Organization
 **Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
 
 **Problem**: InteractionFactory classes are currently defined within component files rather than alongside their corresponding Interaction classes:
@@ -473,7 +474,7 @@ src/field/interactions/sit_interaction_factory.gd
 - Easier to maintain interaction-factory pairs
 - Clearer separation of concerns
 
-### 16. Fragile Initialization Dependencies
+### 18. Fragile Initialization Dependencies
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥
 
 **Problem**: Multiple systems rely on specific initialization timing in _ready() functions, creating fragile dependencies that can permanently break systems:
@@ -521,3 +522,56 @@ var parent_gamepiece: Gamepiece:
 The highest-leverage improvements now focus on code quality and maintainability. With the interaction system recently refactored, priorities shift to establishing consistent patterns (logging, event handling) and improving type safety. The terminology overloading remains a significant issue affecting developer productivity.
 
 Key insight: Establishing consistent patterns and clear contracts will provide the foundation for sustainable growth of the codebase.
+
+### 17. Mock Backend Client Architecture Duplication
+**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
+
+**Problem**: The mock backend currently implements a completely separate client architecture from the MCP server client, blocking the core business model feature of distributed compute through player-spawned MCP servers.
+
+**Business Model Impact**: 
+The distributed compute model is central to the platform's revenue strategy and scaling goals:
+- **Revenue Stream**: Players contribute compute via client-spawned MCP servers, earning tokens proportionally
+- **Scaling Target**: 100-1000+ NPCs per world through distributed player compute contributions  
+- **Player Economy**: Platform takes transaction fees on player-to-player compute trades
+- **Technical Foundation**: "Player-contributed compute through automatically spawned MCP servers" is a key architectural feature
+
+**Current Architecture Issues**:
+- **MCP Backend**: Uses three-layer architecture (McpNpcClient → McpSdkClient → McpServiceProxy)
+- **Mock Backend**: Uses direct instantiation of MockNpcBackend with simple method calls
+- Both implement NpcClientBase but with entirely different communication patterns
+- Mock backend bypasses the structured observation/action flow used by MCP
+- **Critical Gap**: No development/testing path from mock backend to player-spawned MCP servers
+
+**Blocking Business Features**:
+- Cannot test distributed compute spawning functionality during development
+- No migration path from development (mock) to production (player-spawned MCP servers)
+- Cannot validate the player compute contribution and token allocation systems
+- Different code paths prevent testing of the full MCP communication pipeline
+
+**Proposed Solution**: Refactor mock backend to use MCP server architecture:
+```gdscript
+# Create MockMcpServer that implements MCP protocol
+class_name MockMcpServer extends RefCounted
+
+# Encapsulates current MockNpcBackend logic
+var _backend: MockNpcBackend
+
+func call_tool(tool_name: String, arguments: Dictionary) -> Dictionary:
+    match tool_name:
+        "create_agent":
+            return _backend.create_agent(arguments)
+        "process_observation":
+            return _backend.process_observation(arguments)
+        # etc.
+```
+
+**Benefits**:
+- **Enables Core Business Model**: Provides development/testing foundation for player-spawned MCP servers
+- **Single Client Architecture**: Unified codebase for both mock and distributed compute backends
+- **Business Model Validation**: Enables testing of compute contribution, token allocation, and player economy systems
+- **Production Parity**: Mock backend tests the full communication pipeline used in production
+- **Easier Runtime Switching**: Seamless transition between local mock and distributed player compute
+- **Reduced Maintenance**: Single client architecture eliminates code duplication
+
+**Implementation Priority**: 
+This should be elevated to **Phase 1: Critical Issues** as it's blocking core business model development and testing.

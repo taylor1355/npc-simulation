@@ -19,27 +19,41 @@ Interaction System
 ## 2. Core Components
 
 ### Interaction (`src/field/interactions/interaction.gd`)
-The `Interaction` class is a generic, `RefCounted` object that defines a specific way an NPC can interact with an object. It does not contain behavior-specific logic itself; instead, it orchestrates the interaction lifecycle by invoking `Callable` handlers provided by the component that created it.
+The `Interaction` class is a generic, `RefCounted` object that defines a specific way an NPC can interact with an object. It manages participant lifecycles, provides event integration, and creates appropriate contexts for state management.
 
 **Key Properties:**
+*   `id: String`: Unique identifier generated automatically
 *   `name: String`: A unique identifier for the interaction (e.g., "consume", "sit").
 *   `description: String`: A human-readable description, which can be updated dynamically.
 *   `max_participants: int`: The maximum number of NPCs that can participate (default is 1).
+*   `min_participants: int`: The minimum number required to maintain the interaction
 *   `requires_adjacency: bool`: If `true`, the NPC must be next to the target object to interact.
-*   `needs_filled: Dictionary[String, float]`: Needs that will be filled when participating.
-*   `needs_drained: Dictionary[String, float]`: Needs that will be drained when participating.
-*   `action_parameter_specs: Dictionary[String, PropertySpec]`: Type-safe parameter specifications for actions.
+*   `needs_filled: Array[Needs.Need]`: Needs that will be increased when participating.
+*   `needs_drained: Array[Needs.Need]`: Needs that will be decreased when participating.
+*   `need_rates: Dictionary[Needs.Need, float]`: Per-second need change rates
+*   `act_in_interaction_parameters: Dictionary[String, PropertySpec]`: Type-safe parameter specifications for actions.
 
-**Lifecycle Handlers (`Callable`):**
-These are the core of the new system. A component assigns its own methods to these handlers to inject logic into the interaction's lifecycle.
-*   `on_start_handler`: Called when the interaction begins.
-*   `on_end_handler`: Called when the interaction concludes.
-*   `on_participant_joined_handler`: Called when a new participant is added.
-*   `on_participant_left_handler`: Called when a participant leaves.
+**Participant Management:**
+*   `participants: Array[NpcController]`: Current participants in the interaction
+*   `can_add_participant(npc)`: Validates if NPC can join
+*   `add_participant(npc)`: Adds NPC and triggers lifecycle events
+*   `remove_participant(npc)`: Removes NPC and triggers lifecycle events
+
+**Lifecycle Methods:**
+These methods are called automatically during interaction events and dispatch corresponding `InteractionEvents`.
+*   `_on_start(context)`: Called when the interaction begins, dispatches `INTERACTION_STARTED`
+*   `_on_end(context)`: Called when the interaction concludes, dispatches `INTERACTION_ENDED`
+*   `_on_participant_joined(participant)`: Called when a new participant is added, dispatches `INTERACTION_PARTICIPANT_JOINED`
+*   `_on_participant_left(participant)`: Called when a participant leaves, dispatches `INTERACTION_PARTICIPANT_LEFT`
 
 **Key Methods:**
-*   `act_in_interaction(action_name: String, params: Dictionary)`: Execute actions within the interaction with parameter validation.
-*   `send_observation(observation: Observation)`: Send observations to all participants (for streaming interactions).
+*   `act_in_interaction(participant, params)`: Execute actions within the interaction with parameter validation.
+*   `send_observation_to_participant(participant, observation)`: Send observations to specific participants.
+*   `create_context(target_controller)`: Factory method that creates appropriate `InteractionContext` based on interaction type.
+
+**Signals:**
+*   `act_in_interaction_received(participant, validated_parameters)`: Emitted when actions are performed
+*   `participant_should_transition(participant, interaction)`: Signals participant to transition to `InteractingState`
 
 ### InteractionBid (`src/field/interactions/interaction_bid.gd`)
 The `InteractionBid` class manages the request and acceptance process for starting or canceling interactions. It uses a bidding pattern where NPCs can bid to start an interaction, and the target (item or other NPC) can accept or reject the bid.
@@ -191,6 +205,34 @@ A base class for interactions that need to send ongoing observations to particip
 - Subclasses override `_generate_observation_for_participant()`
 - Used for interactions with continuous updates
 
+### InteractionContext System (`src/field/interactions/interaction_context.gd`)
+A polymorphic context architecture that provides a unified interface for `InteractingState` regardless of single-party vs multi-party interactions. This system eliminates null handling and type-specific branching in controller states.
+
+**Base InteractionContext (`interaction_context.gd`):**
+- `get_display_name() -> String`: Returns context-appropriate display name
+- `get_position() -> Vector2i`: Returns relevant position for the interaction
+- `get_entity_type() -> String`: Returns type identifier for the context
+- `handle_cancellation()`: Handles interaction cancellation in context-appropriate way
+- `get_context_data()`: Provides state information for observations
+- `setup_completion_signals()`: Configures interaction completion detection
+
+**EntityInteractionContext (`entity_interaction_context.gd`):**
+Context for single-party interactions with items or NPCs.
+- Wraps a `target_controller: GamepieceController`
+- Uses existing bid system for cancellation requests
+- Provides entity-specific context data (name, type, position)
+- Sets up `interaction_finished` signal handling
+
+**GroupInteractionContext (`group_interaction_context.gd`):**
+Context for multi-party interactions (conversations, group activities).
+- Wraps the `interaction: Interaction` itself
+- Uses direct participant removal for cancellation
+- Calculates centroid position of all participants
+- Provides group-specific context data (participant count, names)
+
+**Factory Integration:**
+The `Interaction.create_context(target_controller)` factory method automatically creates the appropriate context type based on `max_participants`.
+
 ### ConversationInteraction (`src/field/interactions/conversation_interaction.gd`)
 Manages multi-party conversations between NPCs.
 
@@ -204,4 +246,4 @@ Manages multi-party conversations between NPCs.
 - Sends `ConversationObservation` updates when messages are added
 
 **Usage:**
-Created by the `ConversableComponent` when NPCs start conversations through the multi-party bidding process.
+Created by the `ConversableComponent` when NPCs start conversations through the multi-party bidding process. Uses `GroupInteractionContext` for state management.

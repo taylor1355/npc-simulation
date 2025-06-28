@@ -2,37 +2,49 @@
 
 ## Core Components
 
-### Panel System (tab_container.gd)
-```
-Panel Types:
-├── Info Panels (priority 0)
-│   ├── NpcInfoPanel: NPC name, state, traits
-│   └── ItemInfoPanel: Item details
-├── NPC Panels (priority 1)
-│   ├── NeedsPanel: Need bars
-│   └── WorkingMemoryPanel: Memory state
-└── Component Panels (priority 1)
-    ├── ConsumablePanel: Usage info
-    ├── NeedModifyingPanel: Rate changes
-    └── SittablePanel: Occupancy state
+### Enhanced Panel System (`tab_container.gd`)
+The UI system now features a dynamic, priority-based panel management system that automatically creates and organizes panels based on the focused gamepiece.
 
-Panel Management:
-├── Creation: On focus change
-├── Sorting: By priority then name
-├── Activation: On tab change
-└── Cleanup: On focus change
-
-Base Panel (gamepiece_panel.gd):
-├── Properties
-│   ├── update_interval: Update frequency
-│   └── current_controller: Active controller
-├── Methods
-│   ├── is_compatible_with(): Type check
-│   ├── activate()/deactivate(): Processing
-│   └── _update_display(): Content refresh
-└── Event Handling:
-    └── Listens for `FOCUSED_GAMEPIECE_CHANGED` from `EventBus` to update its content based on the newly focused gamepiece.
 ```
+Panel System Architecture:
+├── TabContainer (extends Godot TabContainer)
+│   ├── Dynamic Panel Creation: Based on compatibility and priority
+│   ├── Priority-Based Ordering: Lower priority = earlier tabs
+│   ├── Automatic Cleanup: Removes panels when focus changes
+│   └── Activation Management: Only active panel processes updates
+│
+├── Panel Types:
+│   ├── Info Panels (priority 0)
+│   │   ├── NpcInfoPanel: NPC name, state, traits, emoji indicators  
+│   │   └── ItemInfoPanel: Item details and properties
+│   ├── NPC Panels (priority 1)
+│   │   ├── NeedsPanel: Real-time need bars with progress indicators
+│   │   └── WorkingMemoryPanel: Backend memory state display
+│   └── Component Panels (priority 1)
+│       ├── ConsumablePanel: Consumption progress and effects
+│       ├── NeedModifyingPanel: Rate changes and effect descriptions
+│       └── SittablePanel: Occupancy state and energy regeneration
+│
+└── Base Panel (gamepiece_panel.gd):
+    ├── Properties
+    │   ├── update_interval: Configurable update frequency
+    │   └── current_controller: Active gamepiece controller
+    ├── Methods
+    │   ├── is_compatible_with(): Type compatibility checking
+    │   ├── activate()/deactivate(): Lifecycle management
+    │   └── _update_display(): Content refresh implementation
+    └── Event Integration:
+        └── Responds to FOCUSED_GAMEPIECE_CHANGED events automatically
+```
+
+### NPC Nameplate System (`npc_nameplate.gd`)
+Shows NPC name and current state emoji above each NPC. Updates automatically when NPC state changes.
+
+### Debug Console System (`debug_console.gd`)
+Developer console for runtime commands and backend switching. Toggle with backtick (`). Key commands:
+- `backend mock` / `backend mcp` - Switch AI backends
+- `help` - Show available commands
+- `clear` - Clear output
 
 ### Need Display (need_bar.gd, need_bar.tscn)
 ```
@@ -77,15 +89,25 @@ Updates:
 └── On state changed (via NPC_STATE_CHANGED event)
 ```
 
-### Main UI (ui.tscn)
+### Main UI Integration (`ui.gd`, `ui.tscn`)
 ```
-Components:
-├── Need displays
-│   ├── Hunger bar
-│   ├── Energy bar
-│   ├── Hygiene bar
-│   └── Fun bar
-└── Memory panel
+Enhanced UI Components:
+├── Dynamic Tab Container
+│   ├── Auto-generated panels based on focused entity
+│   ├── Priority-based tab ordering
+│   └── Component-specific information display
+├── Debug Console
+│   ├── Toggle with backtick (`) key
+│   ├── Backend switching commands
+│   └── Runtime configuration capabilities
+├── NPC Nameplates
+│   ├── Floating above each NPC
+│   ├── Real-time state emoji indicators
+│   └── Display name showing
+└── Event-Driven Updates
+    ├── Focused gamepiece changes trigger panel updates
+    ├── NPC state changes update nameplates
+    └── Component status reflected in specialized panels
 ```
 
 ## Event Integration
@@ -111,33 +133,58 @@ Update Flow:
 5. Text content updates
 ```
 
-### Global State
-```
-Tracked State:
-├── Focused gamepiece
-├── NPC client reference
-└── UI update status
-```
+### State Management
+UI panels automatically update based on focused gamepiece. Debug console maintains command history and backend status.
 
-## Usage
+## Usage & Integration
 
-### Need Bar Setup
+### Debug Console Commands
 ```gdscript
-# Create need display
-var need_bar = preload("need_bar.tscn").instantiate()
-need_bar.need_id = "energy"
-need_bar.label_text = "Energy"
+# Toggle console with backtick key
+Input.action_just_pressed("toggle_debug_console")
 
-# Add to container
-add_child(need_bar)
+# Built-in commands:
+"backend mock"     # Switch to mock backend
+"backend mcp"      # Switch to MCP backend  
+"clear"           # Clear console output
+"help"            # Show available commands
 ```
 
-### Memory Display
+### NPC Nameplate Integration
 ```gdscript
-# Format panel text
-memory_text.text = """
-State: {state}
-Goals: {goals}
-Memory: {observations}
-"""
+# Automatic integration - add to NPC scene:
+# NpcNameplate node with:
+# ├── NameLabel (Label)
+# └── EmojiLabel (Label)
+
+# Manual emoji updates (handled automatically):
+emoji_label.text = _controller.state_machine.current_state.get_state_emoji()
+```
+
+### Panel System Extension
+```gdscript
+# Create custom panel for new component types
+extends GamepiecePanel
+
+func is_compatible_with(controller: GamepieceController) -> bool:
+    return controller.has_component(MyCustomComponent)
+
+func _update_display() -> void:
+    var component = current_controller.get_component(MyCustomComponent)
+    # Update UI based on component state
+```
+
+### Enhanced Event Handling
+```gdscript
+# Panels automatically respond to relevant events:
+# - FOCUSED_GAMEPIECE_CHANGED: Triggers panel recreation
+# - NPC_STATE_CHANGED: Updates nameplate emojis
+# - Component events: Update specialized panels
+
+# Manual event listening:
+EventBus.event_dispatched.connect(
+    func(event: Event):
+        if event.is_type(Event.Type.MY_CUSTOM_EVENT):
+            _handle_custom_event(event)
+)
 ```

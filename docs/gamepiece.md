@@ -60,15 +60,15 @@ The `GamepieceController` (extends `Node2D`) is responsible for managing the beh
 ### Components
 
 #### GamepieceComponent (`src/field/gamepieces/controllers/gamepiece_component.gd`)
-The `GamepieceComponent` class (extends `Node2D`) is the base class for controller-level components.
+The `GamepieceComponent` class (extends `Node2D`) is the base class for all controller-level components.
 *   **Controller Link:** In its `_ready()` method, it automatically searches its ancestor nodes to find and store a reference to its `controller: GamepieceController`.
-*   **Extensibility:** Designed to be inherited by specialized components (e.g., movement components).
+*   **Extensibility:** Designed to be inherited by specialized components.
 *   **Utility:**
     *   `get_component_name() -> String`: Returns a human-readable name derived from its script's filename.
     *   `_setup() -> void`: A virtual method that can be overridden by subclasses for additional initialization after the `controller` reference is set.
 
 #### EntityComponent (`src/field/gamepieces/components/entity_component.gd`)
-The `EntityComponent` class (extends `GamepieceComponent`) is the new unified base for all components that add interactive functionality to entities (items and NPCs).
+The `EntityComponent` class (extends `GamepieceComponent`) is the unified base for all components that add interactive functionality to entities (items and NPCs).
 
 **Key Features:**
 *   **Property System:**
@@ -86,10 +86,25 @@ The `EntityComponent` class (extends `GamepieceComponent`) is the new unified ba
 *   **Controller Access:**
     *   `get_entity_controller() -> GamepieceController`: Returns the parent controller
 
+#### ItemComponent (`src/field/items/components/item_component.gd`)
+The `ItemComponent` class (extends `EntityComponent`) provides a specialized base for item-specific components.
+*   **Item-Specific Access:**
+    *   `get_item_controller() -> ItemController`: Returns the parent ItemController for type-safe access
+
+#### NpcComponent (`src/field/npcs/components/npc_component.gd`)  
+The `NpcComponent` class (extends `EntityComponent`) provides a specialized base for NPC-specific components.
+*   **NPC-Specific Access:**
+    *   `get_npc_controller() -> NpcController`: Returns the parent NpcController for type-safe access
+    *   `get_needs_manager() -> NeedsManager`: Direct access to the NPC's needs system
+    *   `get_state_machine() -> ControllerStateMachine`: Access to the NPC's state machine
+    *   `is_interacting() -> bool`: Check if NPC is currently in an interaction
+    *   `get_current_interaction() -> Interaction`: Get the active interaction if any
+
 **Usage Pattern:**
 ```gdscript
-extends EntityComponent  # For items: extends ItemComponent
-                        # For NPCs: extends NpcComponent
+extends ItemComponent    # For item-specific components
+# OR
+extends NpcComponent     # For NPC-specific components
 
 func _init():
     # Define properties with type specifications
@@ -104,6 +119,8 @@ var my_property: float = 1.0  # Will be auto-configured
 
 func _component_ready():
     # Properties are already configured here
+    # Use specialized controller access methods
+    var controller = get_item_controller()  # or get_npc_controller()
     pass
 
 func _create_interaction_factories() -> Array[InteractionFactory]:

@@ -15,8 +15,11 @@
    - Mouse wheel to zoom in/out
    - Press A to anchor camera to selected NPC
 5. Click NPCs to view their state in UI panels
-6. Watch NPCs autonomously interact with items
+6. Watch NPCs autonomously interact with items  
 7. Press ` (backtick) to toggle debug console
+   - Use "backend mock" or "backend mcp" to switch AI backends
+   - Type "help" for available commands
+   - Up/Down arrows navigate command history
 
 ## System Architecture
 

@@ -48,7 +48,9 @@ A 2D NPC simulation built with Godot 4.3+, where NPCs autonomously interact with
 ### Interaction System
 - **InteractionBid**: Request/response pattern for starting interactions
 - **MultiPartyBid**: Protocol for group interactions like conversations
+- **InteractionContext**: Polymorphic architecture for unified single/multi-party interaction handling
 - **Streaming interactions**: Support for ongoing observations
+- **InteractionEvents**: Comprehensive lifecycle event system
 - Factory pattern enables flexible interaction creation
 
 ### Observation System

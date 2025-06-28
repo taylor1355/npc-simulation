@@ -86,7 +86,7 @@ Conversations use the standard `InteractingState` rather than a dedicated state.
 - `cancel_interaction`: Leave the conversation and return to idle
 - `continue`: Stay in conversation (no-op)
 
-**Implementation Note:** The `start_conversation` action is not yet implemented. The TODO in idle_state.gd indicates it should use the interaction bid system with MultiPartyBid.
+**Implementation Note:** The conversation system is fully implemented. NPCs can start conversations through the interaction bid system using MultiPartyBid, with support for the polymorphic InteractionContext architecture.
 
 ## 3. Protocol Flow
 
@@ -162,8 +162,8 @@ NPCs receive `ConversationObservation` updates containing:
 
 ### Actions
 The backend can trigger these conversation-related actions:
-- `start_conversation`: **NOT IMPLEMENTED** - Currently shows error message. Should use `interact_with` with conversation factory instead
-- `act_in_interaction` with `{"message": "text"}`: Send a message in current conversation
+- `interact_with`: Start a conversation by targeting another NPC with the conversation interaction
+- `act_in_interaction` with `{"message": "text"}`: Send a message in current conversation  
 - `cancel_interaction`: Leave the current conversation and return to idle
 
 ## 6. Design Decisions
@@ -206,30 +206,24 @@ The conversation system demonstrates the project's core design principle of scal
 - **Extensibility**: New interaction types can be added without modifying the state machine
 - **Consistency**: All interactions follow the same lifecycle patterns and event flow
 
-### Current Implementation Status
-- ✅ ConversationInteraction manages multi-party state through StreamingInteraction
-- ✅ MultiPartyBid provides reusable invitation protocol
-- ✅ Movement locking handled generically by interaction lifecycle
-- ✅ Generic `act_in_interaction` supports any interaction-specific behavior
-- ⚠️ `start_conversation` action needs implementation through the bid system
-- ⚠️ Backend integration for multi-party invitation needs completion
+### Implementation Status
+The conversation system is fully implemented with multi-party coordination support.
 
-This generic approach enables rapid development of new interaction types without modifying core systems, supporting the project's goal of facilitating AI-assisted development at scale.
 
 ## 9. Example Usage
 
 ### Starting a Conversation
 ```gdscript
 # Backend sends action to NPC
-# NOTE: start_conversation is not implemented. Use interact_with instead:
 {
     "type": "interact_with",
     "parameters": {
-        "item_name": "npc_2",  // Target NPC treated as "item" in the interaction system
+        "item_name": "npc_2",  // Target NPC with ConversableComponent
         "interaction_name": "conversation"
     }
 }
-# This will create a MultiPartyBid if multiple NPCs are nearby
+# This creates a MultiPartyBid and invites nearby NPCs through the interaction system
+# Uses GroupInteractionContext for unified state management
 ```
 
 ### Sending a Message

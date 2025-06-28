@@ -72,6 +72,37 @@ General system-level events:
     *   `is_paused: bool` - The new input pause state (`true` if paused, `false` otherwise).
 *   **Terrain Changed** (Type: `TERRAIN_CHANGED`): Dispatched when parts of the game terrain are modified. This event uses the generic `Event` class. The dispatcher would populate its `payload` dictionary (e.g., with `affected_cells`). The `EventBus` emits a specific `terrain_changed(event: Event)` signal for this.
 
+### Interaction Events (`interaction_events.gd`)
+Events related to interaction lifecycle management, providing detailed tracking of interaction state changes:
+
+*   **`InteractionStartedEvent`** (Type: `INTERACTION_STARTED`): Dispatched when any interaction begins.
+    *   `interaction_id: String` - Unique identifier for the interaction instance
+    *   `interaction_type: String` - Type of interaction ("conversation", "sit", "consume", etc.)
+    *   `participants: Array[NpcController]` - All NPCs involved in the interaction
+
+*   **`InteractionEndedEvent`** (Type: `INTERACTION_ENDED`): Dispatched when any interaction concludes.
+    *   `interaction_id: String` - Unique identifier for the interaction instance
+    *   `interaction_type: String` - Type of interaction that ended
+    *   `participants: Array[NpcController]` - All NPCs that were involved
+
+*   **`InteractionParticipantJoinedEvent`** (Type: `INTERACTION_PARTICIPANT_JOINED`): Dispatched when a participant joins a multi-party interaction.
+    *   `interaction_id: String` - Unique identifier for the interaction
+    *   `interaction_type: String` - Type of interaction being joined
+    *   `participants: Array[NpcController]` - Current participants after join
+    *   `joined_participant: NpcController` - The NPC that just joined
+
+*   **`InteractionParticipantLeftEvent`** (Type: `INTERACTION_PARTICIPANT_LEFT`): Dispatched when a participant leaves a multi-party interaction.
+    *   `interaction_id: String` - Unique identifier for the interaction
+    *   `interaction_type: String` - Type of interaction being left
+    *   `participants: Array[NpcController]` - Current participants after departure
+    *   `left_participant: NpcController` - The NPC that just left
+
+**Factory Methods:**
+*   `InteractionEvents.create_interaction_started(id, type, participants)`
+*   `InteractionEvents.create_interaction_ended(id, type, participants)`
+*   `InteractionEvents.create_interaction_participant_joined(id, type, participants, joined)`
+*   `InteractionEvents.create_interaction_participant_left(id, type, participants, left)`
+
 ### Cell Events (`cell_event.gd`)
 Events related to grid cell interactions, typically from UI or selection systems:
 *   **`CellEvent`** (Types: `CELL_HIGHLIGHTED`, `CELL_SELECTED`): Used for highlighting or selecting specific grid cells.

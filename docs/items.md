@@ -145,7 +145,7 @@ This system is integral to the `ItemComponent`'s property specification pattern,
 
 ### Creating a New Component
 
-When creating a component, you define its configurable properties in `_init()` using `PropertySpec` (which specifies the `TypeConverters.PropertyType`) and then use the automatically converted, typed properties in methods like `_component_ready()`:
+Components use dedicated Interaction subclasses. When creating a component:
 
 ```gdscript
 class_name CustomItemComponent extends ItemComponent
@@ -172,11 +172,10 @@ var effect_strength: float = 10.0
 
 func _component_ready() -> void:
     # At this point, properties have been configured from ItemConfig
-    # Components now use the factory pattern instead of direct setup
     pass
 
 func _create_interaction_factories() -> Array[InteractionFactory]:
-    # Return factories that create interactions for this component
+    # Return factories that create specialized interactions
     return [CustomInteractionFactory.new(self)]
 
 # Inner factory class
@@ -193,20 +192,19 @@ class CustomInteractionFactory extends InteractionFactory:
         return "Activate item (%.1fs)" % component.activation_time
     
     func create_interaction(context: Dictionary = {}) -> Interaction:
-        var interaction = Interaction.new(
+        # Create specialized interaction class
+        var interaction = CustomInteraction.new(
             get_interaction_name(),
             get_interaction_description(),
-            {}, # needs_filled
-            {}, # needs_drained
             true # requires_adjacency
         )
         
-        # Set up lifecycle handlers
-        interaction.on_start_handler = component._on_activate_start
-        interaction.on_end_handler = component._on_activate_end
+        # Link component to interaction
+        interaction.custom_component = component
         
         return interaction
 
+# Component lifecycle methods called by interaction
 func _on_activate_start(interaction: Interaction, context: Dictionary) -> void:
     # Validate and begin activation
     if not _can_activate():
@@ -216,6 +214,32 @@ func _on_activate_start(interaction: Interaction, context: Dictionary) -> void:
 
 func _on_activate_end(interaction: Interaction, context: Dictionary) -> void:
     # Clean up activation
+```
+
+**Corresponding Interaction Class:**
+```gdscript
+class_name CustomInteraction extends Interaction
+
+var custom_component: CustomItemComponent
+
+func _on_start(context: Dictionary) -> void:
+    # Do custom logic first
+    if custom_component:
+        custom_component._on_activate_start(self, context)
+    
+    # Call super last to dispatch event
+    super._on_start(context)
+
+func _on_end(context: Dictionary) -> void:
+    # Do custom cleanup first
+    if custom_component:
+        custom_component._on_activate_end(self, context)
+    
+    # Call super last to dispatch event
+    super._on_end(context)
+
+func get_interaction_emoji() -> String:
+    return "⚡"
 ```
 
 ### Built-in Components
@@ -235,26 +259,37 @@ Handles items that NPCs consume over time to satisfy needs (food, drinks, medici
 - `need_deltas: Dictionary[Needs.Need, float]` - Total need changes when fully consumed
 
 **Implementation Details:**
-The component creates a child NeedModifyingComponent and calculates rates by dividing the total need changes by consumption time. This ensures smooth, gradual satisfaction of needs rather than instant changes.
+Creates `ConsumeInteraction` and child `NeedModifyingComponent` for gradual consumption effects. Tracks `percent_left` as consumption progresses.
 
 #### NeedModifyingComponent
 
-Provides continuous modification of NPC needs over time. Used both standalone and as a child of other components.
+Provides continuous modification of NPC needs over time. **Primary used as a child component** by other components like ConsumableComponent and SittableComponent rather than standalone.
 
 **Key Features:**
 - Accumulates fractional changes to avoid precision loss
 - Applies changes only when they exceed the update threshold
 - Supports both positive (satisfaction) and negative (drain) rates
-- Provides human-readable effect descriptions
+- Provides human-readable effect descriptions via `get_effects_description()`
+- **No longer creates its own interactions** - delegates to parent components
 
 **Properties:**
 - `need_rates: Dictionary[Needs.Need, float]` - Per-second change rates
 - `update_threshold: float` - Minimum accumulated change before applying (default: 1.0)
 
+**Usage Pattern:**
+```gdscript
+# Used by other components
+func _ready() -> void:
+    super._ready()
+    need_modifier = NeedModifyingComponent.new()
+    need_modifier.need_rates[Needs.Need.ENERGY] = energy_regeneration_rate
+    add_child(need_modifier)
+```
+
 **Use Cases:**
-- Chairs that restore energy while sitting
-- Workstations that drain energy but increase fun
-- Environmental effects that impact multiple needs
+- Child of ConsumableComponent for gradual consumption effects
+- Child of SittableComponent for energy restoration
+- Could be used for environmental effects or area-of-effect items
 
 #### SittableComponent
 
@@ -270,15 +305,7 @@ Manages furniture that NPCs can sit on, handling the complex state transitions r
 - `energy_regeneration_rate: float` - Energy restored per second (default: 10.0)
 
 **Implementation Details:**
-The sitting process involves several careful steps:
-1. Verify NPC is adjacent to chair
-2. Lock NPC movement
-3. Temporarily disable chair collision
-4. Move NPC to chair position with proper z-index
-5. Re-enable chair collision
-6. Begin need modification
-
-The exit process reverses this, finding a safe adjacent cell for the NPC.
+Creates `SitInteraction` and child `NeedModifyingComponent` for energy regeneration. Handles movement locking, collision management, and positioning during sit/stand transitions.
 
 ## Configuration System
 
