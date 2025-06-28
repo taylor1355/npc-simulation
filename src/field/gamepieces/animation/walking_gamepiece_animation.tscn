@@ -220,6 +220,7 @@ shape = SubResource("CapsuleShape2D_1wavg")
 
 [node name="CollisionArea" type="Area2D" parent="."]
 collision_mask = 3
+monitoring = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionArea"]
 shape = SubResource("CapsuleShape2D_fjbxw")

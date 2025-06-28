@@ -51,6 +51,7 @@ var movement_locked: bool = false
 var destination: Vector2i
 var current_interaction: Interaction = null
 var current_request: InteractionBid = null
+var pending_incoming_bids: Array[InteractionBid] = []
 
 @onready var _vision_manager: VisionManager = $VisionArea as VisionManager
 
@@ -125,7 +126,9 @@ func _ready() -> void:
 		
 		# Set up NPC ID and initial state
 		npc_id = str(get_instance_id()) # Use instance ID as unique identifier
-		_gamepiece.display_name = "NPC" # Default name
+		# Only set default name if no display name is already set
+		if _gamepiece.display_name.is_empty():
+			_gamepiece.display_name = "NPC"
 		
 		# Create NPC in backend
 		npc_client.create_npc(
@@ -154,6 +157,11 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	# Update needs
 	needs_manager.process_decay(delta)
+	
+	# Update MultiPartyBid timeout if we have a pending request
+	if current_request and current_request is MultiPartyBid:
+		var multi_bid = current_request as MultiPartyBid
+		multi_bid.update_timeout(delta)
 	
 	# Regularly make decisions
 	decision_timer += delta
@@ -221,8 +229,6 @@ func decide_behavior() -> void:
 	
 	for item in seen_items:
 		var interaction_dicts = item.get_available_interactions()
-		print("[NPC %s] Processing item '%s' at %s with %d interactions" % [npc_id, item.get_display_name(), item._gamepiece.cell, interaction_dicts.size()])
-		
 		var item_entry = {
 			"name": item.get_display_name(),
 			"cell": item._gamepiece.cell,
@@ -231,17 +237,14 @@ func decide_behavior() -> void:
 			"current_interaction": item.current_interaction
 		}
 		item_data.append(item_entry)
-		print("[NPC %s] Added item entry: %s" % [npc_id, item_entry])
-	
-	print("[NPC %s] Total item_data array: %s" % [npc_id, item_data])
 	
 	# Get visible NPCs and prepare data for backend
 	var seen_npcs := _vision_manager.get_npcs_by_distance()
 	var npc_data: Array[Dictionary] = []
+	print("[NPC %s] decide_behavior: Found %d visible NPCs" % [npc_id, seen_npcs.size()])
 	for npc in seen_npcs:
-		# TODO: This is inefficient - creating temporary interactions just to get their data
-		# Should refactor to have factories provide this data directly
 		var npc_interaction_dicts = npc.get_available_interactions()
+		print("[NPC %s] NPC '%s' has %d interactions: %s" % [npc_id, npc.get_display_name(), npc_interaction_dicts.size(), npc_interaction_dicts])
 		
 		npc_data.append({
 			"npc_id": npc.npc_id,
@@ -297,6 +300,11 @@ func _on_action_chosen(event: NpcClientEvents.ActionChosenEvent) -> void:
 		action_name, 
 		state_machine.get_state_info().state_enum
 	])
+	
+	# Handle bid responses at controller level
+	if action_name == "respond_to_interaction_bid":
+		_handle_bid_response(parameters)
+		return
 	
 	# Delegate to state machine
 	state_machine.handle_action(action_name, parameters)
@@ -412,11 +420,47 @@ func handle_interaction_bid(request: InteractionBid) -> void:
 	# For now, NPCs can only handle multi-party bids (conversations)
 	# Single-party interactions with NPCs could be added later
 	if request is MultiPartyBid:
-		# Let the state machine handle the bid
-		# This allows NPCs to accept/reject based on their current state
-		state_machine.current_state.on_interaction_bid(request)
+		# Store bid for async processing
+		pending_incoming_bids.append(request)
+		
+		# Send to backend for decision-making
+		var bid_event = NpcEvent.create_interaction_bid_received_event(request)
+		event_log.append(bid_event)
 	else:
 		request.reject("NPCs currently only support multi-party interactions")
+
+## Handle bid response action from backend
+func _handle_bid_response(parameters: Dictionary) -> void:
+	var bid_id = parameters.get("bid_id", "")
+	var accept = parameters.get("accept", false)
+	var reason = parameters.get("reason", "")
+	
+	# Find the bid by ID
+	var bid: InteractionBid = null
+	
+	for pending_bid in pending_incoming_bids:
+		if pending_bid.bid_id == bid_id:
+			bid = pending_bid
+			break
+	
+	if not bid:
+		push_warning("[NPC %s] Could not find bid with ID %s" % [npc_id, bid_id])
+		return
+	
+	# Remove from pending list
+	pending_incoming_bids.erase(bid)
+	
+	# Respond to the bid
+	if accept:
+		if bid is MultiPartyBid:
+			bid.add_participant_response(self, true)
+		else:
+			bid.accept()
+	else:
+		if bid is MultiPartyBid:
+			bid.add_participant_response(self, false, reason)
+		else:
+			bid.reject(reason)
 
 ## Find an NPC by name or ID from visible NPCs
 func _find_npc_by_name(npc_name: String) -> NpcController:

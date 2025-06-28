@@ -1,15 +1,202 @@
-[gd_scene load_steps=7 format=3 uid="uid://b4i22ohcw0fgd"]
+[gd_scene load_steps=23 format=3 uid="uid://b4i22ohcw0fgd"]
 
 [ext_resource type="PackedScene" uid="uid://b626e0bngfvjj" path="res://src/field/gamepieces/gamepiece.tscn" id="1_uyrdv"]
-[ext_resource type="PackedScene" uid="uid://caxhff6by5nqu" path="res://src/field/gamepieces/animation/walking_gamepiece_animation.tscn" id="2_nt6uj"]
-[ext_resource type="Script" uid="uid://blk0h8ca6sctn" path="res://src/field/npcs/npc_controller.gd" id="3_xmgw3"]
-[ext_resource type="Script" uid="uid://1ii7x6rdlp4r" path="res://src/field/npcs/vision_manager.gd" id="4_uu4ol"]
-[ext_resource type="PackedScene" uid="uid://nameplate" path="res://src/ui/npc_nameplate.tscn" id="5_nplate"]
+[ext_resource type="Script" uid="uid://ipktgtfpmjyx" path="res://src/field/gamepieces/animation/gamepiece_animation.gd" id="2_anim"]
+[ext_resource type="Texture2D" uid="uid://v2ng3jhojx3b" path="res://assets/sprites/24x32-characters-big-pack-by-Svetlana-Kushnariova/NPC/Townfolk-Old-M-002-spritesheet.png" id="3_sprite"]
+[ext_resource type="Script" uid="uid://bok4ni4k2rpge" path="res://src/field/gamepieces/animation/gamepiece_click_area.gd" id="4_click"]
+[ext_resource type="Script" uid="uid://blk0h8ca6sctn" path="res://src/field/npcs/npc_controller.gd" id="5_xmgw3"]
+[ext_resource type="Script" uid="uid://1ii7x6rdlp4r" path="res://src/field/npcs/vision_manager.gd" id="6_uu4ol"]
+[ext_resource type="PackedScene" uid="uid://nameplate" path="res://src/ui/npc_nameplate.tscn" id="7_nplate"]
+[ext_resource type="Script" uid="uid://nayuudv2ddfi" path="res://src/field/npcs/components/conversable_component.gd" id="8_convo"]
+
+[sub_resource type="Animation" id="Animation_ivohq"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("GFX/Sprite:flip_h")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_xdc4x"]
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+
+[sub_resource type="Animation" id="Animation_invt8"]
+step = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [4]
+}
+
+[sub_resource type="Animation" id="Animation_trip1"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_e03xs"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [6]
+}
+
+[sub_resource type="Animation" id="Animation_fg0yt"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [9]
+}
+
+[sub_resource type="Animation" id="Animation_ykwrq"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [3, 4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_aknng"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [0, 1, 2]
+}
+
+[sub_resource type="Animation" id="Animation_708je"]
+length = 0.75
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [6, 7, 8]
+}
+
+[sub_resource type="Animation" id="Animation_lywan"]
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("GFX/Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [9, 10, 11]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_67ks1"]
+_data = {
+&"RESET": SubResource("Animation_ivohq"),
+&"idle": SubResource("Animation_xdc4x"),
+&"idle_e": SubResource("Animation_invt8"),
+&"idle_n": SubResource("Animation_trip1"),
+&"idle_s": SubResource("Animation_e03xs"),
+&"idle_w": SubResource("Animation_fg0yt"),
+&"run_e": SubResource("Animation_ykwrq"),
+&"run_n": SubResource("Animation_aknng"),
+&"run_s": SubResource("Animation_708je"),
+&"run_w": SubResource("Animation_lywan")
+}
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1wavg"]
+radius = 8.0
+height = 26.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_fjbxw"]
+radius = 6.0
+height = 22.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8aea6"]
 radius = 132.004
 
 [node name="Npc" instance=ExtResource("1_uyrdv")]
+blocks_movement = true
 
 [node name="ControllerAnchor" type="RemoteTransform2D" parent="Decoupler/Path2D/PathFollow2D" index="2"]
 remote_path = NodePath("../../../../Controller")
@@ -19,21 +206,61 @@ remote_path = NodePath("../../../../NameplateContainer")
 update_rotation = false
 update_scale = false
 
-[node name="Animation" parent="." index="1" instance=ExtResource("2_nt6uj")]
+[node name="Animation" type="Marker2D" parent="." index="1"]
+script = ExtResource("2_anim")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Animation" index="0"]
+libraries = {
+&"": SubResource("AnimationLibrary_67ks1")
+}
+autoplay = "idle"
+
+[node name="GFX" type="Marker2D" parent="Animation" index="1"]
+
+[node name="Sprite" type="Sprite2D" parent="Animation/GFX" index="0"]
+texture = ExtResource("3_sprite")
+offset = Vector2(0, -6)
+hframes = 3
+vframes = 4
+frame = 6
+region_rect = Rect2(0, 0, 72, 128)
+
+[node name="Shadow" type="Sprite2D" parent="Animation/GFX" index="1"]
+
+[node name="ClickArea" type="Area2D" parent="Animation/GFX" index="2"]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("4_click")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Animation/GFX/ClickArea" index="0"]
+position = Vector2(0, -3)
+shape = SubResource("CapsuleShape2D_1wavg")
+
+[node name="CollisionArea" type="Area2D" parent="Animation" index="2"]
+collision_mask = 3
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Animation/CollisionArea" index="0"]
+shape = SubResource("CapsuleShape2D_fjbxw")
+debug_color = Color(0.67451, 0.156863, 0.278431, 0.419608)
 
 [node name="Controller" type="Node2D" parent="." index="2"]
-script = ExtResource("3_xmgw3")
+script = ExtResource("5_xmgw3")
 
 [node name="VisionArea" type="Area2D" parent="Controller" index="0"]
 visible = false
 collision_layer = 0
 collision_mask = 3
-script = ExtResource("4_uu4ol")
+script = ExtResource("6_uu4ol")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Controller/VisionArea" index="0"]
 shape = SubResource("CircleShape2D_8aea6")
 
+[node name="ConversableComponent" type="Node2D" parent="Controller" index="1"]
+script = ExtResource("8_convo")
+
 [node name="NameplateContainer" type="Node2D" parent="." index="3"]
 
-[node name="Nameplate" parent="NameplateContainer" index="0" instance=ExtResource("5_nplate")]
+[node name="Nameplate" parent="NameplateContainer" index="0" instance=ExtResource("7_nplate")]
 position = Vector2(0, -24)

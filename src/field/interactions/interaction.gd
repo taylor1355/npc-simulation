@@ -2,6 +2,7 @@ class_name Interaction extends RefCounted
 
 const BidType = preload("res://src/field/interactions/interaction_bid.gd").BidType
 
+var id: String
 var name: String
 var description: String
 var needs_filled: Array[Needs.Need]  # Needs this interaction will increase
@@ -19,12 +20,14 @@ var min_participants: int = 1
 var act_in_interaction_parameters: Dictionary[String, PropertySpec] = {}
 
 signal act_in_interaction_received(participant: NpcController, validated_parameters: Dictionary)
+signal participant_should_transition(participant: NpcController, interaction: Interaction)
 
 
 func _init(_name: String, _description: String, _requires_adjacency: bool = true):
 	name = _name
 	description = _description
 	requires_adjacency = _requires_adjacency
+	id = IdGenerator.generate_interaction_id()
 
 # Participant management
 func can_add_participant(npc: NpcController) -> bool:
@@ -46,27 +49,37 @@ func remove_participant(npc: NpcController) -> bool:
 	_on_participant_left(npc)
 	return true
 
-# Lifecycle hooks for subclasses
-var on_start_handler: Callable
-var on_end_handler: Callable
-var on_participant_joined_handler: Callable
-var on_participant_left_handler: Callable
-
+# Lifecycle methods - subclasses override these and call super last
 func _on_start(context: Dictionary) -> void:
-	if on_start_handler.is_valid():
-		on_start_handler.call(self, context)
+	# Subclasses do their setup first, then call super to dispatch event
+	var event = InteractionEvents.create_interaction_started(
+		id, name, participants
+	)
+	EventBus.dispatch(event)
 
 func _on_end(context: Dictionary) -> void:
-	if on_end_handler.is_valid():
-		on_end_handler.call(self, context)
+	# Subclasses do their cleanup first, then call super to dispatch event
+	var event = InteractionEvents.create_interaction_ended(
+		id, name, participants
+	)
+	EventBus.dispatch(event)
 
 func _on_participant_joined(participant: NpcController) -> void:
-	if on_participant_joined_handler.is_valid():
-		on_participant_joined_handler.call(self, participant)
+	# Subclasses handle the join first, then call super to dispatch event
+	var event = InteractionEvents.create_interaction_participant_joined(
+		id, name, participants, participant
+	)
+	EventBus.dispatch(event)
+	
+	# Signal participant to transition to InteractingState
+	participant_should_transition.emit(participant, self)
 
 func _on_participant_left(participant: NpcController) -> void:
-	if on_participant_left_handler.is_valid():
-		on_participant_left_handler.call(self, participant)
+	# Subclasses handle the leave first, then call super to dispatch event
+	var event = InteractionEvents.create_interaction_participant_left(
+		id, name, participants, participant
+	)
+	EventBus.dispatch(event)
 
 func act_in_interaction(participant: NpcController, raw_parameters: Dictionary) -> bool:
 	if participant not in participants:
@@ -129,11 +142,19 @@ func to_dict() -> Dictionary[String, Variant]:
 		"act_in_interaction_parameters": action_params
 	}
 
+# Override in subclasses to provide interaction-specific emoji
 func get_interaction_emoji() -> String:
-	match name:
-		"consume":
-			return "🍽️"
-		"sit":
-			return "🪑"
-		_:
-			return "🔧"
+	return "🔧"  # Default emoji
+
+# Factory method to create appropriate context for this interaction
+func create_context(target_controller: GamepieceController = null) -> InteractionContext:
+	if max_participants > 1:
+		# Multi-party interaction
+		return GroupInteractionContext.new(self)
+	else:
+		# Single-party interaction with entity
+		if target_controller:
+			return EntityInteractionContext.new(target_controller)
+		else:
+			push_error("Single-party interaction requires target_controller")
+			return null

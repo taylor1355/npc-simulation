@@ -22,3 +22,9 @@ static func generate_uuid() -> String:
 
 static func generate_conversation_id() -> String:
 	return "conv_" + generate_uuid()
+
+static func generate_interaction_id() -> String:
+	return "interaction_" + generate_uuid()
+
+static func generate_bid_id() -> String:
+	return "bid_" + generate_uuid()

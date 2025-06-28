@@ -7,6 +7,7 @@ var rejected_participants: Array[NpcController] = [] # NPCs who rejected
 var responses: Dictionary = {} # npc_id -> {accepted: bool, reason: String}
 var response_timeout: float = 5.0
 var timeout_timer: float = 0.0
+var interaction: Interaction # The interaction object for this bid
 
 # The host is the bidder (inherited from InteractionBid)
 # All participants includes host + invited_participants
@@ -18,6 +19,7 @@ signal timed_out()
 func _init(_interaction: Interaction, _bid_type: BidType, _host: NpcController, _invited: Array[NpcController] = []):
 	# For multi-party interactions, use the host as the "target" since there's no single target
 	super._init(_interaction.name, _bid_type, _host, _host)
+	interaction = _interaction
 	invited_participants = _invited
 
 func get_all_participants() -> Array[NpcController]:
@@ -78,7 +80,14 @@ func accept():
 	if accepted_participants.size() != invited_participants.size():
 		push_error("Cannot accept multi-party bid without all participants")
 		return
+	
 	super.accept()
+	
+	# Add all participants to the interaction
+	# Note: bidder (host) is added by RequestingState transition
+	for participant in accepted_participants:
+		if interaction.can_add_participant(participant):
+			interaction.add_participant(participant)
 
 func get_status_text() -> String:
 	return "Responses: %d/%d accepted" % [accepted_participants.size(), invited_participants.size()]

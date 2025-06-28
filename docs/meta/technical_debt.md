@@ -202,39 +202,46 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 
 **Problem**: TODO about `get_overlapping_areas()` timing issue with physics initialization.
 
-### 7. NPC and Item Interaction Handling Inconsistency
-**Impact**: High | **Effort**: High | **Leverage**: 🔥🔥
+### 7. Complete Entity Polymorphism (Remaining Vision & Terminology)
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
 
-**Problem**: NPCs and Items handle interactions differently, creating complexity and duplication:
-- Items use `handle_interaction_bid()` method
-- NPCs don't have this method, requiring special handling in RequestingState
-- `_on_interaction_finished` signal connection differs between items and NPCs
-- Vision system treats NPCs and items differently (separate arrays)
-- Parameters like "item_name" assume only items can be interaction targets
+**Progress**: ✅ **Core interaction handling unified** (December 26, 2024)
+- Moved `handle_interaction_bid()` and `interaction_finished` to `GamepieceController` base class
+- Eliminated type-specific branching in `RequestingState` through polymorphic context system
+- Standardized interaction lifecycle signals
+
+**Remaining Issues**:
+- **Vision System Separation**: Still separates NPCs and Items into different arrays instead of unified entity list
+- **Parameter Terminology**: Still uses "item_name" parameters instead of generic "entity_name" 
+- **NPC Single-Party Limitations**: NPCs reject single-party interactions ("NPCs currently only support multi-party interactions")
+- **Scattered Item-Specific Terminology**: References to "items" throughout codebase that should be generic "entities"
 
 **Current Issues**:
 ```gdscript
-# RequestingState has to check target type
-if target_controller is ItemController:
-    target_controller.interaction_finished.connect(...)
-else:
-    # Different handling for NPCs
-    interaction_obj.interaction_ended.connect(...)
-
-# Vision observation separates entities unnecessarily
+# Vision observation still separates entities unnecessarily
 {
     "visible_items": [...],
     "visible_npcs": [...]  # Should be unified as "visible_entities"
 }
+
+# Parameters still assume item-centric terminology
+{
+    "item_name": "Chair"  # Should be "entity_name": "Chair"
+}
+
+# NPCs can't be single-party interaction targets
+func handle_interaction_bid(request: InteractionBid) -> void:
+    if not request is MultiPartyBid:
+        request.reject("NPCs currently only support multi-party interactions")
 ```
 
-**Solution**: Unify interaction handling at GamepieceController level:
-- Move `handle_interaction_bid()` to GamepieceController base class
-- Standardize interaction lifecycle signals
-- Treat all entities uniformly in vision and interaction systems
-- Use generic "target" terminology instead of "item" specific naming
+**Remaining Solution**:
+- Unify vision observations into single `visible_entities` array with type field
+- Rename interaction parameters from "item_name" to "entity_name"
+- Enable NPCs as single-party interaction targets
+- Audit and update item-specific terminology to be entity-generic
 
-**Benefits**: Simpler code, true entity polymorphism, easier to add new entity types
+**Benefits**: Complete entity polymorphism, easier to add new entity types, cleaner API contracts
 
 ## Implementation Priority
 
@@ -427,6 +434,87 @@ func get_interaction_emoji() -> String:
 - Consider making base class abstract (if Godot 4.x supports it)
 
 **Benefits**: Better separation of concerns, easier to add new interaction types, more maintainable
+
+### 15. Interaction Factory Organization
+**Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
+
+**Problem**: InteractionFactory classes are currently defined within component files rather than alongside their corresponding Interaction classes:
+- Factories are tightly coupled to their interactions but separated in the file structure
+- Makes it harder to find the factory for a given interaction
+- Components files become cluttered with factory definitions
+- Violates single responsibility principle
+
+**Current Organization**:
+```
+src/field/items/components/consumable_component.gd  # Contains ConsumeInteractionFactory
+src/field/items/components/sittable_component.gd    # Contains SitInteractionFactory  
+src/field/npcs/components/conversable_component.gd  # Contains ConversationInteractionFactory
+src/field/interactions/consume_interaction.gd       # The actual interaction
+src/field/interactions/sit_interaction.gd           # The actual interaction
+src/field/interactions/conversation_interaction.gd  # The actual interaction
+```
+
+**Proposed Organization**:
+```
+# Option 1: Factories in same file as interactions
+src/field/interactions/consume_interaction.gd       # Contains both ConsumeInteraction and ConsumeInteractionFactory
+src/field/interactions/sit_interaction.gd           # Contains both SitInteraction and SitInteractionFactory
+
+# Option 2: Separate factory files alongside interactions
+src/field/interactions/consume_interaction.gd
+src/field/interactions/consume_interaction_factory.gd
+src/field/interactions/sit_interaction.gd
+src/field/interactions/sit_interaction_factory.gd
+```
+
+**Benefits**: 
+- Better code organization and discoverability
+- Components focus on configuration, not factory logic
+- Easier to maintain interaction-factory pairs
+- Clearer separation of concerns
+
+### 16. Fragile Initialization Dependencies
+**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥
+
+**Problem**: Multiple systems rely on specific initialization timing in _ready() functions, creating fragile dependencies that can permanently break systems:
+
+**Known Issues**:
+- VisionManager expects parent gamepiece metadata to be set in _ready()
+- If timing fails, VisionManager remains permanently broken
+- Similar patterns exist in other systems that assume certain initialization order
+- No recovery mechanism if initialization fails
+
+**Example**:
+```gdscript
+# Current fragile pattern in VisionManager
+func _ready():
+    parent_gamepiece = get_gamepiece(self)  # May return null if metadata not set yet
+    if not parent_gamepiece:
+        push_error("VisionManager failed to find parent gamepiece")
+        return  # Permanently broken, no recovery possible
+```
+
+**Solution**: Use lazy-loaded properties that attempt initialization on first access:
+```gdscript
+# Lazy loading property pattern
+var _parent_gamepiece: Gamepiece = null  # Private cached value
+
+## Lazy-loaded parent gamepiece property
+var parent_gamepiece: Gamepiece:
+    get:
+        if not _parent_gamepiece:
+            _parent_gamepiece = get_gamepiece(self)
+            if not _parent_gamepiece:
+                push_error("VisionManager failed to find parent gamepiece")
+        return _parent_gamepiece
+```
+
+**Benefits**:
+- Defers initialization until actually needed
+- Automatically retries on each access if previous attempts failed
+- No extra initialization state to manage
+- Clean property access syntax
+- Can still detect and log errors when they occur
 
 ## Conclusion
 

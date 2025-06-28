@@ -4,6 +4,7 @@ extends RefCounted
 enum Type {
 	INTERACTION_REQUEST_PENDING,   # When request is first made
 	INTERACTION_REQUEST_REJECTED,  # When request is rejected
+	INTERACTION_BID_RECEIVED,      # When an incoming interaction bid needs a response
 	INTERACTION_STARTED,          # When interaction begins
 	INTERACTION_CANCELED,        # When interaction is canceled
 	INTERACTION_FINISHED,         # When interaction completes normally
@@ -35,6 +36,14 @@ static func create_interaction_rejected_event(request: InteractionBid, reason: S
 		reason
 	)
 	return NpcEvent.new(Type.INTERACTION_REQUEST_REJECTED, observation)
+
+static func create_interaction_bid_received_event(request: InteractionBid) -> NpcEvent:
+	var observation = InteractionRequestObservation.new(
+		request.interaction_name,
+		request.bid_type,
+		request.bid_id
+	)
+	return NpcEvent.new(Type.INTERACTION_BID_RECEIVED, observation)
 
 static func create_interaction_update_event(request: InteractionBid, update_type: Type) -> NpcEvent:
 	var observation = InteractionUpdateObservation.new(
@@ -71,11 +80,11 @@ static func create_observation_event(
 	if not needs.is_empty():
 		composite.add_observation(NeedsObservation.new(needs, Needs.MAX_VALUE))
 	
-	# Add vision observation
-	if not seen_items.is_empty() or not seen_npcs.is_empty():
-		var visible_entities: Array[Dictionary] = []
-		visible_entities.append_array(seen_items)
-		visible_entities.append_array(seen_npcs)
+	# Add vision observation - combine items and NPCs
+	var visible_entities: Array[Dictionary] = []
+	visible_entities.append_array(seen_items)
+	visible_entities.append_array(seen_npcs)
+	if not visible_entities.is_empty():
 		composite.add_observation(VisionObservation.new(visible_entities))
 	
 	return NpcEvent.new(Type.OBSERVATION, composite)

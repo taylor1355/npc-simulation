@@ -27,12 +27,7 @@ func _init():
 	
 	conversation_id = IdGenerator.generate_conversation_id()
 
-	# Assign handlers
-	self.on_start_handler = _handle_start
-	self.on_participant_joined_handler = _handle_participant_joined
-	self.on_participant_left_handler = _handle_participant_left
-
-func _handle_start(_interaction: Interaction, _context: Dictionary) -> void:
+func _on_start(context: Dictionary) -> void:
 	started_at = Time.get_unix_time_from_system()
 	
 	# Log conversation start
@@ -42,22 +37,31 @@ func _handle_start(_interaction: Interaction, _context: Dictionary) -> void:
 	
 	# Send initial observation to all participants
 	send_observations()
+	
+	# Call super last to dispatch event
+	super._on_start(context)
 
-func _handle_participant_joined(_interaction: Interaction, participant: NpcController) -> void:
+func _on_participant_joined(participant: NpcController) -> void:
 	participant.set_movement_locked(true)
 	
 	# Log participant joined
 	ConversationLogger.log_conversation_event("PARTICIPANT_JOINED", conversation_id, {
 		"participant": participant.npc_id
 	})
+	
+	# Call super last to dispatch event
+	super._on_participant_joined(participant)
 
-func _handle_participant_left(_interaction: Interaction, participant: NpcController) -> void:
+func _on_participant_left(participant: NpcController) -> void:
 	participant.set_movement_locked(false)
 	
 	# Log participant left
 	ConversationLogger.log_conversation_event("PARTICIPANT_LEFT", conversation_id, {
 		"participant": participant.npc_id
 	})
+	
+	# Call super last to dispatch event
+	super._on_participant_left(participant)
 
 func handle_act_in_interaction(participant: NpcController, parameters: Dictionary) -> void:
 	# Early return for empty messages
@@ -102,14 +106,15 @@ func _generate_observation_for_participant(participant: NpcController) -> Dictio
 	
 	return observation
 
-func _on_end() -> void:
-	super._on_end()
-	
+func _on_end(context: Dictionary) -> void:
 	# Log conversation end
 	var duration = Time.get_unix_time_from_system() - started_at if started_at > 0.0 else 0.0
 	ConversationLogger.log_conversation_event("ENDED", conversation_id, {
 		"duration": duration
 	})
+	
+	# Call super last to dispatch event
+	super._on_end(context)
 
 func get_interaction_emoji() -> String:
 	return "💬"

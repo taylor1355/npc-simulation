@@ -18,3 +18,12 @@ func update(_seen_items: Array, _needs: Dictionary) -> Action:
 	
 func should_check_needs() -> bool:
 	return true  # Most states should check needs
+
+func handle_incoming_interaction_bid(bid_observation: InteractionRequestObservation) -> bool:
+	"""Handle incoming interaction bids. Returns true to accept, false to decline.
+	
+	Default implementation accepts all interactions.
+	Override in specific states for custom behavior.
+	"""
+	agent.add_observation("Accepted incoming %s" % bid_observation.interaction_name)
+	return true

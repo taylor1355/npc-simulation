@@ -23,7 +23,10 @@ func update(_seen_items: Array, needs: Dictionary) -> Action:
 			return Action.wait()
 	
 	var current_interaction = status_obs.current_interaction
+	
+	# If no current interaction, we should transition back to idle
 	if current_interaction.is_empty():
+		agent.change_state(IdleState)
 		return Action.wait()
 	
 	# Check if this is a conversation

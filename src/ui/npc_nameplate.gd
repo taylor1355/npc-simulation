@@ -40,7 +40,8 @@ func _connect_to_controller() -> void:
 	await get_tree().process_frame
 	
 	# Set initial name
-	name_label.text = _controller.get_display_name()
+	var display_name = _controller.get_display_name()
+	name_label.text = display_name
 	
 	# Set initial emoji if state machine is ready
 	if _controller.state_machine and _controller.state_machine.current_state:

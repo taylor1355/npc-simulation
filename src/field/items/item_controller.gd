@@ -6,8 +6,6 @@ var current_interaction: Interaction = null
 var interacting_npc: NpcController = null
 var interaction_time: float = 0.0
 
-signal interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary)
-
 func _ready() -> void:
 	super._ready()
 	add_to_group(GROUP_NAME)

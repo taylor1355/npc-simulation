@@ -277,21 +277,233 @@ Improve the existing console with:
    - Fall back to default "🔧" if no emoji defined
 4. Test with existing interactions (consume apple, sit on chair)
 
-### Phase 4: Conversation Visual Indicator
-1. Create ConversationIndicator.tscn:
-   - Root: Node2D
-   - Child: Line2D with dotted texture
-   - Configure: Default color, width, texture mode
-2. Add to Field node when conversation starts:
-   - Listen for INTERACTION_STARTED events
-   - Check if interaction is ConversationInteraction
-   - Instantiate indicator and add as child
-3. Connect participant positions:
-   - Update Line2D points array each frame
-   - Get positions from participant GamepieceControllers
-4. Remove when conversation ends:
-   - Listen for INTERACTION_FINISHED events
-   - Free the indicator node
+### Phase 4: Generic Interaction Visual System
+**Note**: This phase has been expanded to create a scalable visual system for all interaction types, not just conversations. This addresses technical debt around event handling patterns and prepares for future interaction types.
+
+#### 4.1. Add Unique ID to All Interactions
+```gdscript
+# In interaction.gd
+var id: String  # Unique identifier for this interaction instance
+
+func _init(_name: String, _description: String, _requires_adjacency: bool = true):
+    name = _name
+    description = _description
+    requires_adjacency = _requires_adjacency
+    id = IdGenerator.generate_interaction_id()
+
+# In id_generator.gd
+static func generate_interaction_id() -> String:
+    return "interaction_" + generate_uuid()
+```
+
+#### 4.2. Create Generic Interaction Events
+```gdscript
+# In Event.Type enum (removing dead CONVERSATION_STARTED/ENDED):
+INTERACTION_STARTED,
+INTERACTION_ENDED,
+INTERACTION_PARTICIPANT_JOINED,
+INTERACTION_PARTICIPANT_LEFT
+
+# New file: src/common/events/field_events/interaction_events.gd
+class_name InteractionEvents
+
+class InteractionEvent extends Event:
+    var interaction_id: String
+    var interaction_type: String  # "conversation", "sit", etc.
+    var participants: Array[NpcController]
+
+class InteractionStartedEvent extends InteractionEvent:
+    func _init(id: String, type: String, npcs: Array[NpcController]):
+        super._init(Event.Type.INTERACTION_STARTED)
+        interaction_id = id
+        interaction_type = type
+        participants = npcs
+
+class InteractionEndedEvent extends InteractionEvent:
+    # Similar pattern
+
+class InteractionParticipantJoinedEvent extends InteractionEvent:
+    var joined_participant: NpcController
+    
+class InteractionParticipantLeftEvent extends InteractionEvent:
+    var left_participant: NpcController
+
+# Factory methods following project patterns
+static func create_interaction_started(id: String, type: String, participants: Array[NpcController]) -> InteractionStartedEvent:
+    return InteractionStartedEvent.new(id, type, participants)
+```
+
+#### 4.3. Refactor Interaction Lifecycle to Use EventBus
+**Important**: Call super last to ensure interaction is ready before event dispatch
+```gdscript
+# In interaction.gd - Remove handler properties, update methods:
+func _on_start(context: Dictionary) -> void:
+    # Subclasses do their setup first
+    # Then dispatch event
+    var event = InteractionEvents.create_interaction_started(
+        id, name, participants
+    )
+    EventBus.dispatch(event)
+
+func _on_end(context: Dictionary) -> void:
+    # Subclasses do their cleanup first
+    # Then dispatch event
+    var event = InteractionEvents.create_interaction_ended(
+        id, name, participants
+    )
+    EventBus.dispatch(event)
+
+# Similar for _on_participant_joined/left
+```
+
+#### 4.4. Create Interaction Type Hierarchy
+```
+src/field/interactions/
+├── interaction.gd
+├── streaming_interaction.gd
+├── interaction_types/  # Renamed from "types"
+│   ├── conversation_interaction.gd  # Moved here
+│   ├── sit_interaction.gd           # New
+│   └── consume_interaction.gd       # New
+```
+
+Example subclass:
+```gdscript
+# src/field/interactions/interaction_types/sit_interaction.gd
+class_name SitInteraction extends Interaction
+
+var sittable_component: SittableComponent
+
+func _on_start(context: Dictionary) -> void:
+    # Do sit-specific logic first
+    if sittable_component:
+        sittable_component._on_sit_start(self, context)
+    # Then call super to dispatch event
+    super._on_start(context)
+
+func _on_end(context: Dictionary) -> void:
+    # Do sit-specific cleanup first
+    if sittable_component:
+        sittable_component._on_sit_end(self, context)
+    # Then call super to dispatch event
+    super._on_end(context)
+```
+
+#### 4.5. Update Components to Create Subclasses
+```gdscript
+# In sittable_component.gd factory
+func create_interaction(context: Dictionary = {}) -> Interaction:
+    var interaction = SitInteraction.new(
+        get_interaction_name(),
+        get_interaction_description(),
+        true
+    )
+    interaction.sittable_component = self
+    # Set other properties...
+    return interaction
+```
+
+#### 4.6. Build Generic Interaction Visual System
+Directory structure:
+```
+src/field/interaction_visuals/
+├── interaction_visualizer.gd      # Main visualizer
+└── handlers/
+    ├── base_visual_handler.gd     # Base class
+    └── conversation_visual_handler.gd  # Lines between participants
+```
+
+InteractionVisualizer implementation:
+```gdscript
+# src/field/interaction_visuals/interaction_visualizer.gd
+extends Node2D
+
+var visual_handlers: Dictionary = {}  # interaction_id -> handler
+var handler_registry: Dictionary = {
+    "conversation": preload("res://src/field/interaction_visuals/handlers/conversation_visual_handler.gd")
+    # Easy to add more interaction types here
+}
+
+func _ready():
+    EventBus.event_dispatched.connect(_on_event_dispatched)
+
+func _on_event_dispatched(event: Event):
+    match event.event_type:
+        Event.Type.INTERACTION_STARTED:
+            _handle_interaction_started(event as InteractionEvents.InteractionStartedEvent)
+        Event.Type.INTERACTION_ENDED:
+            _handle_interaction_ended(event as InteractionEvents.InteractionEndedEvent)
+        Event.Type.INTERACTION_PARTICIPANT_JOINED:
+            _handle_participant_joined(event as InteractionEvents.InteractionParticipantJoinedEvent)
+        Event.Type.INTERACTION_PARTICIPANT_LEFT:
+            _handle_participant_left(event as InteractionEvents.InteractionParticipantLeftEvent)
+
+func _handle_interaction_started(event: InteractionEvents.InteractionStartedEvent):
+    var HandlerClass = handler_registry.get(event.interaction_type)
+    if HandlerClass:
+        var handler = HandlerClass.new()
+        handler.setup(event.interaction_id, event.participants)
+        add_child(handler)
+        visual_handlers[event.interaction_id] = handler
+
+func _handle_interaction_ended(event: InteractionEvents.InteractionEndedEvent):
+    var handler = visual_handlers.get(event.interaction_id)
+    if handler:
+        visual_handlers.erase(event.interaction_id)
+        handler.queue_free()
+```
+
+ConversationVisualHandler implementation:
+```gdscript
+# src/field/interaction_visuals/handlers/conversation_visual_handler.gd
+extends Node2D  # base_visual_handler.gd
+
+var interaction_id: String
+var participants: Array[NpcController]
+var line: Line2D
+
+func setup(id: String, npcs: Array[NpcController]):
+    interaction_id = id
+    participants = npcs
+    
+    # Create line
+    line = Line2D.new()
+    line.width = 2.0
+    line.default_color = Color(0.5, 0.5, 1.0, 0.5)  # Semi-transparent blue
+    # TODO: Add dotted texture
+    add_child(line)
+
+func _process(_delta):
+    # Update line to connect all participants
+    var points = PackedVector2Array()
+    for npc in participants:
+        if is_instance_valid(npc) and npc._gamepiece:
+            points.append(npc._gamepiece.global_position)
+    line.points = points
+```
+
+#### 4.7. Update Scene Structure
+In main.tscn, add under Field node:
+```
+Field
+├── TileLayers
+├── PathDestinationMarker
+├── Entities
+│   ├── NPCs
+│   └── Items  
+├── InteractionVisualizer  # New - instantiate interaction_visualizer.gd
+└── MapBoundaries
+```
+
+#### 4.8. Files to Delete
+- `src/common/events/field_events/conversation_events.gd` - Confirmed unused
+
+#### 4.9. Benefits Over Original Approach
+- **Event Handling Pattern Consolidation**: Uses established EventBus patterns
+- **Scalable to thousands of interaction types**: Registry pattern for visuals
+- **Clean separation**: Interaction logic vs visual representation
+- **No conversation-specific code**: Generic system works for all interactions
+- **Addresses technical debt**: Fixes "Interaction Base Class Responsibilities" issue
 
 ### Phase 5: Conversation Group Bubble
 1. Add centered 💬 sprite above conversation groups:

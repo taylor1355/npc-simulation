@@ -1,5 +1,9 @@
 extends Node
 
+# Constants
+const GAMEPIECE_META_KEY = "gamepiece"  # Metadata key for storing gamepiece reference on collision areas
+const GAMEPIECE_GROUP = "_GAMEPIECE_GROUP"  # Group name for all gamepieces
+
 var focused_gamepiece: Gamepiece = null
 var npc_client: NpcClientBase = null
 

@@ -82,9 +82,28 @@ func process_observation(request: NpcRequest) -> NpcResponse:
 					# Go back to idle if we were requesting an interaction
 					if agent.current_state is RequestingInteractionState:
 						agent.change_state(IdleState)
+			NpcEvent.Type.INTERACTION_BID_RECEIVED:
+				if event.payload is InteractionRequestObservation:
+					# Let the current state decide how to handle the incoming bid
+					var should_accept = agent.current_state.handle_incoming_interaction_bid(event.payload)
+					
+					# Return bid response immediately
+					return NpcResponse.create_success(
+						Action.Type.RESPOND_TO_INTERACTION_BID,
+						{
+							"bid_id": event.payload.bid_id,
+							"accept": should_accept,
+							"reason": ""
+						}
+					)
 			NpcEvent.Type.INTERACTION_STARTED:
 				if event.payload is InteractionUpdateObservation:
 					agent.add_observation("Interaction started: %s" % event.payload.interaction_name)
+					
+					# Transition to InteractingState if not already there
+					# This handles both initiator transitions and multi-party coordination
+					if not (agent.current_state is InteractingState):
+						agent.change_state(InteractingState)
 			NpcEvent.Type.INTERACTION_OBSERVATION:
 				if event.payload is ConversationObservation:
 					var conv_obs = event.payload as ConversationObservation

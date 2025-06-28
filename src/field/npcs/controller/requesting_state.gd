@@ -106,6 +106,9 @@ func _create_multi_party_bid(factory: InteractionFactory, parameters: Dictionary
 		controller.state_machine.change_state(ControllerIdleState.new(controller))
 		return false
 	
+	# Connect to the interaction's transition signal for multi-party coordination
+	interaction.participant_should_transition.connect(on_interaction_transition_requested)
+	
 	# Find additional participants
 	var all_participants: Array[NpcController] = []
 	for target_name in additional_targets:
@@ -140,6 +143,7 @@ func _submit_bid() -> void:
 		var multi_bid = interaction_request as MultiPartyBid
 		multi_bid.all_participants_accepted.connect(_on_all_participants_accepted)
 		multi_bid.participant_rejected.connect(_on_participant_rejected)
+		multi_bid.timed_out.connect(_on_timeout)
 	
 	# Log the request
 	controller.event_log.append(NpcEvent.create_interaction_request_event(interaction_request))
@@ -161,6 +165,15 @@ func _on_all_participants_accepted() -> void:
 func _on_participant_rejected(participant: NpcController, reason: String) -> void:
 	# One participant rejected - bid will be rejected
 	pass
+
+func _on_timeout() -> void:
+	# MultiPartyBid timed out - return to idle
+	controller.event_log.append(NpcEvent.create_error_event("Conversation request timed out"))
+	controller.state_machine.change_state(ControllerIdleState.new(controller))
+	controller.current_request = null
+	
+	# Trigger new decision after timeout
+	controller.decide_behavior.call_deferred()
 
 func handle_action(action_name: String, parameters: Dictionary) -> bool:
 	match action_name:
@@ -204,23 +217,19 @@ func on_interaction_accepted(request: InteractionBid) -> void:
 		push_error("Accepted request has no interaction object")
 		return
 		
+	# Create appropriate context using interaction's factory method
+	var context = interaction_obj.create_context(target_controller)
+	if not context:
+		push_error("Failed to create interaction context")
+		return
+	
 	# Transition to interacting state
-	var interacting_state = ControllerInteractingState.new(controller, interaction_obj, target_controller)
+	var interacting_state = ControllerInteractingState.new(controller, interaction_obj, context)
 	controller.state_machine.change_state(interacting_state)
 	controller.current_interaction = interaction_obj
 	
-	# Connect to interaction finished signal from the appropriate source
-	if target_controller is ItemController:
-		target_controller.interaction_finished.connect(
-			controller._on_interaction_finished,
-			Node.CONNECT_ONE_SHOT
-		)
-	else:
-		# For NPC interactions, the interaction itself should handle completion
-		interaction_obj.interaction_ended.connect(
-			func(name, initiator, payload): controller._on_interaction_finished(name, initiator, payload),
-			Node.CONNECT_ONE_SHOT
-		)
+	# Set up interaction completion signals through the context
+	context.setup_completion_signals(controller, interaction_obj)
 	
 	# Log interaction started
 	controller.event_log.append(NpcEvent.create_interaction_update_event(
@@ -246,3 +255,4 @@ func get_state_description() -> String:
 	if interaction_name and target_controller:
 		return "Requesting %s with %s" % [interaction_name, target_controller.get_display_name()]
 	return "Requesting interaction..."
+

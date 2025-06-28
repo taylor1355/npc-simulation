@@ -32,7 +32,7 @@ class SitInteractionFactory extends InteractionFactory:
 		]
 
 	func create_interaction(context: Dictionary = {}) -> Interaction:
-		var interaction = Interaction.new(
+		var interaction = SitInteraction.new(
 			get_interaction_name(),
 			get_interaction_description(),
 			true
@@ -42,8 +42,7 @@ class SitInteractionFactory extends InteractionFactory:
 		interaction.needs_filled.append(Needs.Need.ENERGY)
 		interaction.need_rates[Needs.Need.ENERGY] = sittable_component.energy_regeneration_rate
 		
-		interaction.on_start_handler = sittable_component._on_sit_start
-		interaction.on_end_handler = sittable_component._on_sit_end
+		interaction.sittable_component = sittable_component
 		return interaction
 
 func _ready() -> void:

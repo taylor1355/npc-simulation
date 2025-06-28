@@ -49,13 +49,6 @@ func handle_action(action_name: String, parameters: Dictionary) -> bool:
 		"continue":
 			# Continue is valid in idle - just means stay idle
 			return true
-		"start_conversation":
-			# TODO: start_conversation should use the generic interact_with action
-			# For now, log that it's not implemented
-			controller.event_log.append(NpcEvent.create_error_event(
-				"start_conversation is deprecated. Use interact_with with target NPCs instead."
-			))
-			return true
 		_:
 			return super.handle_action(action_name, parameters)
 

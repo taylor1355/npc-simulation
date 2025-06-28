@@ -110,7 +110,10 @@ func _ready() -> void:
 		assert(gameboard, "Gamepiece '%s' must have a gameboard reference to function!" % name)
 		
 		# Add to gamepiece group for block movement change tracking
-		add_to_group("_GAMEPIECE_GROUP")
+		add_to_group(Globals.GAMEPIECE_GROUP)
+		
+		# Register this gamepiece on all CollisionArea nodes for vision detection
+		_register_collision_areas()
 		
 		# Ensure that the gamepiece and its path are at the same scale. Enables using local scale for movement coordinates (simplifies path creation)
 		_path.global_scale = global_scale
@@ -261,3 +264,10 @@ func get_controller() -> GamepieceController:
 		if child is GamepieceController:
 			return child
 	return null
+
+## Registers this gamepiece in metadata of all Area2D nodes for vision detection
+func _register_collision_areas() -> void:
+	# Find all Area2D nodes named "CollisionArea" or "VisionArea" in the entire subtree
+	for area in find_children("*", "Area2D", true):
+		if area.name == "CollisionArea" or area.name == "VisionArea":
+			area.set_meta(Globals.GAMEPIECE_META_KEY, self)

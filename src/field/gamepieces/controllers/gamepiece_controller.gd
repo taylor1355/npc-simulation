@@ -39,6 +39,9 @@ func get_cell_position() -> Vector2i:
 func get_display_name() -> String:
 	return _gamepiece.display_name if _gamepiece else ""
 
+## Signal emitted when an interaction finishes - unified for all entity types
+signal interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary)
+
 # Keep track of cells that need an update and do so as a batch before the next path search.
 var _cells_to_update: PackedVector2Array = []
 
@@ -328,3 +331,9 @@ func get_available_interactions() -> Dictionary:
 func _on_component_interaction_finished(interaction_name: String, payload: Dictionary) -> void:
 	# Override in subclasses if needed
 	pass
+
+## Handle incoming interaction bids - unified interface for all entity types
+## Override in subclasses to implement entity-specific bid handling logic
+func handle_interaction_bid(request: InteractionBid) -> void:
+	# Default implementation rejects all bids - override in subclasses
+	request.reject("Entity type does not support interactions")

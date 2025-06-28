@@ -10,8 +10,7 @@ enum Type {
 	CONTINUE,
 	ACT_IN_INTERACTION,
 	CANCEL_INTERACTION,
-	# Conversation actions
-	START_CONVERSATION
+	RESPOND_TO_INTERACTION_BID
 }
 
 var type: Type
@@ -52,11 +51,14 @@ static func cancel_interaction() -> Action:
 	"""Create a cancel interaction action"""
 	return Action.new(Type.CANCEL_INTERACTION)
 
-static func start_conversation(npc_ids: Array[String]) -> Action:
-	"""Create a start conversation action"""
-	return Action.new(Type.START_CONVERSATION, {
-		"npc_ids": npc_ids
+static func respond_to_interaction_bid(bid_id: String, accept: bool, reason: String = "") -> Action:
+	"""Create a respond to interaction bid action"""
+	return Action.new(Type.RESPOND_TO_INTERACTION_BID, {
+		"bid_id": bid_id,
+		"accept": accept,
+		"reason": reason
 	})
+
 
 
 func format_action() -> String:
@@ -76,8 +78,8 @@ func format_action() -> String:
 			return "act_in_interaction(%s)" % [parameters]
 		Type.CANCEL_INTERACTION:
 			return "cancel_interaction"
-		Type.START_CONVERSATION:
-			return "start_conversation(%s)" % [parameters.get("npc_ids", [])]
+		Type.RESPOND_TO_INTERACTION_BID:
+			return "respond_to_interaction_bid(%s, %s)" % [parameters.bid_id, parameters.accept]
 		_:
 			return "unknown"
 
@@ -136,12 +138,14 @@ static func get_action_description(action_type: Type) -> Dictionary[String, Vari
 				"description": "Stop current interaction",
 				"parameters": {}
 			}
-		Type.START_CONVERSATION:
+		Type.RESPOND_TO_INTERACTION_BID:
 			return {
 				"name": get_name_from_type(action_type),
-				"description": "Start a conversation with other NPCs",
+				"description": "Accept or reject an incoming interaction bid",
 				"parameters": {
-					"npc_ids": "Array of NPC IDs to converse with"
+					"bid_id": "ID of the bid to respond to",
+					"accept": "True to accept, false to reject",
+					"reason": "Optional reason for rejection"
 				}
 			}
 		_:

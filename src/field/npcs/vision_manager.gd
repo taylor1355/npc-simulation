@@ -1,12 +1,20 @@
 class_name VisionManager extends Area2D
 
-var parent_gamepiece: Gamepiece
+var _parent_gamepiece: Gamepiece = null  # Private cached value
 var seen_npcs: Dictionary[Gamepiece, NpcController] = {}
 var seen_items: Dictionary[Gamepiece, ItemController] = {}
 
+## Lazy-loaded parent gamepiece property
+var parent_gamepiece: Gamepiece:
+	get:
+		if not _parent_gamepiece:
+			_parent_gamepiece = get_gamepiece(self)
+			if not _parent_gamepiece:
+				push_error("VisionManager failed to find parent gamepiece")
+		return _parent_gamepiece
+
 
 func _ready():
-	parent_gamepiece = get_gamepiece(self)
 	area_entered.connect(_on_area_entered)
 	area_exited.connect(_on_area_exited)
 	EventBus.event_dispatched.connect(
@@ -14,15 +22,24 @@ func _ready():
 			if event.is_type(Event.Type.GAMEPIECE_DESTROYED):
 				_on_gamepiece_removed(event as GamepieceEvents.DestroyedEvent)
 	)
-
-	# TODO: add all gamepieces already in the area
-	# get_overlapping_areas() seems to not be working as expected
+	
+	# Check for already overlapping areas after a frame to ensure metadata is set
+	await get_tree().process_frame
+	for area in get_overlapping_areas():
+		if area != self:  # Don't process ourselves
+			_on_area_entered(area)
 
 
 func _on_area_entered(area: Area2D):
 	var gamepiece: Gamepiece = get_gamepiece(area)
-	if gamepiece and gamepiece != parent_gamepiece:
-		_add_gamepiece(gamepiece)
+	
+	if not gamepiece:
+		return
+		
+	if gamepiece == parent_gamepiece:
+		return
+		
+	_add_gamepiece(gamepiece)
 
 
 func _on_area_exited(area: Area2D):
@@ -36,32 +53,27 @@ func _on_gamepiece_removed(event: GamepieceEvents.DestroyedEvent):
 
 
 func _add_gamepiece(gamepiece: Gamepiece):
-	print("[VisionManager] Adding gamepiece: %s (parent: %s)" % [gamepiece.name, parent_gamepiece.name if parent_gamepiece else "unknown"])
-	
 	for child in gamepiece.get_children():
 		if child is NpcController:
 			seen_npcs[gamepiece] = child
-			print("[VisionManager] Added NPC: %s" % gamepiece.name)
 		elif child is ItemController:
 			seen_items[gamepiece] = child
-			print("[VisionManager] Added Item: %s" % gamepiece.name)
 
 
 func _remove_gamepiece(gamepiece: Gamepiece):
-	print("[VisionManager] Removing gamepiece: %s" % gamepiece.name)
-	
 	if seen_npcs.has(gamepiece):
 		seen_npcs.erase(gamepiece)
-		print("[VisionManager] Removed NPC: %s" % gamepiece.name)
 	elif seen_items.has(gamepiece):
 		seen_items.erase(gamepiece)
-		print("[VisionManager] Removed Item: %s" % gamepiece.name)
 
 
 func get_gamepiece(area: Area2D) -> Gamepiece:
-	if area.owner is Gamepiece:
-		return area.owner as Gamepiece
-	return null
+	# All collision areas should have gamepiece metadata set by Gamepiece._ready()
+	if not area.has_meta(Globals.GAMEPIECE_META_KEY):
+		push_error("CollisionArea %s missing gamepiece metadata" % area.get_path())
+		return null
+	
+	return area.get_meta(Globals.GAMEPIECE_META_KEY) as Gamepiece
 
 
 func _sort_controllers_by_distance(controllers: Array) -> void:
@@ -75,7 +87,6 @@ func _sort_controllers_by_distance(controllers: Array) -> void:
 
 func get_items_by_distance() -> Array[ItemController]:
 	var item_controllers := seen_items.values()
-	print("[VisionManager] get_items_by_distance called, found %d items: %s" % [item_controllers.size(), item_controllers.map(func(item): return item.get_display_name())])
 	_sort_controllers_by_distance(item_controllers)
 	return item_controllers
 

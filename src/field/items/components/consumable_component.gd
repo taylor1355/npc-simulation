@@ -39,7 +39,7 @@ class ConsumableInteractionFactory extends InteractionFactory:
 		return "Consume this item (%.1fs left). Effects per second: %s" % [time_left, effects_desc]
 
 	func create_interaction(context: Dictionary = {}) -> Interaction:
-		var interaction = Interaction.new(
+		var interaction = ConsumeInteraction.new(
 			get_interaction_name(),
 			get_interaction_description(),
 			true
@@ -57,8 +57,7 @@ class ConsumableInteractionFactory extends InteractionFactory:
 			if consumable_component.consumption_time > 0:
 				interaction.need_rates[need_enum] = delta / consumable_component.consumption_time
 		
-		interaction.on_start_handler = consumable_component._on_consume_start
-		interaction.on_end_handler = consumable_component._on_consume_end
+		interaction.consumable_component = consumable_component
 		return interaction
 
 func _ready() -> void:
