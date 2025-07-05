@@ -16,8 +16,10 @@ var last_update_time: float
 var last_processed_event_timestamp: float = 0.0
 var movement_locked: bool = false
 var current_observation = null  # Latest observation payload
+var streaming_observations: Dictionary = {}  # Store streaming observations by type (e.g., "conversation" -> ConversationObservation)
 var last_conversation_time: float = 0.0
-var conversation_cooldown: float = 3.0  # Reduced for debugging - was 10.0
+var conversation_cooldown: float = 5.0  # Time between conversations in seconds
+var controller_state: String = ""  # Current controller state for validation
 
 func change_state(new_state_type) -> void:
 	# Get state names for logging
@@ -55,36 +57,23 @@ func update_timer(delta: float) -> void:
 	if idle_timer > 0:
 		idle_timer = max(0, idle_timer - delta)
 
-func update_state_from_action(action: Action) -> void:
-	"""Update agent state based on chosen action"""
-	print("[%s] Updating state from action: %s" % [id, action.format_action()])
+func update_target_from_action(action: Action) -> void:
+	"""Update agent's target position when choosing movement actions"""
 	match action.type:
 		Action.Type.MOVE_TO:
 			target_position = Vector2i(
-				action.parameters["x"],
-				action.parameters["y"]
+				int(action.parameters.get("x", 0)),
+				int(action.parameters.get("y", 0))
 			)
-			change_state(MovingToItemState)
-		Action.Type.INTERACT_WITH:
-			change_state(RequestingInteractionState)
-		Action.Type.WANDER:
-			if not movement_locked:
-				change_state(WanderingState)
-		Action.Type.CONTINUE:
-			pass # Keep current state
-		Action.Type.WAIT:
-			change_state(IdleState)
-		Action.Type.CANCEL_INTERACTION:
-			change_state(IdleState)
-		Action.Type.RESPOND_TO_INTERACTION_BID:
-			# This action is handled by the NPC controller, not state machine
-			pass
+		Action.Type.WANDER, Action.Type.WAIT:
+			# Clear target for non-targeted movements
+			target_position = Vector2i()
 		_:
-			push_error("[%s] Unknown action: %s" % [id, action.format_action()])
+			# Other actions don't affect target position
+			pass
 
 func choose_action(seen_items: Array, needs: Dictionary) -> Action:
 	"""Choose next action based on state, needs, and environment"""
-	print("\n[%s] Choosing action - needs: %s" % [id, needs])
 	
 	# Update timers
 	var current_time = Time.get_unix_time_from_system()
@@ -98,5 +87,7 @@ func choose_action(seen_items: Array, needs: Dictionary) -> Action:
 	
 	# Get action from current state
 	var action = current_state.update(seen_items, needs)
-	print("[%s] Chose action: %s" % [id, action.format_action()])
+	
+	# Update target position based on action
+	update_target_from_action(action)
 	return action

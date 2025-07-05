@@ -56,9 +56,6 @@ func on_interaction_finished(interaction_name: String, npc: NpcController, paylo
 	
 	# Return to idle
 	controller.state_machine.change_state(ControllerIdleState.new(controller))
-	
-	# Trigger new decision (IdleState.enter will handle this)
-	# controller.decide_behavior() # Removed as IdleState.enter will trigger it
 
 func exit() -> void:
 	if EventBus.event_dispatched.is_connected(_on_event_dispatched):
@@ -72,18 +69,29 @@ func _handle_act_in_interaction(parameters: Dictionary) -> void:
 	interaction.handle_act_in_interaction(controller, parameters)
 
 func _on_event_dispatched(event: Event) -> void:
-	if not event.is_type(Event.Type.NPC_INTERACTION_OBSERVATION):
-		return
+	# Handle interaction observations
+	if event.is_type(Event.Type.NPC_INTERACTION_OBSERVATION):
+		var observation_event = event as NpcEvents.InteractionObservationEvent
+		if observation_event.npc != controller._gamepiece:
+			return
 		
-	var observation_event = event as NpcEvents.InteractionObservationEvent
-	if observation_event.npc != controller._gamepiece:
-		return
+		var interaction_observation_event = NpcEvent.create_interaction_observation_event(
+			observation_event.observation
+		)
+		controller.event_log.append(interaction_observation_event)
 		
-	var interaction_observation_event = NpcEvent.create_interaction_observation_event(
-		observation_event.observation.get("interaction_name", ""),
-		observation_event.observation
-	)
-	controller.event_log.append(interaction_observation_event)
+		# Immediately process streaming observations for real-time conversation flow
+		controller.npc_client.process_observation(controller.npc_id, [interaction_observation_event])
+	
+	# Handle interaction ended events
+	elif event.is_type(Event.Type.INTERACTION_ENDED):
+		var ended_event = event as InteractionEvents.InteractionEndedEvent
+		if interaction and ended_event.interaction_id == interaction.id:
+			# Our interaction has ended - clean up and transition to idle
+			# Don't call on_interaction_finished as that would call _on_end again
+			controller.current_interaction = null
+			controller.current_request = null
+			controller.state_machine.change_state(ControllerIdleState.new(controller))
 
 func get_context_data() -> Dictionary:
 	if not context or not interaction:
@@ -104,21 +112,16 @@ func get_state_description() -> String:
 func on_interaction_bid(bid: MultiPartyBid) -> void:
 	# If this is a conversation bid, we should consider leaving our current interaction
 	if bid.interaction_name == "conversation":
-		# Only accept conversations if we're not already in one
-		if interaction and interaction.name == "conversation":
-			# Already in a conversation, reject
-			bid.add_participant_response(controller, false, "Already in a conversation")
+		# Always reject if already in any interaction to prevent overlapping
+		if interaction:
+			bid.add_participant_response(controller, false, "Already busy with %s" % interaction.name)
 			return
 		
-		# For non-conversation interactions, accept conversation and cancel current interaction
+		# Only accept if we're completely free
 		if randf() < 0.8:  # High probability to join conversations
-			print("[%s] Leaving %s to join conversation" % [controller.npc_id, interaction.name])
-			# Cancel current interaction first
-			_try_cancel_interaction()
-			# Accept the conversation
 			bid.add_participant_response(controller, true)
 		else:
-			bid.add_participant_response(controller, false, "Too busy right now")
+			bid.add_participant_response(controller, false, "Not interested right now")
 	else:
 		# For other interaction types, reject while already interacting
 		bid.add_participant_response(controller, false, "Currently busy")

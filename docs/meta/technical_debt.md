@@ -205,9 +205,12 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 ### 7. Complete Entity Polymorphism (Remaining Vision & Terminology)
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
 
-**Progress**: ✅ **Core interaction handling unified** (December 26, 2024)
+**Progress**: ✅ **Interaction system fully unified** (January 2025)
 - Moved `handle_interaction_bid()` and `interaction_finished` to `GamepieceController` base class
-- Eliminated type-specific branching in `RequestingState` through polymorphic context system
+- Created single `InteractionContext` class handling both entity and group interactions
+- Added `InteractionRegistry` singleton for global interaction tracking
+- Eliminated duplicate conversation bug through context-based duplicate prevention
+- Removed temporary interaction object creation during discovery
 - Standardized interaction lifecycle signals
 
 **Remaining Issues**:
@@ -288,20 +291,17 @@ VisionObservation → MockNpcBackend
 
 **Issues**:
 - Components store need effects in different formats (deltas vs rates)
-- Interaction creation is inefficient (creates temporary objects for data extraction)
 - Need logic spread across multiple files instead of centralized in needs.gd/needs_manager.gd
 - Backend only sees binary filled/drained, not actual rates
-- Interaction factories are created repeatedly instead of being cached
-- ItemController.get_available_interactions() creates temporary interactions just to get their data
 
 **Long-term Solution**: 
 Centralize need effect evaluation in Needs class, make components expose need effects directly without going through interaction creation. This would eliminate the complex data transformation chain and improve performance.
 
-**Partial Fix Applied**:
-- Added caching to EntityComponent base class to prevent repeated factory creation
-- Components now override `_create_interaction_factories()` instead of `get_interaction_factories()`
-- This reduces ConsumableComponent factory spam from hundreds to once per component
-- Still need to address temporary interaction creation for data extraction
+**Partial Fixes Applied**:
+- ✅ Added caching to EntityComponent base class to prevent repeated factory creation
+- ✅ Components now override `_create_interaction_factories()` instead of `get_interaction_factories()`
+- ✅ This reduces ConsumableComponent factory spam from hundreds to once per component
+- ✅ Eliminated temporary interaction creation via `InteractionFactory.get_metadata()`
 
 ### 10. Debug Print Statements Cleanup
 **Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
@@ -523,7 +523,49 @@ The highest-leverage improvements now focus on code quality and maintainability.
 
 Key insight: Establishing consistent patterns and clear contracts will provide the foundation for sustainable growth of the codebase.
 
-### 17. Mock Backend Client Architecture Duplication
+### 17. Interaction Bid System Architecture Complexity
+**Impact**: High | **Effort**: High | **Leverage**: 🔥🔥🔥🔥
+
+**Problem**: The current bid system has differential handling between single-party and multi-party bids, creating bugs and unnecessary complexity:
+
+**Current Issues**:
+- Single-party bids have no timeout mechanism (unlike MultiPartyBid's 5-second timeout)
+- Different code paths for handling single vs multi-party interactions
+- NPCs get stuck in REQUESTING state when targets are destroyed or don't respond
+- Bid system adds an extra layer of abstraction that may be redundant
+- Separate bid classes (InteractionBid, MultiPartyBid) with different behaviors and lifecycles
+
+**Recent Bug Examples**:
+```gdscript
+# NPC stuck in requesting state after target item consumed
+[NPC 82208360471] Action 'interact_with' in state IDLE
+[NPC 82208360471] State changed from idle to requesting
+# ... stays in requesting state indefinitely sending 'continue' actions
+
+# NPCs responding to bids while already interacting  
+[NPC 81705043961] Action 'respond_to_interaction_bid' in state INTERACTING
+```
+
+**Architectural Observation**:
+The bid system essentially manages a temporary pre-interaction state that tracks:
+- Who wants to interact
+- What interaction they want
+- Who has accepted/rejected
+- Timeout handling
+
+These responsibilities could potentially be absorbed by existing subsystems (interactions, contexts, or enhanced participant tracking), eliminating an entire abstraction layer.
+
+**Key Insight**: 
+Interactions and contexts already manage participant state and lifecycle. The bid system may be a vestigial abstraction that creates more complexity than it solves. The invitation/acceptance protocol it implements could be handled more directly by the systems that already manage the actual interactions.
+
+**Benefits of Simplification**:
+- Single code path for all interaction types
+- Unified timeout handling
+- Simpler state machine
+- Fewer abstraction layers to understand
+- Reduced bugs from differential handling
+
+### 18. Mock Backend Client Architecture Duplication
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
 
 **Problem**: The mock backend currently implements a completely separate client architecture from the MCP server client, blocking the core business model feature of distributed compute through player-spawned MCP servers.

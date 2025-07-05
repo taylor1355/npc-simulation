@@ -9,11 +9,13 @@ The core of the system is a generic `Interaction` class that acts as a configura
 ### System Components
 ```
 Interaction System
-├── NpcController (controller/npc_controller.gd) - Initiates and manages interactions via its state machine.
-├── Interaction (interactions/interaction.gd) - A generic class that orchestrates an interaction's lifecycle.
-├── InteractionFactory (interactions/interaction_factory.gd) - A factory interface for creating configured Interaction instances.
-├── InteractionBid (interactions/interaction_bid.gd) - Manages interaction requests with bidding process.
-└── Item/Npc Components (e.g., sittable_component.gd) - Define and implement the actual interaction logic.
+├── InteractionRegistry (common/interaction_registry.gd) - Global singleton tracking all active interactions
+├── InteractionContext (interactions/interaction_context.gd) - Manages interaction state and discovery
+├── NpcController (controller/npc_controller.gd) - Initiates and manages interactions via its state machine
+├── Interaction (interactions/interaction.gd) - A generic class that orchestrates an interaction's lifecycle
+├── InteractionFactory (interactions/interaction_factory.gd) - Creates interactions and provides metadata
+├── InteractionBid (interactions/interaction_bid.gd) - Manages interaction requests with bidding process
+└── Item/Npc Components (e.g., sittable_component.gd) - Define and implement the actual interaction logic
 ```
 
 ## 2. Core Components
@@ -76,6 +78,7 @@ This is a simple interface (`RefCounted`) that standardizes the creation of `Int
 *   `get_interaction_name() -> String`: Returns the unique name of the interaction.
 *   `get_interaction_description() -> String`: Returns a description for the interaction.
 *   `is_multi_party() -> bool`: Returns whether this factory creates multi-party interactions (default: false).
+*   `get_metadata() -> Dictionary`: Returns interaction data without creating an instance. This avoids temporary object creation during discovery.
 
 ## 3. Integration Flow
 
@@ -194,6 +197,32 @@ The interaction system uses a bidding mechanism to manage interaction requests:
 
 This bidding system provides a clean separation between the request to interact and the actual interaction execution, allowing for proper validation and state management.
 
+### InteractionRegistry (`src/field/common/interaction_registry.gd`)
+Global singleton that tracks all active interactions. Prevents duplicate interactions and provides queries for interaction state.
+
+**Key Responsibilities:**
+- Tracks all active interactions by ID, participant, and host
+- Prevents duplicate interactions through `is_participating_in()` checks
+- Automatically cleans up when interactions end via EventBus
+- Provides context queries for hosts
+
+**Key Methods:**
+- `register_interaction(interaction, context)`: Registers a new active interaction
+- `is_participating_in(entity, interaction_type)`: Checks if entity is already in an interaction of given type
+- `get_contexts_for(host)`: Returns all contexts for a host controller
+- `get_participant_interactions(entity, type)`: Gets all interactions for a participant, optionally filtered by type
+
+**Usage:**
+Accessed directly as an autoload singleton:
+```gdscript
+# Register new interaction
+InteractionRegistry.register_interaction(interaction, context)
+
+# Check for duplicates
+if InteractionRegistry.is_participating_in(npc, "conversation"):
+    # NPC is already in a conversation
+```
+
 ## 5. Specialized Interaction Types
 
 ### StreamingInteraction (`src/field/interactions/streaming_interaction.gd`)
@@ -205,33 +234,36 @@ A base class for interactions that need to send ongoing observations to particip
 - Subclasses override `_generate_observation_for_participant()`
 - Used for interactions with continuous updates
 
-### InteractionContext System (`src/field/interactions/interaction_context.gd`)
-A polymorphic context architecture that provides a unified interface for `InteractingState` regardless of single-party vs multi-party interactions. This system eliminates null handling and type-specific branching in controller states.
+### InteractionContext (`src/field/interactions/interaction_context.gd`)
+Manages interaction state and lifecycle for both single-party and multi-party interactions. Provides the primary interface for discovering available interactions and preventing duplicates.
 
-**Base InteractionContext (`interaction_context.gd`):**
+**Key Properties:**
+- `interaction: Interaction`: The active interaction (null if not started)
+- `host: GamepieceController`: The entity hosting this context
+- `context_type: ContextType`: Either ENTITY (single-party) or GROUP (multi-party)
+- `is_active: bool`: Whether an interaction is currently active
+
+**Key Methods:**
 - `get_display_name() -> String`: Returns context-appropriate display name
-- `get_position() -> Vector2i`: Returns relevant position for the interaction
-- `get_entity_type() -> String`: Returns type identifier for the context
-- `handle_cancellation()`: Handles interaction cancellation in context-appropriate way
+- `get_position() -> Vector2i`: Returns relevant position (entity position or participant centroid)
+- `get_entity_type() -> String`: Returns "group" for GROUP contexts, otherwise host's entity type
+- `handle_cancellation()`: Routes cancellation appropriately (bid system for ENTITY, direct removal for GROUP)
+- `can_start_interaction()`: Checks InteractionRegistry to prevent duplicates
 - `get_context_data()`: Provides state information for observations
 - `setup_completion_signals()`: Configures interaction completion detection
 
-**EntityInteractionContext (`entity_interaction_context.gd`):**
-Context for single-party interactions with items or NPCs.
-- Wraps a `target_controller: GamepieceController`
-- Uses existing bid system for cancellation requests
-- Provides entity-specific context data (name, type, position)
-- Sets up `interaction_finished` signal handling
-
-**GroupInteractionContext (`group_interaction_context.gd`):**
-Context for multi-party interactions (conversations, group activities).
-- Wraps the `interaction: Interaction` itself
-- Uses direct participant removal for cancellation
-- Calculates centroid position of all participants
-- Provides group-specific context data (participant count, names)
+**Context Types:**
+- `ENTITY`: Single-party interactions with items or NPCs
+  - Uses bid system for cancellation
+  - Provides entity-specific context data (name, type, position)
+  - Sets up `interaction_finished` signal handling
+- `GROUP`: Multi-party interactions like conversations
+  - Uses direct participant removal for cancellation
+  - Calculates centroid position of all participants
+  - Provides group-specific context data (participant count, names)
 
 **Factory Integration:**
-The `Interaction.create_context(target_controller)` factory method automatically creates the appropriate context type based on `max_participants`.
+The `Interaction.create_context(target_controller)` factory method creates an InteractionContext with the appropriate type based on `max_participants`.
 
 ### ConversationInteraction (`src/field/interactions/conversation_interaction.gd`)
 Manages multi-party conversations between NPCs.

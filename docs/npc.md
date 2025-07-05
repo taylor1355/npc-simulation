@@ -312,9 +312,10 @@ The `InteractingState` manages NPCs during active interactions using the polymor
 - `act_in_interaction`: Executes interaction-specific actions (e.g., sending messages in conversations)
 
 **Context Integration:**
-- `EntityInteractionContext`: For single-party interactions, wraps target controller
-- `GroupInteractionContext`: For multi-party interactions, wraps the interaction itself
-- Context provides display names, positions, and handles cancellation appropriately
+The `InteractionContext` manages both single-party and multi-party interactions:
+- Single-party (ENTITY type): Wraps target controller, uses bid system for cancellation
+- Multi-party (GROUP type): Wraps the interaction itself, uses direct participant removal
+- Provides display names, positions, and duplicate prevention via InteractionRegistry
 
 **State Display:**
 - `get_state_emoji()`: Returns interaction-specific emoji

@@ -3,10 +3,13 @@
 ## Core Components
 
 ### Base Event (`event.gd`)
-The `Event` class is the foundation for all specific event types in the system.
-*   **`event_type: Type`**: Each event instance holds an `event_type` which is a value from the central `Event.Type` enum defined in this script. This enum includes all possible event type identifiers (e.g., `GAMEPIECE_CLICKED`, `NPC_NEED_CHANGED`, `INPUT_PAUSED`).
-*   **`timestamp: float`**: Automatically records the Unix time when the event was created.
-*   **`is_type(type: Type) -> bool`**: A utility method to check if an event instance matches a specific `Event.Type`.
+
+The base class for all events in the system. Every event carries a type identifier and timestamp.
+
+**Key Properties:**
+- **`event_type: Type`**: Identifies the event using the central `Event.Type` enum
+- **`timestamp: float`**: Unix time when the event was created
+- **`is_type(type: Type) -> bool`**: Checks if this event matches a specific type
 
 ### Event Bus (`EventBus` Singleton, implemented in `event_bus.gd`, extended by `field_events.gd`)
 The global event bus, typically accessed via an autoload singleton named `EventBus` (which is an instance of `field_events.gd`, extending `event_bus.gd`), is responsible for dispatching all game events. The core logic resides in `event_bus.gd`.

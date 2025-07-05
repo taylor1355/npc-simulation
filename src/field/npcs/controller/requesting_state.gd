@@ -3,8 +3,10 @@ extends BaseControllerState
 class_name ControllerRequestingState
 
 var interaction_request: InteractionBid
-var target_controller: GamepieceController  # Can be ItemController or NpcController
+var target_controller: GamepieceController
 var interaction_name: String
+var timeout_timer: float = 0.0
+var timeout_duration: float = 5.0  # Timeout after 5 seconds
 
 func _init(controller_ref: NpcController) -> void:
 	super(controller_ref)
@@ -106,9 +108,6 @@ func _create_multi_party_bid(factory: InteractionFactory, parameters: Dictionary
 		controller.state_machine.change_state(ControllerIdleState.new(controller))
 		return false
 	
-	# Connect to the interaction's transition signal for multi-party coordination
-	interaction.participant_should_transition.connect(on_interaction_transition_requested)
-	
 	# Find additional participants
 	var all_participants: Array[NpcController] = []
 	for target_name in additional_targets:
@@ -183,6 +182,33 @@ func handle_action(action_name: String, parameters: Dictionary) -> bool:
 		_:
 			return super.handle_action(action_name, parameters)
 
+func _physics_process(delta: float) -> void:
+	if not interaction_request:
+		return
+		
+	# Check if target still exists
+	if not is_instance_valid(target_controller) or target_controller.is_queued_for_deletion():
+		_handle_target_destroyed()
+		return
+	
+	# Update timeout for single-party bids
+	if not interaction_request is MultiPartyBid:
+		timeout_timer += delta
+		if timeout_timer >= timeout_duration:
+			_handle_timeout()
+
+func _handle_target_destroyed() -> void:
+	controller.event_log.append(NpcEvent.create_error_event("Target destroyed while requesting interaction"))
+	controller.state_machine.change_state(ControllerIdleState.new(controller))
+	controller.current_request = null
+	controller.decide_behavior.call_deferred()
+
+func _handle_timeout() -> void:
+	controller.event_log.append(NpcEvent.create_error_event("Interaction request timed out"))
+	controller.state_machine.change_state(ControllerIdleState.new(controller))
+	controller.current_request = null
+	controller.decide_behavior.call_deferred()
+
 func get_context_data() -> Dictionary:
 	var context = {
 		"target_name": target_controller.get_display_name() if target_controller else "",
@@ -211,6 +237,12 @@ func on_interaction_accepted(request: InteractionBid) -> void:
 		push_error("Accepted request doesn't match current request")
 		return
 	
+	# For multi-party bids, the transition is handled by the bid itself
+	# when it adds all participants (including the host)
+	if request is MultiPartyBid:
+		# Multi-party bid accepted - wait for the bid to coordinate all participants
+		return
+	
 	# Get the interaction object
 	var interaction_obj = request.interaction
 	if not interaction_obj:
@@ -222,6 +254,9 @@ func on_interaction_accepted(request: InteractionBid) -> void:
 	if not context:
 		push_error("Failed to create interaction context")
 		return
+	
+	# Register with InteractionRegistry
+	InteractionRegistry.register_interaction(interaction_obj, context)
 	
 	# Transition to interacting state
 	var interacting_state = ControllerInteractingState.new(controller, interaction_obj, context)

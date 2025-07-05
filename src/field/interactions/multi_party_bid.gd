@@ -82,24 +82,24 @@ func accept():
 	
 	super.accept()
 	
-	# Connect each participant (including host) to the interaction's transition signal
-	# This allows them to transition to InteractingState when added to the interaction
+	# Connect transition signals to controller-level method
 	var all_participants = [bidder] + accepted_participants
+	
 	for participant in all_participants:
+		# Connect without CONNECT_ONE_SHOT to ensure all participants get the signal
 		interaction.participant_should_transition.connect(
-			participant.state_machine.current_state.on_interaction_transition_requested,
-			Node.CONNECT_ONE_SHOT
+			participant.request_interaction_transition
 		)
 	
-	# Add all participants to the interaction (including host/bidder)
-	# First add the bidder (host) who initiated the interaction
-	if interaction.can_add_participant(bidder):
-		interaction.add_participant(bidder)
-	
-	# Then add all accepting participants
-	for participant in accepted_participants:
+	# Add participants to interaction (triggers signals)
+	for participant in all_participants:
 		if interaction.can_add_participant(participant):
 			interaction.add_participant(participant)
+		else:
+			push_error("Cannot add participant %s to interaction" % participant.npc_id)
+	
+	# Start the interaction
+	interaction._on_start({"bid": self})
 
 func get_status_text() -> String:
 	return "Responses: %d/%d accepted" % [accepted_participants.size(), invited_participants.size()]

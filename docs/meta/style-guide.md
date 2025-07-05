@@ -22,6 +22,18 @@
 
 5. Prioritize Clarity and Readability
    Strive for descriptive explanations that help a developer understand a system's role and behavior quickly. Use narrative descriptions, often supplemented by bullet points for key responsibilities or features, rather than just listing technical specifications. The goal is to provide enough detail for comprehension without overwhelming the reader. Aim for strategically concise language: be descriptive enough to convey necessary information and context, but avoid unnecessary verbosity that could increase cognitive load. If a shorter phrasing conveys the same meaning effectively, prefer it. However, do not sacrifice critical context or clarity for the sake of extreme brevity. The key is to find a balance that makes the documentation both informative and easy to digest.
+   
+   **Balance Readability with Skimmability**: Write complete, understandable sentences while maintaining a structure that supports quick scanning:
+   - **Use bullet points** for lists of features, responsibilities, or options
+   - **Keep paragraphs short** (2-3 sentences) to maintain visual breaks
+   - **Bold key terms** to help readers quickly locate information
+   - **Avoid walls of text** by breaking up content with headers and lists
+   
+   Examples of the balance:
+   - ✅ Good bullet: "Manages both single-party and multi-party interactions through a type property"
+   - ❌ Poor bullet: "Manages single/multi-party via type property" (too telegraphic)
+   - ✅ Good paragraph: "The interaction system uses a bid-based pattern. NPCs request interactions through bids, and targets evaluate whether to accept based on their current state."
+   - ❌ Poor paragraph: One long paragraph explaining the entire bid system without breaks
 
 ## Document Structure
 

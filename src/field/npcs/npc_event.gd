@@ -90,14 +90,11 @@ static func create_observation_event(
 	return NpcEvent.new(Type.OBSERVATION, composite)
 
 static func create_interaction_observation_event(
-	interaction_name: String,
-	observation_data: Dictionary
+	observation: Observation
 ) -> NpcEvent:
-	# TODO: Create a generic StreamingObservation when we have more streaming interaction types
-	# For now, we'll use ConversationObservation for conversation interactions
-	var participants = observation_data.get("participants", [])
-	var history = observation_data.get("conversation_history", [])
-	var observation = ConversationObservation.new(interaction_name, participants, history)
+	if not observation:
+		push_error("NpcEvent: Cannot create interaction observation event with null observation")
+		return null
 	return NpcEvent.new(Type.INTERACTION_OBSERVATION, observation)
 
 static func create_error_event(message: String) -> NpcEvent:

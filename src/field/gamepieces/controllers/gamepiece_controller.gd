@@ -179,6 +179,9 @@ func travel_to_cell(destination: Vector2i, allow_adjacent_cells: = false) -> voi
 	
 	else:
 		_waypoints.clear()
+		# If we're already at the destination or can't find a path, trigger arrived
+		if _gamepiece.cell == destination or (_waypoints.is_empty() and allow_adjacent_cells):
+			_on_gamepiece_arrived()
 
 ## Returns true if a given cell is occupied by something that has a collider matching 
 ## [member gamepiece_mask].
@@ -314,18 +317,35 @@ func get_available_interactions() -> Dictionary:
 	if Engine.is_editor_hint():
 		return {}
 		
-	# Return interaction data in same format as Interaction.to_dict() for vision system
 	var available = {}
+	var contexts = _get_interaction_contexts()
 	
-	for name in interaction_factories:
-		var factory = interaction_factories[name]
-		# Create temporary interaction to get its data
-		# NOTE: This is marked as inefficient but maintains consistency
-		var temp_interaction = factory.create_interaction({"requester": null, "target": self})
-		if temp_interaction:
-			available[name] = temp_interaction.to_dict()
+	for context in contexts:
+		for name in interaction_factories:
+			var factory = interaction_factories[name]
+			
+			# Skip if context already has this interaction type active
+			if context.is_active and context.interaction and context.interaction.name == name:
+				continue
+			
+			# Skip if can't start
+			if not context.can_start_interaction(null, factory):
+				continue
+			
+			# Get interaction metadata from factory
+			available[name] = factory.get_metadata()
 	
 	return available
+
+func _get_interaction_contexts() -> Array[InteractionContext]:
+	# Check for existing contexts
+	var existing = InteractionRegistry.get_contexts_for(self)
+	if not existing.is_empty():
+		return existing
+	
+	# Create new context if none exists
+	var context = InteractionContext.new(self, InteractionContext.ContextType.ENTITY)
+	return [context]
 
 ## Called when a component's interaction finishes. Override in subclasses if needed.
 func _on_component_interaction_finished(interaction_name: String, payload: Dictionary) -> void:

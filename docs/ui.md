@@ -38,13 +38,17 @@ Panel System Architecture:
 ```
 
 ### NPC Nameplate System (`npc_nameplate.gd`)
-Shows NPC name and current state emoji above each NPC. Updates automatically when NPC state changes.
+
+Floating labels above NPCs display their name and current state emoji. The nameplate automatically updates when the NPC's state changes, providing immediate visual feedback about what each NPC is doing.
 
 ### Debug Console System (`debug_console.gd`)
-Developer console for runtime commands and backend switching. Toggle with backtick (`). Key commands:
-- `backend mock` / `backend mcp` - Switch AI backends
-- `help` - Show available commands
-- `clear` - Clear output
+
+A developer console accessible at runtime for debugging and configuration. Toggle it with the backtick (`) key.
+
+**Available Commands:**
+- `backend mock` / `backend mcp` - Switch between AI backends
+- `help` - Display all available commands
+- `clear` - Clear the console output
 
 ### Need Display (need_bar.gd, need_bar.tscn)
 ```

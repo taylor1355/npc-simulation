@@ -2,9 +2,21 @@ extends RefCounted
 
 class_name NeedUtils
 
+class ItemMatch:
+	var item: Dictionary
+	var interaction_name: String
+	var score: float
+	var distance: float
+	
+	func _init(item_data: Dictionary, interaction: String, item_score: float, item_distance: float):
+		item = item_data
+		interaction_name = interaction
+		score = item_score
+		distance = item_distance
+
 const NEED_HYSTERESIS = 10.0  # Hysteresis for need changes
 const NEED_CRITICAL_THRESHOLD = 20.0  # Point at which needs become critical
-const NEED_SEARCH_THRESHOLD = 90.0  # Point at which NPCs start looking for items
+const NEED_SEARCH_THRESHOLD = 50.0  # Point at which NPCs start looking for items
 const NEED_SATISFIED_THRESHOLD = 99.0  # Point at which needs are considered satisfied
 
 static func get_interaction_for_need(agent_id: String, item: Dictionary, need_id: String) -> String:
@@ -70,15 +82,13 @@ static func score_item_interactions(agent_id: String, item: Dictionary, needs: D
 		"score": best_score
 	}
 
-static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionary, movement_locked: bool) -> Action:
-	"""Find the item that best satisfies current needs"""
+static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionary) -> ItemMatch:
+	"""Find the item that best satisfies current needs
+	Returns: ItemMatch instance or null if nothing suitable found"""
 	print("[%s] Finding best item for needs: %s" % [agent_id, needs])
 	
 	# Track best item and its details
-	var best_item = null
-	var best_interaction = ""
-	var best_score = 0.0
-	var best_distance = 999999
+	var best_match: ItemMatch = null
 	
 	for item in seen_items:
 		var result = score_item_interactions(agent_id, item, needs)
@@ -91,29 +101,20 @@ static func find_best_item(agent_id: String, seen_items: Array, needs: Dictionar
 		# 1. First valid item found
 		# 2. Higher score (more critical need)
 		# 3. Equal score but closer distance
-		if best_item == null or result.score > best_score or (result.score == best_score and distance < best_distance):
-			best_item = item
-			best_interaction = result.interaction_name
-			best_score = result.score
-			best_distance = distance
+		if best_match == null or result.score > best_match.score or (result.score == best_match.score and distance < best_match.distance):
+			best_match = ItemMatch.new(item, result.interaction_name, result.score, distance)
 			print("[%s] New best: item=%s score=%s distance=%s" % [
-				agent_id, item.name, best_score, best_distance
+				agent_id, item.name, best_match.score, best_match.distance
 			])
 	
-	if best_item:
+	if best_match:
 		print("[%s] Chose item %s with score %s at distance %s" % [
-			agent_id, best_item.name, best_score, best_distance
+			agent_id, best_match.item.name, best_match.score, best_match.distance
 		])
-		if best_distance <= 1:
-			return Action.interact_with(best_item.name, best_interaction)
-		else:
-			if movement_locked:
-				print("[%s] Movement locked, cannot move to item" % agent_id)
-				return Action.continue_action()
-			return Action.move_to(best_item.cell.x, best_item.cell.y)
+	else:
+		print("[%s] No suitable items found" % agent_id)
 	
-	print("[%s] No suitable items found" % agent_id)
-	return Action.wander()
+	return best_match
 
 static func should_cancel_interaction(agent_id: String, current_interaction: Dictionary, needs: Dictionary) -> bool:
 	"""Check if current interaction should be canceled based on needs"""

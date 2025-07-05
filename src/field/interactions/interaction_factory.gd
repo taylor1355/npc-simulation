@@ -19,3 +19,15 @@ func can_create_for(entity: Node) -> bool:
 
 func is_multi_party() -> bool:
 	return false
+
+# Get metadata for this interaction type without creating an instance
+func get_metadata() -> Dictionary:
+	# Default implementation creates a temporary interaction for backward compatibility
+	# Subclasses should override this to avoid creating temporary objects
+	var temp_interaction = create_interaction({})
+	if temp_interaction:
+		return temp_interaction.to_dict()
+	return {
+		"name": get_interaction_name(),
+		"description": get_interaction_description()
+	}

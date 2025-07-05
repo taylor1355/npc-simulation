@@ -225,7 +225,6 @@ func decide_behavior() -> void:
 	# Get visible items and prepare data for backend
 	var seen_items := _vision_manager.get_items_by_distance()
 	var item_data: Array[Dictionary] = []
-	print("[NPC %s] decide_behavior: Found %d visible items" % [npc_id, seen_items.size()])
 	
 	for item in seen_items:
 		var interaction_dicts = item.get_available_interactions()
@@ -241,10 +240,8 @@ func decide_behavior() -> void:
 	# Get visible NPCs and prepare data for backend
 	var seen_npcs := _vision_manager.get_npcs_by_distance()
 	var npc_data: Array[Dictionary] = []
-	print("[NPC %s] decide_behavior: Found %d visible NPCs" % [npc_id, seen_npcs.size()])
 	for npc in seen_npcs:
 		var npc_interaction_dicts = npc.get_available_interactions()
-		print("[NPC %s] NPC '%s' has %d interactions: %s" % [npc_id, npc.get_display_name(), npc_interaction_dicts.size(), npc_interaction_dicts])
 		
 		npc_data.append({
 			"npc_id": npc.npc_id,
@@ -413,7 +410,6 @@ func _on_component_interaction_finished(interaction_name: String, payload: Dicti
 	if current_interaction and current_interaction.name == interaction_name:
 		current_interaction = null
 
-# get_available_interactions() is now inherited from GamepieceController
 
 ## Handle incoming interaction bids (so NPCs can be conversation targets)
 func handle_interaction_bid(request: InteractionBid) -> void:
@@ -469,3 +465,29 @@ func _find_npc_by_name(npc_name: String) -> NpcController:
 		if npc.get_display_name() == npc_name or npc.npc_id == npc_name:
 			return npc
 	return null
+
+## Handle interaction transition request from MultiPartyBid coordination
+func request_interaction_transition(participant: NpcController, interaction: Interaction) -> void:
+	# Only process if this signal is for our controller
+	if participant != self:
+		return
+		
+	# Controller decides how to handle transition based on current state
+	if current_interaction:
+		# End current interaction first
+		current_interaction._on_end({})
+		current_interaction = null
+		current_request = null
+	
+	# Set up new interaction
+	current_interaction = interaction
+	var context = interaction.create_context()
+	if not context:
+		push_error("[NPC %s] Failed to create context for interaction" % npc_id)
+		return
+	
+	# Register with InteractionRegistry (for multi-party interactions)
+	InteractionRegistry.register_interaction(interaction, context)
+	
+	var interacting_state = ControllerInteractingState.new(self, interaction, context)
+	state_machine.change_state(interacting_state)

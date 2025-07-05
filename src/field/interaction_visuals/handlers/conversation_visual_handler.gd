@@ -7,7 +7,7 @@ func _on_setup() -> void:
 	line = Line2D.new()
 	line.width = 2.0
 	line.default_color = Color(0.5, 0.5, 1.0, 0.5)  # Semi-transparent blue
-	line.z_index = -1  # Draw behind NPCs
+	line.z_index = 10
 	
 	# TODO: Add dotted texture for a more subtle look
 	# var texture = preload("res://assets/ui/dotted_line.png")

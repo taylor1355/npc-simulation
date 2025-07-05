@@ -1,31 +1,145 @@
 class_name InteractionContext extends RefCounted
 
-# Base class for interaction contexts that provide a unified interface
-# for InteractingState regardless of single-party vs multi-party interactions
+# Unified context for all interaction types (single-party and multi-party)
+
+# Core properties
+var interaction: Interaction  # null if not started yet
+var host: GamepieceController  # Who hosts this (item, npc, etc)
+var context_type: ContextType  # ENTITY or GROUP
+var is_active: bool = false  # Is there an active interaction?
+
+enum ContextType { ENTITY, GROUP }
+
+func _init(_host: GamepieceController, _type: ContextType):
+	host = _host
+	context_type = _type
 
 func get_display_name() -> String:
+	if interaction and interaction.participants.size() > 1:
+		return "%s (%d participants)" % [interaction.name.capitalize(), interaction.participants.size()]
+	elif host:
+		return host.get_display_name()
 	return "Unknown"
 
 func get_position() -> Vector2i:
-	assert(false, "get_position() must be overridden in subclasses")
-	return Vector2i.ZERO # Not actually used, just to satisfy the static type checker
+	if context_type == ContextType.GROUP and interaction:
+		# Calculate centroid for group interactions
+		var sum := Vector2i.ZERO
+		for p in interaction.participants:
+			sum += p.get_cell_position()
+		return sum / interaction.participants.size()
+	elif host:
+		return host.get_cell_position()
+	return Vector2i.ZERO
 
 func get_entity_type() -> String:
+	if context_type == ContextType.GROUP:
+		return "group"
+	elif host:
+		return host.get_entity_type()
 	return "unknown"
 
 # Handle interaction cancellation in context-appropriate way
-func handle_cancellation(_interaction: Interaction, _controller: NpcController) -> void:
-	push_warning("Cancellation not implemented for this context type")
+func handle_cancellation(_interaction_ref: Interaction, controller: NpcController) -> void:
+	if not interaction:
+		return
+		
+	if context_type == ContextType.ENTITY:
+		# Use bid system for single-party
+		_handle_entity_cancellation(controller)
+	else:
+		# Direct removal for multi-party
+		interaction.remove_participant(controller)
 
-func get_context_data(interaction: Interaction, duration: float) -> Dictionary:
-	return {
-		"interaction_name": interaction.name,
+func _handle_entity_cancellation(controller: NpcController) -> void:
+	if not host:
+		push_warning("No host for entity cancellation")
+		return
+	
+	# Use existing bid system for entity interactions
+	var request = InteractionBid.new(
+		interaction.name,
+		InteractionBid.BidType.CANCEL,
+		controller,
+		host
+	)
+	
+	# Log the cancel request
+	controller.event_log.append(NpcEvent.create_interaction_request_event(request))
+	
+	# Set up response handlers
+	request.accepted.connect(
+		func():
+			controller.event_log.append(NpcEvent.create_interaction_update_event(
+				request,
+				NpcEvent.Type.INTERACTION_CANCELED
+			))
+			controller.current_request = null
+			controller.current_interaction = null
+			controller.state_machine.change_state(ControllerIdleState.new(controller))
+	)
+	
+	request.rejected.connect(
+		func(reason: String):
+			controller.event_log.append(NpcEvent.create_interaction_rejected_event(request, reason))
+	)
+	
+	# Submit the cancellation request
+	host.handle_interaction_bid(request)
+
+func can_start_interaction(requester: NpcController, factory: InteractionFactory) -> bool:
+	# Check if we already have an active interaction of this type
+	if is_active and interaction and interaction.name == factory.get_interaction_name():
+		return false  # Can't start duplicate
+	
+	# Check global registry for any active interactions of this type
+	if requester and InteractionRegistry.is_participating_in(requester, factory.get_interaction_name()):
+		return false  # Already in an interaction of this type
+	
+	# Let factory do additional validation
+	return factory.can_create_for(requester if requester else host)
+
+func get_context_data(interaction_ref: Interaction, duration: float) -> Dictionary:
+	var context = {
+		"interaction_name": interaction_ref.name,
 		"duration": duration
 	}
+	
+	if context_type == ContextType.ENTITY and host:
+		context["entity_name"] = host.get_display_name()
+		context["entity_type"] = host.get_entity_type()
+		
+		var position = host.get_cell_position()
+		if position != null:
+			context["entity_position"] = {
+				"x": position.x,
+				"y": position.y
+			}
+	elif context_type == ContextType.GROUP and interaction:
+		context["interaction_type"] = "multi_party"
+		context["participant_count"] = interaction.participants.size()
+		context["participant_names"] = interaction.participants.map(func(p): return p.get_display_name())
+	
+	return context
 
 # Check whether this context can be used for the given interaction
-func is_valid_for_interaction(_interaction: Interaction) -> bool:
-	return true
+func is_valid_for_interaction(interaction_ref: Interaction) -> bool:
+	if context_type == ContextType.ENTITY:
+		return host != null and interaction_ref.max_participants == 1
+	else:
+		return interaction_ref != null and interaction_ref.max_participants > 1
 
-func setup_completion_signals(_controller: NpcController, _interaction: Interaction) -> void:
-	pass
+func setup_completion_signals(controller: NpcController, interaction_ref: Interaction) -> void:
+	if context_type == ContextType.ENTITY and host:
+		host.interaction_finished.connect(
+			controller._on_interaction_finished,
+			Node.CONNECT_ONE_SHOT
+		)
+	elif context_type == ContextType.GROUP and interaction_ref:
+		# For multi-party interactions, the interaction itself handles completion
+		# Check if the interaction has an interaction_ended signal
+		if interaction_ref.has_signal("interaction_ended"):
+			interaction_ref.interaction_ended.connect(
+				func(name, initiator, payload): controller._on_interaction_finished(name, initiator, payload),
+				Node.CONNECT_ONE_SHOT
+			)

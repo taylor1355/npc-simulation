@@ -67,27 +67,3 @@ func get_state_emoji() -> String:
 # Get human-readable description of current state activity
 func get_state_description() -> String:
 	return ""  # Override in subclasses to provide state-specific details
-
-# Handle interaction transition signal for multi-party coordination
-func on_interaction_transition_requested(participant: NpcController, interaction: Interaction) -> void:
-	# Only handle transitions for our own controller
-	if participant != controller:
-		return
-	
-	# If already in an interaction, properly end it first
-	if controller.current_interaction:
-		controller.current_interaction._on_end({})
-	
-	# Create appropriate context for multi-party interaction
-	var context = GroupInteractionContext.new(interaction)
-	var interacting_state = ControllerInteractingState.new(controller, interaction, context)
-	controller.state_machine.change_state(interacting_state)
-	controller.current_interaction = interaction
-	
-	# Log the transition
-	controller.event_log.append(NpcEvent.create_interaction_update_event(
-		controller.current_request if controller.current_request else InteractionBid.new(
-			interaction.name, InteractionBid.BidType.START, controller, null
-		),
-		NpcEvent.Type.INTERACTION_STARTED
-	))

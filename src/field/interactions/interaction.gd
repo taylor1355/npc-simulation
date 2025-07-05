@@ -21,6 +21,7 @@ var act_in_interaction_parameters: Dictionary[String, PropertySpec] = {}
 
 signal act_in_interaction_received(participant: NpcController, validated_parameters: Dictionary)
 signal participant_should_transition(participant: NpcController, interaction: Interaction)
+signal interaction_ended(interaction_name: String, initiator: NpcController, payload: Dictionary)
 
 
 func _init(_name: String, _description: String, _requires_adjacency: bool = true):
@@ -42,12 +43,23 @@ func add_participant(npc: NpcController) -> bool:
 	return true
 
 func remove_participant(npc: NpcController) -> bool:
-	if not (npc in participants and participants.size() > min_participants):
+	if npc not in participants:
 		return false
 	
 	participants.erase(npc)
 	_on_participant_left(npc)
+	
+	# If we're below minimum participants, end the interaction gracefully
+	if participants.size() < min_participants:
+		_end_interaction_due_to_insufficient_participants()
+	
 	return true
+
+# Helper method to end interaction when participants drop below minimum
+func _end_interaction_due_to_insufficient_participants() -> void:
+	# End the interaction - controllers will handle their own state transitions
+	# through the normal event system when they receive INTERACTION_ENDED
+	_on_end({"reason": "insufficient_participants", "remaining_participants": participants.size()})
 
 # Lifecycle methods - subclasses override these and call super last
 func _on_start(context: Dictionary) -> void:
@@ -65,14 +77,14 @@ func _on_end(context: Dictionary) -> void:
 	EventBus.dispatch(event)
 
 func _on_participant_joined(participant: NpcController) -> void:
-	# Subclasses handle the join first, then call super to dispatch event
+	# Signal participant to transition to InteractingState first
+	participant_should_transition.emit(participant, self)
+	
+	# Then dispatch the event (subclasses handle the join before calling super)
 	var event = InteractionEvents.create_interaction_participant_joined(
 		id, name, participants, participant
 	)
 	EventBus.dispatch(event)
-	
-	# Signal participant to transition to InteractingState
-	participant_should_transition.emit(participant, self)
 
 func _on_participant_left(participant: NpcController) -> void:
 	# Subclasses handle the leave first, then call super to dispatch event
@@ -94,13 +106,9 @@ func act_in_interaction(participant: NpcController, raw_parameters: Dictionary) 
 	return true
 
 # Infrastructure for subclasses to send observations
-func send_observation_to_participant(participant: NpcController, observation: Dictionary) -> void:
+func send_observation_to_participant(participant: NpcController, observation: Observation) -> void:
 	if participant not in participants:
 		return
-	
-	# Add common interaction info to observation
-	observation["interaction_name"] = name
-	observation["participants"] = participants.map(func(p): return p.npc_id)
 	
 	# This could trigger events or call methods on the participant
 	# For now, we'll emit a signal that controllers can listen to
@@ -148,13 +156,14 @@ func get_interaction_emoji() -> String:
 
 # Factory method to create appropriate context for this interaction
 func create_context(target_controller: GamepieceController = null) -> InteractionContext:
-	if max_participants > 1:
-		# Multi-party interaction
-		return GroupInteractionContext.new(self)
-	else:
-		# Single-party interaction with entity
-		if target_controller:
-			return EntityInteractionContext.new(target_controller)
-		else:
-			push_error("Single-party interaction requires target_controller")
-			return null
+	var context_type = InteractionContext.ContextType.GROUP if max_participants > 1 else InteractionContext.ContextType.ENTITY
+	var host = target_controller if target_controller else (participants[0] if participants.size() > 0 else null)
+	
+	if not host and context_type == InteractionContext.ContextType.ENTITY:
+		push_error("Entity interaction requires a host controller")
+		return null
+	
+	var context = InteractionContext.new(host, context_type)
+	if context_type == InteractionContext.ContextType.GROUP:
+		context.interaction = self
+	return context

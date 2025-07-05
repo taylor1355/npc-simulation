@@ -86,7 +86,7 @@ Conversations use the standard `InteractingState` rather than a dedicated state.
 - `cancel_interaction`: Leave the conversation and return to idle
 - `continue`: Stay in conversation (no-op)
 
-**Implementation Note:** The conversation system is fully implemented. NPCs can start conversations through the interaction bid system using MultiPartyBid, with support for the polymorphic InteractionContext architecture.
+**Implementation Note:** The conversation system is fully implemented. NPCs can start conversations through the interaction bid system using MultiPartyBid. The InteractionContext system handles both single-party and multi-party interactions through a single context type.
 
 ## 3. Protocol Flow
 
@@ -123,7 +123,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant NPC
-    participant State as ConversingState
+    participant State as InteractingState
     participant ConvComp as ConversableComponent
     participant Interaction as ConversationInteraction
     participant Others as Other Participants
@@ -223,7 +223,7 @@ The conversation system is fully implemented with multi-party coordination suppo
     }
 }
 # This creates a MultiPartyBid and invites nearby NPCs through the interaction system
-# Uses GroupInteractionContext for unified state management
+# Uses InteractionContext with GROUP type for state management
 ```
 
 ### Sending a Message
