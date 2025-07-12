@@ -111,7 +111,7 @@ func process_observation(request: NpcRequest) -> NpcResponse:
 					
 					# Log recent messages
 					for msg in conv_obs.conversation_history.slice(-3):
-						agent.add_observation("%s said: %s" % [msg["speaker"], msg["message"]])
+						agent.add_observation("%s said: %s" % [msg.get("speaker_name", msg.get("speaker_id", "Unknown")), msg["message"]])
 			NpcEvent.Type.INTERACTION_CANCELED, NpcEvent.Type.INTERACTION_FINISHED:
 				agent.idle_timer = MOVEMENT_COOLDOWN
 				

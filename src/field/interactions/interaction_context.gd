@@ -70,12 +70,14 @@ func _handle_entity_cancellation(controller: NpcController) -> void:
 	# Set up response handlers
 	request.accepted.connect(
 		func():
+			print("[DEBUG] Cancel bid accepted for NPC %s" % controller.npc_id)
 			controller.event_log.append(NpcEvent.create_interaction_update_event(
 				request,
 				NpcEvent.Type.INTERACTION_CANCELED
 			))
 			controller.current_request = null
 			controller.current_interaction = null
+			print("[DEBUG] Changing NPC %s state to idle" % controller.npc_id)
 			controller.state_machine.change_state(ControllerIdleState.new(controller))
 	)
 	

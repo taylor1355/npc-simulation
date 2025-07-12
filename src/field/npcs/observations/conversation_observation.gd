@@ -25,6 +25,6 @@ func format_for_npc() -> String:
 		var recent_count = min(5, conversation_history.size())
 		for i in range(conversation_history.size() - recent_count, conversation_history.size()):
 			var msg = conversation_history[i]
-			parts.append("  %s: %s" % [msg.get("speaker", "Unknown"), msg.get("message", "")])
+			parts.append("  %s: %s" % [msg.get("speaker_name", msg.get("speaker_id", "Unknown")), msg.get("message", "")])
 	
 	return "\n".join(parts)

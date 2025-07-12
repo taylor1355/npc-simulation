@@ -17,6 +17,9 @@ class_name Gamepiece extends Node2D
 	set(value):
 		display_name = value
 
+## Unique entity ID for this gamepiece
+var entity_id: String = ""
+
 ## Emitted when the gamepiece begins to travel towards a destination cell.
 signal travel_begun
 
@@ -109,6 +112,10 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		assert(gameboard, "Gamepiece '%s' must have a gameboard reference to function!" % name)
 		
+		# Generate unique entity ID if not already set
+		if entity_id.is_empty():
+			entity_id = IdGenerator.generate_entity_id()
+		
 		# Add to gamepiece group for block movement change tracking
 		add_to_group(Globals.GAMEPIECE_GROUP)
 		
@@ -125,8 +132,8 @@ func _ready() -> void:
 				EventBus.dispatch(event)
 		)
 		_click_area.clicked.connect(
-			func(): 
-				var event = GamepieceEvents.create_clicked(self)
+			func(ui_element_id: String): 
+				var event = GamepieceEvents.create_clicked(self, ui_element_id)
 				EventBus.dispatch(event)
 		)
 
@@ -267,7 +274,7 @@ func get_controller() -> GamepieceController:
 
 ## Registers this gamepiece in metadata of all Area2D nodes for vision detection
 func _register_collision_areas() -> void:
-	# Find all Area2D nodes named "CollisionArea" or "VisionArea" in the entire subtree
+	# Find all Area2D nodes in the entire subtree
 	for area in find_children("*", "Area2D", true):
-		if area.name == "CollisionArea" or area.name == "VisionArea":
+		if area.name in Globals.GAMEPIECE_AREA_NAMES:
 			area.set_meta(Globals.GAMEPIECE_META_KEY, self)

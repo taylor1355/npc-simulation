@@ -230,7 +230,6 @@ region_rect = Rect2(0, 0, 72, 128)
 [node name="ClickArea" type="Area2D" parent="Animation/GFX" index="2"]
 collision_layer = 4
 collision_mask = 0
-monitoring = false
 script = ExtResource("4_click")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Animation/GFX/ClickArea" index="0"]

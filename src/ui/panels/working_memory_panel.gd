@@ -1,4 +1,4 @@
-extends GamepiecePanel
+extends EntityPanel
 
 @onready var memory_text: RichTextLabel = $MarginContainer/WorkingMemoryText
 

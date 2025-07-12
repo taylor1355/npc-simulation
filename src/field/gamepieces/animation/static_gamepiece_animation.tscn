@@ -77,7 +77,6 @@ region_rect = Rect2(0, 0, 72, 128)
 [node name="ClickArea" type="Area2D" parent="GFX"]
 collision_layer = 4
 collision_mask = 0
-monitoring = false
 script = ExtResource("3_i5rw2")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="GFX/ClickArea"]

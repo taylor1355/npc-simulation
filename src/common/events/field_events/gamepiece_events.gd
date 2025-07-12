@@ -22,10 +22,12 @@ class PathSetEvent extends Event:
 
 class ClickedEvent extends Event:
 	var gamepiece: Gamepiece
+	var ui_element_id: String = ""  # Optional UI element that was clicked
 	
-	func _init(piece: Gamepiece) -> void:
+	func _init(piece: Gamepiece, p_ui_element_id: String = "") -> void:
 		super(Type.GAMEPIECE_CLICKED)
 		gamepiece = piece
+		ui_element_id = p_ui_element_id
 
 class DestroyedEvent extends Event:
 	var gamepiece: Gamepiece
@@ -41,6 +43,24 @@ class FocusedEvent extends Event:
 		super(Type.FOCUSED_GAMEPIECE_CHANGED)
 		gamepiece = piece
 
+class HoverStartedEvent extends Event:
+	var gamepiece: Gamepiece
+	var ui_element_id: String = ""  # Optional UI element that was hovered
+	
+	func _init(piece: Gamepiece, p_ui_element_id: String = "") -> void:
+		super(Type.GAMEPIECE_HOVER_STARTED)
+		gamepiece = piece
+		ui_element_id = p_ui_element_id
+
+class HoverEndedEvent extends Event:
+	var gamepiece: Gamepiece
+	var ui_element_id: String = ""  # Optional UI element that was unhovered
+	
+	func _init(piece: Gamepiece, p_ui_element_id: String = "") -> void:
+		super(Type.GAMEPIECE_HOVER_ENDED)
+		gamepiece = piece
+		ui_element_id = p_ui_element_id
+
 ## Static factory methods
 static func create_cell_changed(piece: Gamepiece, old_pos: Vector2i) -> CellChangedEvent:
 	return CellChangedEvent.new(piece, old_pos)
@@ -48,11 +68,17 @@ static func create_cell_changed(piece: Gamepiece, old_pos: Vector2i) -> CellChan
 static func create_path_set(piece: Gamepiece, dest_pos: Vector2i) -> PathSetEvent:
 	return PathSetEvent.new(piece, dest_pos)
 
-static func create_clicked(piece: Gamepiece) -> ClickedEvent:
-	return ClickedEvent.new(piece)
+static func create_clicked(piece: Gamepiece, ui_element_id: String = "") -> ClickedEvent:
+	return ClickedEvent.new(piece, ui_element_id)
 
 static func create_destroyed(piece: Gamepiece) -> DestroyedEvent:
 	return DestroyedEvent.new(piece)
 
 static func create_focused(piece: Gamepiece) -> FocusedEvent:
 	return FocusedEvent.new(piece)
+
+static func create_hover_started(piece: Gamepiece, ui_element_id: String = "") -> HoverStartedEvent:
+	return HoverStartedEvent.new(piece, ui_element_id)
+
+static func create_hover_ended(piece: Gamepiece, ui_element_id: String = "") -> HoverEndedEvent:
+	return HoverEndedEvent.new(piece, ui_element_id)

@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://b7x8q3n5m8vwj"]
+
+[ext_resource type="Script" path="res://src/ui/panels/conversation_message.gd" id="1_msg"]
+
+[node name="ConversationMessage" type="PanelContainer"]
+script = ExtResource("1_msg")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="SpeakerLabel" type="Label" parent="VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Speaker Name"
+theme_override_colors/font_color = Color(0.7, 0.7, 1.0, 1.0)
+
+[node name="TimestampLabel" type="Label" parent="VBox/Header"]
+layout_mode = 2
+text = "00:00"
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1.0)
+
+[node name="ContentLabel" type="RichTextLabel" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Message content goes here"
+fit_content = true

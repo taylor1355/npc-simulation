@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cpijvqmv451y3"]
+[gd_scene load_steps=3 format=3 uid="uid://cpijvqmv451y3"]
 
 [ext_resource type="Script" uid="uid://drl82r6opesg2" path="res://src/ui/panels/npc_info_panel.gd" id="1_script"]
+[ext_resource type="Script" path="res://src/ui/components/rich_text_label_link.gd" id="2_rich_text_label_link"]
 
 [node name="NpcInfoPanel" type="Panel"]
 layout_mode = 2
@@ -23,3 +24,4 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 bbcode_enabled = true
 text = "Select an NPC to view their traits."
+script = ExtResource("2_rich_text_label_link")

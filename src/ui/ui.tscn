@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://bve4u0hewur8"]
+[gd_scene load_steps=6 format=3 uid="uid://bve4u0hewur8"]
 
 [ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="1_6gkxm"]
 [ext_resource type="Script" uid="uid://wapcjmgi1jqa" path="res://src/ui/working_memory_panel.gd" id="2_memory"]
 [ext_resource type="Script" uid="uid://xy6jv38271vm" path="res://src/ui/tab_container.gd" id="4_tab"]
 [ext_resource type="PackedScene" uid="uid://debug_console" path="res://src/ui/debug_console.tscn" id="5_console"]
+[ext_resource type="Script" uid="uid://w58e04f5bf27" path="res://src/ui/floating_window_container.gd" id="6_floating"]
 
 [node name="CanvasLayer" type="CanvasLayer"]
 
@@ -85,3 +86,10 @@ bbcode_enabled = true
 text = "Select an NPC to view their working memory."
 
 [node name="DebugConsole" parent="." instance=ExtResource("5_console")]
+
+[node name="FloatingWindowContainer" type="Control" parent="." groups=["floating_window_container"]]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("6_floating")

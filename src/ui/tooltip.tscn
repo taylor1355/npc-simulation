@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://c4xqtg5hm1vwn"]
+
+[ext_resource type="Script" path="res://src/ui/tooltip.gd" id="1_xhqvw"]
+
+[node name="Tooltip" type="PanelContainer"]
+z_index = 100
+script = ExtResource("1_xhqvw")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+text = "Tooltip"

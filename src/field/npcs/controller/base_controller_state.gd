@@ -65,5 +65,5 @@ func get_state_emoji() -> String:
 	return "❓"  # Default emoji for unknown states
 
 # Get human-readable description of current state activity
-func get_state_description() -> String:
+func get_state_description(include_links: bool = false) -> String:
 	return ""  # Override in subclasses to provide state-specific details

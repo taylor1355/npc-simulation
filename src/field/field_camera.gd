@@ -36,6 +36,21 @@ var drag_point = null
 func _ready() -> void:
 	get_viewport().size_changed.connect(_on_viewport_resized)
 	_on_viewport_resized()
+	
+	# Listen for focus changes
+	EventBus.event_dispatched.connect(
+		func(event: Event):
+			if event.is_type(Event.Type.FOCUSED_GAMEPIECE_CHANGED):
+				var focused_event = event as GamepieceEvents.FocusedEvent
+				self.gamepiece = focused_event.gamepiece
+	)
+
+## Setup called by field.gd since Camera is an autoload
+func setup_from_field(field_scale: Vector2, field_gameboard: Gameboard) -> void:
+	scale = field_scale
+	gameboard = field_gameboard
+	make_current()
+	reset_position()
 
 
 func _input(event: InputEvent) -> void:

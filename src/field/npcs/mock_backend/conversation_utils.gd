@@ -54,7 +54,7 @@ static func was_message_sent_successfully(state: ConversationState, agent_id: St
 		return true
 	
 	for msg in conversation_history:
-		if msg.get("speaker") == agent_id and msg.get("message") == state.pending_message:
+		if msg.get("speaker_id") == agent_id and msg.get("message") == state.pending_message:
 			return true
 	
 	return false

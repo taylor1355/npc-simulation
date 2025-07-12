@@ -28,3 +28,12 @@ static func generate_interaction_id() -> String:
 
 static func generate_bid_id() -> String:
 	return "bid_" + generate_uuid()
+
+static func generate_ui_element_id() -> String:
+	return "ui_elem_" + generate_uuid()
+
+static func generate_interaction_panel_id(interaction_id: String) -> String:
+	return "interaction_panel_" + interaction_id
+
+static func generate_entity_id() -> String:
+	return "entity_" + generate_uuid()

@@ -59,5 +59,5 @@ func is_movement_allowed() -> bool:
 func get_state_emoji() -> String:
 	return "🎲"
 
-func get_state_description() -> String:
+func get_state_description(include_links: bool = false) -> String:
 	return "Looking around"

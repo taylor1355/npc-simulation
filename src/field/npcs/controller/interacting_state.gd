@@ -35,9 +35,12 @@ func handle_action(action_name: String, parameters: Dictionary) -> bool:
 			return super.handle_action(action_name, parameters)
 
 func _try_cancel_interaction() -> void:
+	print("[DEBUG] ControllerInteractingState: _try_cancel_interaction called for NPC %s" % controller.npc_id)
 	if not interaction or not context:
+		print("[DEBUG] No interaction or context to cancel")
 		return
 	
+	print("[DEBUG] Delegating cancellation to context for interaction: %s" % interaction.name)
 	# Delegate cancellation to the context
 	context.handle_cancellation(interaction, controller)
 
@@ -103,10 +106,29 @@ func get_context_data() -> Dictionary:
 func get_state_emoji() -> String:
 	return interaction.get_interaction_emoji()
 
-func get_state_description() -> String:
-	if interaction and context:
-		return "%s with %s" % [interaction.name.capitalize(), context.get_display_name()]
-	return ""
+func get_state_description(include_links: bool = false) -> String:
+	if not interaction or not context:
+		return ""
+		
+	var interaction_name = interaction.name.capitalize()
+	
+	# Make interaction name a link if requested and UI exists
+	if include_links and UIElementProvider.has_ui_for_interaction(interaction.name):
+		var link = UILink.interaction(interaction.id, interaction_name)
+		interaction_name = link.to_bbcode()
+	
+	# For multi-party interactions, show participant names instead of redundant interaction name
+	if interaction.participants.size() > 1:
+		var other_participants = interaction.participants.filter(func(p): return p != controller)
+		if other_participants.size() > 0:
+			var names = other_participants.map(func(p): return p.get_display_name())
+			if names.size() == 1:
+				return "%s with %s" % [interaction_name, names[0]]
+			else:
+				return "%s with %d others" % [interaction_name, names.size()]
+	
+	# For single-party interactions with items
+	return "%s with %s" % [interaction_name, context.host.get_display_name() if context.host else "Unknown"]
 
 # Override bid handling to properly manage interaction transitions
 func on_interaction_bid(bid: MultiPartyBid) -> void:

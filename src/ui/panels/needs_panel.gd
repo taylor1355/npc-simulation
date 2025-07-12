@@ -1,4 +1,4 @@
-extends GamepiecePanel
+extends EntityPanel
 
 @onready var needs_container: VBoxContainer = $MarginContainer/NeedsContainer
 

@@ -8,20 +8,6 @@
 - **Expected**: Nameplates should render at the correct depth relative to world elements
 - **Actual**: Nameplates appear between tilemap layers incorrectly
 
-## Conversation System Issues
-
-### Integration Problems with Conversation Flow
-- **Description**: Major issues with conversation system integration causing incorrect state transitions and message blocking
-- **Symptoms**: 
-  - NPCs attempting to wander during active conversations
-  - Message delays not working correctly (messages blocked with "3.0s delay needed")
-  - State transitions happening mid-conversation (moving_to_item_state -> wandering_state during interaction)
-  - Participants not properly maintaining the INTERACTING state
-- **Example Log**: Shows NPC 81000400886 transitioning states and attempting to wander while in a conversation
-- **Impact**: Conversations break down as participants leave or perform other actions mid-conversation
-
-## Visual/Animation Issues
-
 ### NPCs Don't Face Items When Consuming
 - **Description**: NPCs don't turn to face items when consuming them, making the interaction look unnatural
 - **Steps to Reproduce**: Have an NPC consume any item
@@ -49,3 +35,17 @@
 - **Expected**: Panels should correctly resize and reposition to maintain proper layout and proportions
 - **Actual**: Panels resize but with incorrect dimensions or positioning, causing layout issues
 - **Impact**: UI elements may overlap, have incorrect spacing, or not utilize screen space properly
+
+### Scroll Wheel Zooms Game When Scrolling in Floating Windows
+- **Description**: Using the scroll wheel over floating window UI elements (like conversation panels) still zooms the game camera
+- **Steps to Reproduce**: Open a conversation window and try to scroll through messages with the mouse wheel
+- **Expected**: Scroll wheel should only scroll the UI content, not zoom the camera
+- **Actual**: Both scrolling and camera zoom occur simultaneously
+- **Note**: Tab panels correctly block scroll wheel events, but floating windows do not
+
+### NPC Traits Stuck on "Loading..."
+- **Description**: The Traits section in the NPC info panel shows "Loading..." indefinitely
+- **Steps to Reproduce**: Click on any NPC to view their info panel
+- **Expected**: Traits should display the NPC's actual traits
+- **Actual**: Traits section displays "Loading..." and never updates
+- **Likely Cause**: The traits system or backend integration may not be properly implemented

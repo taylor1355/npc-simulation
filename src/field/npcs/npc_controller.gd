@@ -6,14 +6,14 @@ func get_entity_type() -> String:
 	return "npc"
 
 ## Get formatted state information for UI display
-func get_state_info_text() -> String:
+func get_state_info_text(include_links: bool = false) -> String:
 	if not state_machine or not state_machine.current_state:
 		return ""
 	
 	var state = state_machine.current_state
 	var state_name = state.state_name.capitalize()
 	var emoji = state.get_state_emoji()
-	var description = state.get_state_description()
+	var description = state.get_state_description(include_links)
 	
 	var text = "%s %s" % [emoji, state_name]
 	if description:
@@ -21,8 +21,30 @@ func get_state_info_text() -> String:
 	
 	return text
 
+## Get UI-relevant information about this NPC's current state.
+## Extends the base class implementation with NPC-specific state data.
+func get_ui_info() -> Dictionary:
+	var info = super.get_ui_info()
+	
+	# Add state information if available
+	if state_machine:
+		var state_info = state_machine.get_state_info()
+		info[Globals.UIInfoFields.STATE_NAME] = state_info.get("state_name", "")
+		info[Globals.UIInfoFields.STATE_ENUM] = state_info.get("state_enum", "")
+		
+		# Extract interaction name from context data if present
+		var context_data = state_info.get("context_data", {})
+		if context_data.has("interaction_name"):
+			info[Globals.UIInfoFields.INTERACTION_NAME] = context_data["interaction_name"]
+	
+	return info
+
 # Backend NPC state
-var npc_id: String
+var npc_id: String:
+	get:
+		return _gamepiece.entity_id if _gamepiece else ""
+	set(value):
+		push_warning("npc_id is deprecated, use entity_id from gamepiece")
 var npc_client: NpcClientBase
 var event_log: Array[NpcEvent] = []
 var last_processed_event_index: int = -1
@@ -50,6 +72,10 @@ var movement_locked: bool = false
 # Current state data
 var destination: Vector2i
 var current_interaction: Interaction = null
+
+## Override from GamepieceController
+func get_current_interaction() -> Interaction:
+	return current_interaction
 var current_request: InteractionBid = null
 var pending_incoming_bids: Array[InteractionBid] = []
 

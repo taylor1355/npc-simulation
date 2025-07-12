@@ -95,7 +95,8 @@ func handle_act_in_interaction(participant: NpcController, parameters: Dictionar
 	
 	# Add message to conversation history
 	var message_entry = {
-		"speaker": participant.npc_id,
+		"speaker_id": participant.npc_id,
+		"speaker_name": participant.get_display_name(),
 		"message": message,
 		"timestamp": Time.get_unix_time_from_system()
 	}
@@ -107,7 +108,8 @@ func handle_act_in_interaction(participant: NpcController, parameters: Dictionar
 	
 	# Log the message
 	ConversationLogger.log_conversation_event("MESSAGE", conversation_id, {
-		"speaker": participant.npc_id,
+		"speaker_id": participant.npc_id,
+		"speaker_name": participant.get_display_name(),
 		"message": message
 	})
 	
@@ -144,6 +146,17 @@ func _on_end(context: Dictionary) -> void:
 
 func get_interaction_emoji() -> String:
 	return "💬"
+
+## Get formatted messages for UI display
+func get_messages() -> Array[Dictionary]:
+	var formatted_messages: Array[Dictionary] = []
+	for entry in conversation_history:
+		formatted_messages.append({
+			"speaker_name": entry.get("speaker_name", "Unknown"),
+			"content": entry.message,
+			"timestamp": entry.timestamp - started_at  # Relative to conversation start
+		})
+	return formatted_messages
 
 # Override to add participant state validation
 func send_observations() -> void:

@@ -1,6 +1,6 @@
-extends GamepiecePanel
+extends EntityPanel
 
-@onready var traits_text: RichTextLabel = $MarginContainer/TraitsText
+@onready var traits_text: RichTextLabelLink = $MarginContainer/TraitsText
 
 func is_compatible_with(controller: GamepieceController) -> bool:
 	return controller is NpcController
@@ -56,8 +56,8 @@ func _display_info(traits: Array = []) -> void:
 		
 	var text = "[b]Name:[/b] " + npc_controller.get_display_name() + "\n"
 	
-	# Add state info from controller
-	var state_info = npc_controller.get_state_info_text()
+	# Add state info from controller with links enabled
+	var state_info = npc_controller.get_state_info_text(true)
 	if state_info:
 		text += "[b]State:[/b] " + state_info + "\n"
 	

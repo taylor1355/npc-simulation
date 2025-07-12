@@ -39,6 +39,22 @@ func get_cell_position() -> Vector2i:
 func get_display_name() -> String:
 	return _gamepiece.display_name if _gamepiece else ""
 
+## Get UI-relevant information about this controller's current state.
+## Used by the UI system to determine which behaviors to trigger.
+func get_ui_info() -> Dictionary:
+	return {
+		Globals.UIInfoFields.ENTITY_TYPE: get_entity_type()
+	}
+
+## Get the current interaction this entity is engaged in.
+## Override in subclasses that support interactions.
+func get_current_interaction() -> Interaction:
+	return null
+
+## Get the gamepiece this controller manages.
+func get_gamepiece() -> Gamepiece:
+	return _gamepiece
+
 ## Signal emitted when an interaction finishes - unified for all entity types
 signal interaction_finished(interaction_name: String, npc: NpcController, payload: Dictionary)
 

@@ -52,7 +52,7 @@ func get_context_data() -> Dictionary:
 func get_state_emoji() -> String:
 	return "🚶"
 
-func get_state_description() -> String:
+func get_state_description(include_links: bool = false) -> String:
 	if destination:
 		return "Destination: (%d, %d)" % [destination.x, destination.y]
 	return ""

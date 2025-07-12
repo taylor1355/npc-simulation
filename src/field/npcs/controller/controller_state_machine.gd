@@ -1,12 +1,12 @@
 class_name ControllerStateMachine extends RefCounted
 
 enum State {
-    IDLE,
-    MOVING,
-    REQUESTING,
-    INTERACTING,
-    WANDERING,
-    WAITING
+	IDLE,
+	MOVING,
+	REQUESTING,
+	INTERACTING,
+	WANDERING,
+	WAITING
 }
 
 var current_state: BaseControllerState

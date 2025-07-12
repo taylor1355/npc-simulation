@@ -286,7 +286,7 @@ func on_interaction_rejected(request: InteractionBid, reason: String) -> void:
 func get_state_emoji() -> String:
 	return "🤔"
 
-func get_state_description() -> String:
+func get_state_description(include_links: bool = false) -> String:
 	if interaction_name and target_controller:
 		return "Requesting %s with %s" % [interaction_name, target_controller.get_display_name()]
 	return "Requesting interaction..."

@@ -3,6 +3,10 @@ class_name ItemController extends GamepieceController
 const GROUP_NAME: = "_ITEM_CONTROLLER_GROUP"
 
 var current_interaction: Interaction = null
+
+## Override from GamepieceController
+func get_current_interaction() -> Interaction:
+	return current_interaction
 var interacting_npc: NpcController = null
 var interaction_time: float = 0.0
 
@@ -12,6 +16,33 @@ func _ready() -> void:
 
 func get_entity_type() -> String:
 	return "item"
+
+## Get UI-relevant information about this item's current state.
+## Extends the base class implementation with item-specific state data.
+func get_ui_info() -> Dictionary:
+	var info = super.get_ui_info()
+	
+	# Add current interaction information if available
+	if current_interaction:
+		info[Globals.UIInfoFields.INTERACTION_NAME] = current_interaction.name
+		info[Globals.UIInfoFields.INTERACTION_ACTIVE] = true
+		info[Globals.UIInfoFields.INTERACTION_TIME] = interaction_time
+		
+		# Add interacting NPC info if available
+		if interacting_npc:
+			info[Globals.UIInfoFields.INTERACTING_WITH] = interacting_npc.get_display_name()
+			info[Globals.UIInfoFields.INTERACTING_NPC_ID] = interacting_npc.npc_id
+	else:
+		info[Globals.UIInfoFields.INTERACTION_ACTIVE] = false
+	
+	# Add component information for UI hints
+	var component_types = []
+	for component in components:
+		if component is ItemComponent:
+			component_types.append(component.get_component_name())
+	info[Globals.UIInfoFields.COMPONENT_TYPES] = component_types
+	
+	return info
 
 func add_component_node(component: GamepieceComponent) -> void:
 	super.add_component_node(component)
@@ -51,10 +82,12 @@ func handle_interaction_bid(request: InteractionBid) -> void:
 			# Accept the cancel request
 			request.accepted.connect(
 				func():
+					print("[DEBUG] ItemController: Cancel callback executing for %s" % current_interaction.name)
 					# End the interaction using the lifecycle method
 					current_interaction._on_end({"bid": request})
 					_on_interaction_finished(current_interaction.name, {})
 			)
+			print("[DEBUG] ItemController: Accepting cancel bid for %s" % request.interaction_name)
 			request.accept()
 		else:
 			request.reject("No matching interaction to cancel")

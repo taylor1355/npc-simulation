@@ -1,4 +1,4 @@
-extends GamepiecePanel
+extends EntityPanel
 
 @onready var info_text: RichTextLabel = $MarginContainer/InfoText
 
