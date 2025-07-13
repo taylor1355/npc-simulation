@@ -6,11 +6,13 @@
 The `Gamepiece` class (extends `Node2D`) is the fundamental building block for any entity that exists and moves on the gameboard grid. It manages its logical grid position (`cell`) separately from its visual representation, allowing for smooth movement.
 
 **Key Properties & Features:**
+*   **Identity:**
+    *   `entity_id: String`: Unique identifier generated automatically via `IdGenerator.generate_entity_id()`. Used by UI and other systems for persistent references.
+    *   `@export var display_name: String`: Human-readable name for UI display.
 *   **Grid Position:**
     *   `cell: Vector2i`: The gamepiece's current logical cell on the `Gameboard`. Can be set directly via `set_cell(Vector2i)` for instant teleportation.
     *   `direction: Vector2`: A normalized vector indicating the gamepiece's facing direction.
 *   **Configuration Exports:**
-    *   `@export var display_name: String`: For UI and identification.
     *   `@export var gameboard: Gameboard`: A required reference to the active `Gameboard` resource.
     *   `@export var blocks_movement: bool`: If `true`, this gamepiece (if it has a `CollisionObject2D`) will be considered an obstacle by other gamepieces. Changes emit `blocks_movement_changed`.
     *   `@export var move_speed: float`: Speed in pixels/second for visual movement along a path (default: 64.0).

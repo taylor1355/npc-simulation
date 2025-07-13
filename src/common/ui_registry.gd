@@ -13,12 +13,12 @@ extends Node
 class UIElementInfo:
 	var id: String
 	var element_type: Globals.UIElementType
-	var owner_gamepiece: Gamepiece
+	var owner_entity_id: String
 	
-	func _init(p_id: String, p_type: Globals.UIElementType, p_owner: Gamepiece):
+	func _init(p_id: String, p_type: Globals.UIElementType, p_owner_id: String):
 		id = p_id
 		element_type = p_type
-		owner_gamepiece = p_owner
+		owner_entity_id = p_owner_id
 
 # Behavior registrations - maps trigger conditions to behaviors
 var _behavior_registry: BehaviorRegistry
@@ -72,9 +72,14 @@ func get_state_tracker() -> UIStateTracker:
 	return _ui_state_tracker
 
 ## Register a UI element 
-func register_ui_element(element_type: Globals.UIElementType, owner_gamepiece: Gamepiece) -> String:
+func register_ui_element(element_type: Globals.UIElementType, owner_entity_id: String) -> String:
+	var existing_id = find_ui_element(owner_entity_id, element_type)
+	if existing_id:
+		push_warning("UI element type %s already registered for entity %s" % [element_type, owner_entity_id])
+		return existing_id
+	
 	var id = IdGenerator.generate_ui_element_id()
-	var info = UIElementInfo.new(id, element_type, owner_gamepiece)
+	var info = UIElementInfo.new(id, element_type, owner_entity_id)
 	_ui_elements[id] = info
 	return id
 
@@ -85,6 +90,13 @@ func get_ui_element(id: String) -> UIElementInfo:
 ## Unregister a UI element
 func unregister_ui_element(id: String) -> void:
 	_ui_elements.erase(id)
+
+## Find a UI element by owner and type
+func find_ui_element(entity_id: String, element_type: Globals.UIElementType) -> String:
+	for info in _ui_elements.values():
+		if info.owner_entity_id == entity_id and info.element_type == element_type:
+			return info.id
+	return ""
 
 # Register all behaviors from UIBehaviorConfig
 func _register_configured_behaviors() -> void:
@@ -193,27 +205,49 @@ func _handle_focus_changed(event: Event) -> void:
 class BehaviorRegistry extends RefCounted:
 	enum EventType { CLICK, HOVER_START, HOVER_END, FOCUS }
 	
-	# Storage: Array of {trigger, behavior} pairs
-	var _registrations: Array = []
+	const UNIVERSAL_KEY = "*"  # Special key for behaviors that apply to all types
+	
+	# Single storage structure organized by entity type
+	var _behaviors: Dictionary = {}  # entity_type -> Array[{trigger, behavior}]
+	
+	func _init():
+		# Initialize universal behaviors array
+		_behaviors[UNIVERSAL_KEY] = []
 	
 	## Register a behavior for a trigger condition
 	func register(trigger: UIBehaviorTrigger, behavior: BaseUIBehavior) -> void:
-		_registrations.append({
+		if not trigger:
+			push_error("Cannot register behavior with null trigger")
+			return
+		if not behavior:
+			push_error("Cannot register null behavior")
+			return
+		
+		var registration = {
 			"trigger": trigger,
 			"behavior": behavior
-		})
+		}
+		
+		# Use entity type as key, or universal key for type-agnostic behaviors
+		var key = trigger.entity_type if trigger.entity_type != "" else UNIVERSAL_KEY
+		
+		if not _behaviors.has(key):
+			_behaviors[key] = []
+		_behaviors[key].append(registration)
 	
 	## Find all behaviors matching the controller info and event
 	func find_matching_behaviors(controller_info: Dictionary, event_type: EventType) -> Array[BaseUIBehavior]:
 		var matching: Array[BaseUIBehavior] = []
-		
-		# Convert EventType to string for trigger matching
 		var event_string = _event_type_to_string(event_type)
+		var entity_type = controller_info.get(Globals.UIInfoFields.ENTITY_TYPE, "")
 		
-		for registration in _registrations:
-			var trigger = registration.trigger as UIBehaviorTrigger
-			if trigger.matches(controller_info, event_string):
-				matching.append(registration.behavior)
+		# Check both specific type and universal behaviors
+		for key in [entity_type, UNIVERSAL_KEY]:
+			if _behaviors.has(key):
+				for registration in _behaviors[key]:
+					var trigger = registration.trigger as UIBehaviorTrigger
+					if trigger.matches(controller_info, event_string):
+						matching.append(registration.behavior)
 		
 		return matching
 	
@@ -301,10 +335,14 @@ class UIStateTracker extends RefCounted:
 	
 	## Track a window
 	func track_window(window_id: String, window: Control) -> void:
+		# Cleanup old window if exists
+		if _open_windows.has(window_id):
+			var old_window = _open_windows[window_id]
+			if old_window and is_instance_valid(old_window) and old_window.tree_exited.is_connected(_on_window_freed.bind(window_id)):
+				old_window.tree_exited.disconnect(_on_window_freed.bind(window_id))
+		
 		_open_windows[window_id] = window
-		# Auto-cleanup when window is freed
-		if not window.tree_exited.is_connected(_on_window_freed.bind(window_id)):
-			window.tree_exited.connect(_on_window_freed.bind(window_id))
+		window.tree_exited.connect(_on_window_freed.bind(window_id))
 	
 	func _on_window_freed(window_id: String) -> void:
 		_open_windows.erase(window_id)

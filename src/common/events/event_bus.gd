@@ -31,7 +31,7 @@ func _ready() -> void:
 				var gp_event := event as GamepieceEvents.CellChangedEvent
 				_cell_changes_this_frame.append(gp_event.gamepiece.cell)
 	)
-	set_process_priority(99999999)  # Run last in frame
+	set_process_priority(Globals.ProcessPriorities.EVENT_BUS_CLEANUP)  # Run last in frame
 
 func _process(_delta: float) -> void:
 	_cell_changes_this_frame.clear()

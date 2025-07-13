@@ -67,7 +67,7 @@ Manages the invitation protocol for multi-party interactions.
 
 **Invitation Flow:**
 1. Initiator creates `MultiPartyBid` with invited participants
-2. Each invited NPC receives `InteractionRequestObservation`
+2. Each invited NPC receives `InteractionBidObservation`
 3. NPCs can accept or reject the invitation
 4. If all accept within timeout, bid is accepted
 5. If any reject or timeout expires, bid is rejected

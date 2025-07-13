@@ -5,6 +5,13 @@ const GAMEPIECE_META_KEY = "gamepiece"  # Metadata key for storing gamepiece ref
 const GAMEPIECE_GROUP = "_GAMEPIECE_GROUP"  # Group name for all gamepieces
 const GAMEPIECE_AREA_NAMES = ["CollisionArea", "VisionArea", "ClickArea"]  # Area2D node names that need gamepiece metadata
 
+# Process priorities - lower numbers execute first
+class ProcessPriorities:
+	const SIMULATION_TIME = -100  # Time system updates before gameplay
+	const DEFAULT = 0  # Default Godot priority
+	const UI_UPDATE = 100  # UI updates after gameplay logic
+	const EVENT_BUS_CLEANUP = 99999999  # EventBus frame cleanup runs last
+
 # UI Info field names - used by controllers and UI system for consistent data exchange
 class UIInfoFields:
 	# Common fields for all entities

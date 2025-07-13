@@ -1,69 +1,68 @@
 [gd_scene load_steps=6 format=3 uid="uid://bve4u0hewur8"]
 
-[ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="1_6gkxm"]
-[ext_resource type="Script" uid="uid://wapcjmgi1jqa" path="res://src/ui/working_memory_panel.gd" id="2_memory"]
+[ext_resource type="PackedScene" uid="uid://bottom_ui" path="res://src/ui/bottom_ui.tscn" id="1_bottom"]
+[ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="2_needbar"]
+[ext_resource type="Script" uid="uid://wapcjmgi1jqa" path="res://src/ui/working_memory_panel.gd" id="3_memory"]
 [ext_resource type="Script" uid="uid://xy6jv38271vm" path="res://src/ui/tab_container.gd" id="4_tab"]
 [ext_resource type="PackedScene" uid="uid://debug_console" path="res://src/ui/debug_console.tscn" id="5_console"]
 [ext_resource type="Script" uid="uid://w58e04f5bf27" path="res://src/ui/floating_window_container.gd" id="6_floating"]
 
 [node name="CanvasLayer" type="CanvasLayer"]
 
-[node name="TabContainer" type="TabContainer" parent="."]
-anchors_preset = -1
-anchor_top = 0.75
-anchor_right = 0.251
+[node name="BottomUI" parent="." instance=ExtResource("1_bottom")]
+
+[node name="TabContainer" parent="BottomUI/VBoxContainer/TabSection" index="0"]
+script = ExtResource("4_tab")
+
+[node name="Needs" type="Panel" parent="BottomUI/VBoxContainer/TabSection/TabContainer"]
+layout_mode = 2
+mouse_filter = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-current_tab = 0
-mouse_filter = 0
-script = ExtResource("4_tab")
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 
-[node name="Needs" type="Panel" parent="TabContainer"]
-layout_mode = 2
-mouse_filter = 0
-metadata/_tab_index = 0
-
-[node name="NeedBars" type="VBoxContainer" parent="TabContainer/Needs"]
+[node name="NeedBars" type="VBoxContainer" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs/MarginContainer"]
 mouse_filter = 2
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.02
-anchor_right = 0.85
-anchor_bottom = 1.0
-offset_right = 9.0
-grow_vertical = 2
+layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="HungerBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+[node name="HungerBar" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs/MarginContainer/NeedBars" instance=ExtResource("2_needbar")]
 layout_mode = 2
 need_id = "hunger"
 label_text = "Hunger"
 
-[node name="HygieneBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+[node name="HygieneBar" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs/MarginContainer/NeedBars" instance=ExtResource("2_needbar")]
 layout_mode = 2
 need_id = "hygiene"
 label_text = "Hygiene"
 
-[node name="FunBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+[node name="FunBar" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs/MarginContainer/NeedBars" instance=ExtResource("2_needbar")]
 layout_mode = 2
 need_id = "fun"
 label_text = "Fun"
 
-[node name="EnergyBar" parent="TabContainer/Needs/NeedBars" instance=ExtResource("1_6gkxm")]
+[node name="EnergyBar" parent="BottomUI/VBoxContainer/TabSection/TabContainer/Needs/MarginContainer/NeedBars" instance=ExtResource("2_needbar")]
 layout_mode = 2
 need_id = "energy"
 label_text = "Energy"
 
-[node name="WorkingMemory" type="Panel" parent="TabContainer"]
+[node name="WorkingMemory" type="Panel" parent="BottomUI/VBoxContainer/TabSection/TabContainer"]
 visible = false
 layout_mode = 2
 mouse_filter = 0
-metadata/_tab_index = 1
-script = ExtResource("2_memory")
+script = ExtResource("3_memory")
 
-[node name="MarginContainer" type="MarginContainer" parent="TabContainer/WorkingMemory"]
+[node name="MarginContainer" type="MarginContainer" parent="BottomUI/VBoxContainer/TabSection/TabContainer/WorkingMemory"]
 mouse_filter = 2
 layout_mode = 1
 anchors_preset = 15
@@ -76,7 +75,7 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="WorkingMemoryText" type="RichTextLabel" parent="TabContainer/WorkingMemory/MarginContainer"]
+[node name="WorkingMemoryText" type="RichTextLabel" parent="BottomUI/VBoxContainer/TabSection/TabContainer/WorkingMemory/MarginContainer"]
 layout_mode = 2
 focus_mode = 2
 mouse_filter = 1
@@ -93,3 +92,5 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("6_floating")
+
+[editable path="BottomUI"]

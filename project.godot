@@ -23,6 +23,7 @@ Globals="*res://src/common/globals.gd"
 InteractionRegistry="*res://src/common/interaction_registry.gd"
 UIRegistry="*res://src/common/ui_registry.gd"
 UIElementProvider="*res://src/ui/ui_element_provider.gd"
+SimulationTime="*res://src/common/simulation_time.gd"
 
 [dialogic]
 

@@ -77,12 +77,12 @@ func _setup_ui_elements() -> void:
 	
 	# Create and setup name click area
 	name_area = _create_click_area(name_label, "Name")
-	_name_ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.NAMEPLATE_LABEL, gamepiece)
+	_name_ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.NAMEPLATE_LABEL, gamepiece.entity_id)
 	_connect_click_area(name_area, _name_ui_element_id, _on_name_hover)
 	
 	# Create and setup emoji click area  
 	emoji_area = _create_click_area(emoji_label, "Emoji")
-	_emoji_ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.NAMEPLATE_EMOJI, gamepiece)
+	_emoji_ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.NAMEPLATE_EMOJI, gamepiece.entity_id)
 	_connect_click_area(emoji_area, _emoji_ui_element_id, _on_emoji_hover)
 
 func _create_click_area(target: Control, suffix: String) -> Area2D:

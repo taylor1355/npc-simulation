@@ -13,9 +13,12 @@
 4. Navigate the view:
    - Right-click drag to pan camera
    - Mouse wheel to zoom in/out
-   - Press A to anchor camera to selected NPC
+   - Press Space to anchor camera to selected NPC
 5. Click NPCs to view their state in UI panels
-6. Watch NPCs autonomously interact with items  
+6. Watch NPCs autonomously interact with items
+   - State emoji shows above each NPC: 🧍 (idle), 🚶 (moving), 🎲 (wandering), ⏳ (waiting), 🤔 (requesting)
+   - During interactions: 💬 (conversation), 🍽️ (consuming), 🪑 (sitting), 🔧 (other interactions)
+   - Click interaction emoji to open interaction panel (if available)
 7. Press ` (backtick) to toggle debug console
    - Use "backend mock" or "backend mcp" to switch AI backends
    - Type "help" for available commands

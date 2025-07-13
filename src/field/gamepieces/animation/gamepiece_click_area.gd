@@ -16,7 +16,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var gamepiece = _get_gamepiece()
 	if gamepiece:
-		ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.CLICK_AREA, gamepiece)
+		ui_element_id = UIRegistry.register_ui_element(Globals.UIElementType.CLICK_AREA, gamepiece.entity_id)
 
 
 func _get_gamepiece() -> Gamepiece:

@@ -5,18 +5,25 @@
 ### 1. Debug Logging Cleanup and Standardization
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
 
-**Problem**: 64+ instances of inconsistent logging patterns throughout codebase with no centralized control:
-- Mock backend has excessive debug prints (20+ print statements)
-- MCP client mixes `print()`, `printerr()`, `error.emit()`
-- No consistent debug levels or toggles
+**Problem**: Inconsistent logging patterns throughout codebase with no centralized control:
+- MCP client has 13 debug prints with conditional `debug_mode` flag
+- Different systems use mix of `print()`, `printerr()`, `push_error()`, `push_warning()`, `error.emit()`
+- No consistent debug levels or global toggles
+- State machine and interaction logging scattered without control
 
 **Current Issues**:
 ```gdscript
-# Different patterns throughout:
-print("Debug info")           # Plain print
-printerr("Error occurred")    # Error print  
-error.emit("Error message")   # Signal emission
-push_error("Invalid config")  # Engine error
+# mcp_npc_client.gd (13 instances)
+if debug_mode:
+    print("Sending request to %s: %s" % [endpoint, JSON.stringify(data)])
+
+# Various validation code
+push_error("Invalid property type")  # type_converters.gd
+push_warning("Property not found")   # type_converters.gd
+
+# Debug prints without control
+print("Component interaction '%s' completed" % interaction_name)  # npc_controller.gd:239
+print("State transition")  # interacting_state.gd:38,41,44
 ```
 
 **Solution**: Create centralized logging system:
@@ -27,22 +34,22 @@ extends RefCounted
 
 enum Level { DEBUG, INFO, WARN, ERROR }
 
-static var debug_enabled: bool = false
+static var enabled: bool = true
 static var min_level: Level = Level.INFO
+static var context_filters: Array[String] = []  # Only show specific contexts
 
 static func debug(msg: String, context: String = "") -> void:
-    if debug_enabled and min_level <= Level.DEBUG:
-        print("[DEBUG][%s] %s" % [context, msg])
+    _log(Level.DEBUG, msg, context)
 
 static func error(msg: String, context: String = "") -> void:
-    if min_level <= Level.ERROR:
-        printerr("[ERROR][%s] %s" % [context, msg])
+    _log(Level.ERROR, msg, context)
 ```
 
 **Cleanup Priority**:
-1. Mock backend (remove excessive debugging)
-2. MCP client (standardize error reporting)
-3. Component validation (consistent error messages)
+1. MCP client (13 debug prints)
+2. Interacting state (3 debug prints)
+3. NPC controller state logging
+4. Component validation (convert push_error/warning)
 
 
 ## Medium Leverage Issues
@@ -98,6 +105,12 @@ class_name InteractionEventPayload extends RefCounted:
 ```
 
 **Benefits**: Self-documenting code, better IDE support, compile-time validation, clearer interfaces
+
+**Implementation Considerations**:
+- Start with the highest-impact areas first (Action parameters, NpcEvent payloads)
+- Consider using a factory pattern for creating typed parameters from dictionaries during migration
+- Maintain backward compatibility during transition by supporting both dictionary and typed versions
+- Focus on external APIs first (what backends see) before internal usage
 
 ### 3. Terminology Taxonomy and Naming Clarity
 **Impact**: High | **Effort**: High | **Leverage**: 🔥🔥🔥
@@ -212,56 +225,62 @@ static func subscribe_to_types(types: Array[Event.Type], handler: Callable) -> v
 - Eliminated duplicate conversation bug through context-based duplicate prevention
 - Removed temporary interaction object creation during discovery
 - Standardized interaction lifecycle signals
+- ✅ **Action class now uses `entity_name` instead of `item_name`**
+- ✅ **VisionObservation class updated to use unified `visible_entities` array**
 
 **Remaining Issues**:
-- **Vision System Separation**: Still separates NPCs and Items into different arrays instead of unified entity list
-- **Parameter Terminology**: Still uses "item_name" parameters instead of generic "entity_name" 
-- **NPC Single-Party Limitations**: NPCs reject single-party interactions ("NPCs currently only support multi-party interactions")
-- **Scattered Item-Specific Terminology**: References to "items" throughout codebase that should be generic "entities"
+- **Vision Manager Still Separated**: `VisionManager` maintains separate `seen_npcs` and `seen_items` dictionaries
+- **Separate Vision Methods**: Still has `get_items_by_distance()` and `get_npcs_by_distance()` instead of unified method
+- **NPC Single-Party Limitations**: NPCs still reject single-party interactions ("NPCs currently only support multi-party interactions")
+- **Data Collection Separation**: `npc_controller.gd` still collects item and NPC data separately before combining
 
 **Current Issues**:
 ```gdscript
-# Vision observation still separates entities unnecessarily
-{
-    "visible_items": [...],
-    "visible_npcs": [...]  # Should be unified as "visible_entities"
-}
+# VisionManager still tracks entities separately
+var seen_items: Dictionary = {}  # item_name -> BaseItem
+var seen_npcs: Dictionary = {}    # npc_id -> NPC
 
-# Parameters still assume item-centric terminology
-{
-    "item_name": "Chair"  # Should be "entity_name": "Chair"
-}
+# Separate methods for getting entities
+func get_items_by_distance() -> Array[BaseItem]
+func get_npcs_by_distance() -> Array[NPC]
 
-# NPCs can't be single-party interaction targets
-func handle_interaction_bid(request: InteractionBid) -> void:
-    if not request is MultiPartyBid:
-        request.reject("NPCs currently only support multi-party interactions")
+# NPCs can't be single-party interaction targets (npc_controller.gd:452)
+if not request is MultiPartyBid:
+    request.reject("NPCs currently only support multi-party interactions")
 ```
 
 **Remaining Solution**:
-- Unify vision observations into single `visible_entities` array with type field
-- Rename interaction parameters from "item_name" to "entity_name"
+- Refactor VisionManager to track all entities in single dictionary
+- Create unified `get_entities_by_distance()` method
 - Enable NPCs as single-party interaction targets
-- Audit and update item-specific terminology to be entity-generic
+- Update data collection in npc_controller to handle entities uniformly
 
 **Benefits**: Complete entity polymorphism, easier to add new entity types, cleaner API contracts
 
 ## Implementation Priority
 
-### Phase 1: Critical Issues
-1. **Mock Backend Client Architecture Duplication** - Enables core business model
-2. **Debug Logging Standardization** - Major maintainability improvement
+### Phase 1: Critical Issues (Business Model Blockers)
+1. **Mock Backend Client Architecture Duplication** (#20) - Blocks distributed compute business model
+2. **ID-First Architecture Completion** (#12) - Blocks multiplayer and distributed compute features
+3. **Debug Logging Standardization** (#1) - Major maintainability improvement
 
 ### Phase 2: Type Safety & Patterns
-3. **Variant Usage Investigation** - Better type contracts
-4. **Event Handling Consolidation** - Reduce boilerplate
+4. **Variant Usage Struct Classes** (#2) - Better type contracts
+5. **Event Handling Consolidation** (#4) - Reduce boilerplate
+6. **Fragile Initialization Dependencies** (#18) - System reliability
+7. **Complete UI System Migration** (#21) - Remove duplicates
 
-### Phase 3: Large Refactoring
-5. **Terminology Taxonomy** - Major naming clarity project
-6. **NPC and Item Interaction Unification** - Major architectural improvement
-7. **Physics Layer Constants** - Minor cleanup
-8. **Vision Manager Initialization** - Physics timing issues
-9. **Need Effect Data Flow** - Centralize need logic (see below)
+### Phase 3: Architecture Improvements
+8. **Terminology Taxonomy** (#3) - Major naming clarity project
+9. **Complete Entity Polymorphism** (#7) - Vision system unification
+10. **Interaction Bid Simplification** (#17) - Reduce complexity
+11. **Need Effect Data Flow** (#9) - Centralize need logic
+
+### Phase 4: Polish & Minor Issues
+12. **Game Clock Usage** (#11) - Update timestamp usage
+13. **Z-Index Management** (#18) - Centralized layer system
+14. **Conversation Visual Feedback** (#22) - Better UX
+15. **Physics Layer Constants** (#5) - Minor cleanup
 
 ## Risk Assessment
 
@@ -313,45 +332,30 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 
 **Solution**: Remove or convert to proper logging system (see Debug Logging Standardization)
 
-### 11. Game Clock System
-**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
+### 11. Game Clock System Partially Implemented
+**Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
 
-**Problem**: Using `OS.get_ticks_msec()` for timestamps prevents proper game pause/speed control:
-- `conversation_interaction.gd` uses system time for message timestamps
-- Cannot pause or speed up game time
-- Makes replays and save/load more complex
+**Problem**: SimulationTime system exists but not fully utilized:
+- ✅ `SimulationTime` singleton implemented with proper game time, pause, and speed control
+- ❌ `conversation_interaction.gd` still uses `Time.get_unix_time_from_system()` for timestamps (lines 33, 94, 101, 132)
+- ❌ Message timestamps not using simulation time
 
-**Solution**: Implement centralized game clock that supports:
-- Pause functionality
-- Speed multipliers
-- Consistent time across all systems
-- Proper serialization for save/load
-
-### 12. Vision Observation Entity Separation
-**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
-
-**Problem**: VisionObservation separates items and NPCs into different arrays:
+**Current Issue**:
 ```gdscript
-{
-    "visible_items": [...],
-    "visible_npcs": [...]
-}
+# conversation_interaction.gd still uses OS time
+var timestamp := Time.get_unix_time_from_system()  # Should use SimulationTime
 ```
 
-**Issues**:
-- Requires special handling for each entity type
-- Duplicates logic for similar operations
-- Makes it harder to add new entity types
-
-**Solution**: Unify into single array with type field:
+**Solution**: Update remaining timestamp usage to use SimulationTime:
 ```gdscript
-{
-    "visible_entities": [
-        {"type": "item", "name": "Chair", ...},
-        {"type": "npc", "name": "Alice", ...}
-    ]
-}
+# Replace with:
+var timestamp := SimulationTime.get_unix_timestamp()
+# or for relative time:
+var elapsed := SimulationTime.get_elapsed_seconds()
 ```
+
+**Benefits**: Proper pause support, deterministic replays, consistent time across systems
+
 
 ### 13. Conversation State Validation
 **Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
@@ -366,46 +370,64 @@ Centralize need effect evaluation in Needs class, make components expose need ef
 - Conversation join logic to check existing conversations
 - State machine transitions
 
-### 14. Gamepiece Identification System
-**Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥
+### 12. ID-First Architecture (Partially Resolved)
+**Impact**: Very High | **Effort**: High | **Leverage**: 🔥🔥🔥🔥🔥
 
-**Problem**: Gamepieces currently use `display_name` for both UI display and identification, which creates ambiguity:
+**Progress**: ✅ **Entity ID system implemented** (January 2025)
+- Added `entity_id` property to Gamepiece base class with auto-generation
+- Made `npc_id` a property that returns `gamepiece.entity_id` for consistency
+- Updated SpriteColorManager to use entity IDs as keys
+- UIRegistry tracks UI elements by owner entity ID
 
-**Current Issues**:
-- Multiple items can have the same display_name (e.g., multiple "Chair" items)
-- Code uses display_name for finding specific items (_find_item_by_name)
-- No unique identifier for gamepieces beyond instance_id
-- Confusion between node name and display_name properties
+**Remaining Problem**: The codebase still passes object references directly instead of using IDs with registry lookups. This blocks critical features for multiplayer and distributed compute.
 
-**Example Problem**:
+**Current Architecture Limitations**:
+- Systems pass object references, creating tight coupling and memory leak risks
+- No central registry for entity lookups, making network synchronization impossible
+- O(n) searches using non-unique display names instead of O(1) ID lookups
+- Cannot serialize game state efficiently for save/load or network transmission
+- Incompatible with SpacetimeDB's ID-based architecture for multiplayer
+
+**Business Impact**: 
+This blocks the core distributed compute model where players contribute MCP servers:
+- Cannot transfer NPC control between servers without stable IDs
+- Cannot track which player server processed each decision for rewards
+- Cannot scale to 100-1000 NPCs across distributed compute nodes
+
+**Proposed ID-First Architecture**:
 ```gdscript
-# Multiple chairs with same name
-func _find_item_by_name(item_name: String) -> ItemController:
-    for item in seen_items:
-        if item._gamepiece.display_name == item_name:  # Returns first match only!
-            return item
+# Central registry for all game entities
+class_name EntityRegistry extends Node
+var _entities: Dictionary[String, EntityRecord] = {}
+
+# Systems use IDs instead of references
+UIRegistry.set_selection(entity_id)  # Not gamepiece reference
+InteractionRegistry.start_interaction(initiator_id, target_id)
+EventBus.dispatch_entity_moved(entity_id, new_position)
+
+# Network-ready from day one
+send_to_server({"entity": entity_id, "action": "move", "target": cell})
 ```
 
-**Proposed Solution**:
-```gdscript
-class_name Gamepiece extends Node2D
+**Benefits for Multiplayer & Distributed Compute**:
+- **Network Efficiency**: Send IDs instead of serializing objects (90%+ bandwidth reduction)
+- **State Synchronization**: All clients reference same entities by ID
+- **Distributed Authority**: Track which MCP server controls each entity
+- **Save/Load**: Simple ID-based serialization instead of complex object graphs
+- **Memory Safety**: Weak references prevent leaks, systems handle missing entities gracefully
 
-## Unique identifier for this gamepiece instance
-@export var gamepiece_id: String = ""  # Auto-generated if empty
+**Recommended Approach**:
+1. Implement EntityRegistry alongside existing systems
+2. Migrate subsystems incrementally (UI → Events → Interactions)
+3. Extend pattern to other systems (interactions, UI elements, etc.)
+4. Add network message schemas using IDs
+5. Implement authority tracking for distributed compute
 
-## Display name shown in UI. May not be unique.
-@export var display_name: String = ""
-
-func _ready():
-    if gamepiece_id.is_empty():
-        gamepiece_id = IdGenerator.generate_id("gamepiece")
-```
-
-**Benefits**:
-- Clear separation between identification (gamepiece_id) and display (display_name)
-- Ability to have multiple items with same display name
-- Unambiguous references in code
-- Better support for save/load systems in the future
+**Code Locations Needing EntityRegistry**:
+- `UILink._find_gamepiece_by_entity_id()` - O(n) search through all gamepieces
+- `OpenLinkBehavior._find_gamepiece_by_entity_id()` - Duplicate O(n) search
+- Vision system entity lookups
+- NPC target finding by name
 
 ### 15. Interaction Base Class Responsibilities
 **Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
@@ -517,11 +539,62 @@ var parent_gamepiece: Gamepiece:
 - Clean property access syntax
 - Can still detect and log errors when they occur
 
+### 21. New UI System Technical Debt
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥🔥
+
+**Problem**: The new UI system has incomplete migrations and missing features:
+
+**Issues Found**:
+- **Duplicate Behavior Classes**: `OpenUIBehavior` (old) and `OpenPanelBehavior` (new) coexist
+- **Missing Implementations**: Tooltip system placeholder, resize handles not implemented
+- **No Z-Layer Management**: Hardcoded z-index values (floating windows = 10)
+- **Object References**: UI system passes object references instead of IDs
+- **Missing Documentation**: Referenced UI docs don't exist (ui/overview.md, ui/panels.md)
+
+**Current State**:
+```gdscript
+# Duplicate behavior classes
+OpenUIBehavior  # Hardcoded for NPCs
+OpenPanelBehavior  # Generic configuration-based
+
+# Placeholder implementation
+func display_tooltip(text: String, position: Vector2) -> void:
+    # TODO: Implement tooltip display
+    pass
+```
+
+**Solution**: Complete migration to new behavior system, implement missing features, create documentation
+
+### 22. Conversation Visual Feedback
+**Impact**: Low | **Effort**: Low | **Leverage**: 🔥🔥
+
+**Problem**: Limited visual feedback during interactions:
+- Conversation emoji only shown in nameplate, not floating above NPCs
+- No visual handlers for consume/sit interactions
+- No generic emoji display system for interactions
+
+**Solution**: Create generic emoji visual handler that shows interaction emojis above participants
+
+### 23. Component Property Validation Timing
+**Impact**: Medium | **Effort**: Low | **Leverage**: 🔥🔥
+
+**Problem**: PropertySpec validation happens at configuration time, but no runtime validation:
+- Components can have properties modified after initialization
+- No validation when properties change at runtime
+- Type safety only enforced during initial setup
+
+**Solution**: Add property setters with validation, ensure type safety throughout component lifecycle
+
 ## Conclusion
 
-The highest-leverage improvements now focus on code quality and maintainability. With the interaction system recently refactored, priorities shift to establishing consistent patterns (logging, event handling) and improving type safety. The terminology overloading remains a significant issue affecting developer productivity.
+The highest-leverage improvements now focus on completing partially implemented systems and establishing consistent patterns. With the interaction system refactored and new UI architecture in place, priorities shift to:
 
-Key insight: Establishing consistent patterns and clear contracts will provide the foundation for sustainable growth of the codebase.
+1. **Completing the ID-First Architecture** with EntityRegistry (blocks distributed compute business model)
+2. **Standardizing Debug Logging** (major maintainability improvement)
+3. **Finishing UI System Migration** (remove duplicates, implement missing features)
+4. **Improving Type Safety** with struct-like classes for Variants
+
+Key insight: Many systems have solid foundations but need completion. Focus on finishing what's started before adding new complexity.
 
 ### 17. Interaction Bid System Architecture Complexity
 **Impact**: High | **Effort**: High | **Leverage**: 🔥🔥🔥🔥
@@ -565,7 +638,78 @@ Interactions and contexts already manage participant state and lifecycle. The bi
 - Fewer abstraction layers to understand
 - Reduced bugs from differential handling
 
-### 18. Mock Backend Client Architecture Duplication
+### 18. Z-Index Management and Layer Organization
+**Impact**: Low | **Effort**: Low | **Leverage**: 🔥
+
+**Problem**: Z-index handling is disorganized across the codebase with no clear layering strategy:
+
+**Current Issues**:
+- Hardcoded z-index values scattered throughout different scenes and scripts
+- No documentation of which z-index ranges are used for what purposes
+- Risk of z-fighting and incorrect draw order as new UI elements are added
+- Difficulty debugging visual layering issues
+
+**Examples**:
+- Nameplates, interaction visuals, UI panels all compete for z-ordering
+- No clear separation between world-space UI and screen-space UI
+- Tooltips and context menus can appear behind other elements
+
+**Proposed Solution**: Create centralized z-index constants:
+```gdscript
+# src/common/z_layers.gd
+class_name ZLayers
+
+# World space layers
+const GROUND = 0
+const ITEMS = 10
+const NPCS = 20
+const INTERACTION_VISUALS = 30
+const NAMEPLATES = 40
+
+# UI space layers  
+const PANELS = 100
+const TOOLTIPS = 200
+const MODALS = 300
+```
+
+**Benefits**: Clear layer organization, easier debugging, consistent visual hierarchy
+
+### 19. UI Panel Architecture Inflexibility
+**Impact**: Medium | **Effort**: High | **Leverage**: 🔥🔥
+
+**Problem**: GamepiecePanel extends Panel, preventing flexible UI arrangements:
+
+**Current Limitations**:
+- Panels must be Panel nodes, can't be VBoxContainer, TabContainer children, etc.
+- ConversationPanel had to duplicate GamepiecePanel functionality to work as VBoxContainer
+- Cannot create panels that work as:
+  - Free-floating windows
+  - Tab panel content
+  - Sub-elements within compound UI structures
+  - Dockable panels
+
+**Future Vision**: Panels should be composable UI elements that can exist in multiple contexts:
+- As standalone floating windows (for modding/customization)
+- As tabs within tab containers
+- As sub-panels within larger UI structures
+- As dockable elements in customizable layouts
+
+**Proposed Solution**: Create a component-based panel system:
+```gdscript
+# GamepiecePanelBehavior as a component rather than base class
+class_name GamepiecePanelBehavior extends Node
+
+# Can be added to any Control-derived node
+@export var update_interval: float = 1.0/30.0
+var current_controller: GamepieceController = null
+
+# Panel content as separate scene that can be instantiated into any container
+class_name ConversationPanelContent extends Control
+```
+
+**Benefits**: Flexible UI arrangements, better modding support, cleaner architecture
+
+### 20. Mock Backend Client Architecture Duplication
 **Impact**: High | **Effort**: Medium | **Leverage**: 🔥🔥🔥🔥🔥
 
 **Problem**: The mock backend currently implements a completely separate client architecture from the MCP server client, blocking the core business model feature of distributed compute through player-spawned MCP servers.

@@ -13,7 +13,7 @@ Core components:
 ## Core Components
 
 ### Controller (npc_controller.gd)
-The controller manages the NPC's physical presence in the world, its interaction with the environment, and the execution of actions. It uses a `ControllerStateMachine` to manage its behavior based on decisions from the backend. The NPC's unique identifier (`npc_id`) is derived from its instance ID (`str(get_instance_id())`).
+The controller manages the NPC's physical presence in the world, its interaction with the environment, and the execution of actions. It uses a `ControllerStateMachine` to manage its behavior based on decisions from the backend. The NPC's unique identifier (`npc_id`) is now a property that returns the parent gamepiece's `entity_id`, ensuring consistency across all entity types.
 
 ```
 Key Features:
@@ -105,7 +105,7 @@ The observation system provides structured data about the NPC's state and enviro
 
 **Event-Based Observations:**
 
-*   **`InteractionRequestObservation`**: Tracks interaction bid status (START/CANCEL)
+*   **`InteractionBidObservation`**: Tracks interaction bid status (START/CANCEL)
 *   **`InteractionRejectedObservation`**: Reports failed interaction attempts with reasons
 *   **`InteractionUpdateObservation`**: Tracks interaction lifecycle (started, canceled, finished)
 *   **`ErrorObservation`**: Simple error reporting to backend
@@ -245,7 +245,7 @@ Start Interaction:
 
 Multi-Party Interactions:
 1. Initiator creates MultiPartyBid with invited participants.
-2. Each invited NPC receives InteractionRequestObservation.
+2. Each invited NPC receives InteractionBidObservation.
 3. Invited NPCs can accept or reject within timeout.
 4. If all accept:
    ├── Multi-party interaction created (e.g., ConversationInteraction).

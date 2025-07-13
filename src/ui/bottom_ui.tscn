@@ -1,0 +1,49 @@
+[gd_scene load_steps=3 format=3 uid="uid://bottom_ui"]
+
+[ext_resource type="Script" path="res://src/ui/bottom_ui.gd" id="1_bottom"]
+[ext_resource type="PackedScene" uid="uid://c40y5aqilgenl" path="res://src/ui/need_bar.tscn" id="2_needbar"]
+
+[node name="BottomUI" type="PanelContainer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -200.0
+offset_right = 450.0
+grow_vertical = 0
+size_flags_horizontal = 3
+self_modulate = Color(1, 1, 1, 0.95)
+script = ExtResource("1_bottom")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TabSection" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 5
+
+[node name="TabContainer" type="TabContainer" parent="VBoxContainer/TabSection"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="StatusSection" type="PanelContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/StatusSection"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 4
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer/StatusSection/MarginContainer"]
+layout_mode = 2
+text = "Jan 1, Year 1  •  6:00 AM  •  Pos (x,y): 0, 0"
+size_flags_horizontal = 3

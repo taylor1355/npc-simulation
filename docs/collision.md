@@ -2,7 +2,7 @@
 
 ## Core Components
 
-### CollisionFinder (`collision_finder.gd`)
+### CollisionFinder (`src/common/collision_finder.gd`)
 The `CollisionFinder` class is a utility for dynamically detecting physics objects (both bodies and areas) within a specified radius. It's a key tool for features like gameboard cell occupancy checks or proximity detection, querying Godot's physics engine.
 
 **Initialization & Configuration:**
