@@ -52,6 +52,7 @@ These methods are called automatically during interaction events and dispatch co
 *   `act_in_interaction(participant, params)`: Execute actions within the interaction with parameter validation.
 *   `send_observation_to_participant(participant, observation)`: Send observations to specific participants.
 *   `create_context(target_controller)`: Factory method that creates appropriate `InteractionContext` based on interaction type.
+*   `get_entity_ids() -> Array[String]`: Returns entity IDs of all participants for UI highlighting.
 
 **Signals:**
 *   `act_in_interaction_received(participant, validated_parameters)`: Emitted when actions are performed

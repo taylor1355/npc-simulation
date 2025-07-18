@@ -155,12 +155,43 @@ Panels only process updates while active, but you should still be mindful of per
 
 ## Panel Registration
 
-Panels must be registered with UIElementProvider to appear in the UI. See the [UIElementProvider documentation](ui_element_provider.md) for registration details.
+Panels must be registered with UIElementProvider to appear in the UI. The UIElementProvider singleton manages dynamic panel creation based on entity type and components.
 
 The registration determines:
 - Whether the panel appears as a tab or floating window
 - The panel's priority (for tab ordering)
 - Which entity types or interactions trigger the panel
+
+## Best Practices
+
+### Safe Entity References
+
+When panels need to reference other entities (not just the focused one), use EntityRegistry for safe lookups:
+
+```gdscript
+func _display_interaction_target(target_id: String) -> void:
+    var target = EntityRegistry.get_entity(target_id)
+    if target:  # Always check - entity might have been freed
+        target_label.text = target.get_display_name()
+    else:
+        target_label.text = "(no longer exists)"
+```
+
+### Interactive Entity Names
+
+Make entity names clickable using UILinks:
+
+```gdscript
+func _display_conversation_participant(participant_id: String, name: String) -> void:
+    var link = UILink.entity(participant_id, name)
+    rich_text_label.append_text("Talking with ")
+    rich_text_label.append_text(link.to_bbcode())
+```
+
+This allows players to:
+- Click names to focus the camera on that entity
+- Hover names to highlight the entity in the game world
+- Navigate complex interactions more easily
 
 ## Tips for Panel Development
 

@@ -145,7 +145,7 @@ docs/           # System documentation
 ├── gamepiece.md    # Entity base
 ├── items.md        # Item system
 ├── npc.md          # NPC system
-└── ui.md           # UI system
+└── ui/            # UI system documentation
 ```
 
 ## Development Guidelines

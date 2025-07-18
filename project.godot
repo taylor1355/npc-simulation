@@ -24,6 +24,9 @@ InteractionRegistry="*res://src/common/interaction_registry.gd"
 UIRegistry="*res://src/common/ui_registry.gd"
 UIElementProvider="*res://src/ui/ui_element_provider.gd"
 SimulationTime="*res://src/common/simulation_time.gd"
+EntityRegistry="*res://src/common/entity_registry.gd"
+HighlightManager="*res://src/ui/behaviors/visual_effects/highlight_manager.gd"
+InteractionLineManager="*res://src/field/interaction_line_manager.gd"
 
 [dialogic]
 

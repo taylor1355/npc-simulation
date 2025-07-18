@@ -30,7 +30,8 @@ A 2D NPC simulation built with Godot 4.3+, where NPCs autonomously interact with
    - [conversation.md](conversation.md): Multi-party conversation protocol
 
 4. **User Interface**
-   - [ui.md](ui.md): Debug panels and visualization
+   - [UI System](ui/README.md): UI architecture and components
+   - [UI Documentation](ui/): Detailed UI subsystem docs
 
 ## Architecture Highlights
 

@@ -17,19 +17,18 @@ All behaviors extend `BaseUIBehavior`:
 ```gdscript
 extends BaseUIBehavior
 
-func on_hover_started(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_start(gamepiece: Gamepiece) -> void:
     # Apply visual effect when hover starts
-    var color_manager = get_color_manager()
-    color_manager.add_modification(
+    HighlightManager.highlight(
         gamepiece.entity_id,
-        "hover",
-        Color(1.2, 1.2, 1.2)  # Brighten slightly
+        "my_behavior",  # Unique source ID
+        Color(1.2, 1.2, 1.2),  # Highlight color
+        HighlightManager.Priority.HOVER
     )
 
-func on_hover_ended(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_end(gamepiece: Gamepiece) -> void:
     # Remove effect when hover ends
-    var color_manager = get_color_manager()
-    color_manager.remove_modification(gamepiece.entity_id, "hover")
+    HighlightManager.unhighlight(gamepiece.entity_id, "my_behavior")
 ```
 
 Each behavior implements only the event handlers it needs. The base class provides empty implementations for all events.
@@ -59,15 +58,19 @@ The more specific your trigger, the better performance and easier debugging.
 
 ## Built-in Behaviors
 
-The system includes several standard behaviors:
+**HighlightOnHoverBehavior** - Highlights entities on hover with two modes:
+- `SELF` - Highlights the hovered entity
+- `INTERACTION` - Highlights all participants in the entity's current interaction
 
-**TintHoverBehavior** - Highlights entities when the mouse hovers over them. Supports custom colors and automatic cleanup when hover ends.
+**SelectBehavior** - Focuses entities on click, updating the bottom panel display.
 
-**SelectBehavior** - Updates the focused gamepiece when clicked. This triggers the bottom panel to show information about the selected entity.
+**MultiPartyInteractionBehavior** - Manages interaction lines by coordinating with InteractionLineManager when interactions start/end.
 
-**HighlightTargetBehavior** - Highlights related entities during interactions. For example, highlights all participants in a conversation when hovering over one.
+**OpenPanelBehavior** - Opens floating windows for active interactions.
 
-**OpenPanelBehavior** - Opens floating windows for interactions. Clicking a conversation link opens the chat window.
+**PulseBehavior** - Creates animated pulsing effects on sprites.
+
+**ShowTooltipBehavior** - Displays configurable tooltips with text substitution.
 
 ## Configuration
 
@@ -96,14 +99,17 @@ static func get_all_behaviors() -> Array[TriggeredBehavior]:
 
 The configuration maps triggers to behavior classes with optional parameters.
 
-## Color Management
+## Visual Feedback Systems
 
-Many behaviors modify entity colors for visual feedback. The `SpriteColorManager` coordinates these modifications:
+**HighlightManager** (`src/ui/behaviors/visual_effects/highlight_manager.gd`)
+- Manages entity sprite highlighting with priority-based color selection
+- Multiple sources can highlight the same entity (hover, selection, interaction)
+- Higher priority highlights override lower ones
 
-- **Multiple modifications** blend together (hover + selection + interaction)
-- **Original colors** are preserved and restored
-- **Entity IDs** ensure modifications persist even if nodes change
-- **Automatic cleanup** when entities are destroyed
+**InteractionLineManager** (`src/field/interaction_line_manager.gd`)  
+- Draws lines between interaction participants
+- Supports different line styles per interaction type
+- Coordinates with behaviors for hover highlighting
 
 ## Event Flow
 

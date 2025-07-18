@@ -14,10 +14,10 @@ func _on_configured() -> void:
 	pulse_color = config.get("pulse_color", Color(1.0, 0.8, 0.8, 1.0))
 	pulse_rate = config.get("pulse_rate", 2.0)
 
-func on_hover_start(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_start(gamepiece: Gamepiece) -> void:
 	_start_pulse(gamepiece)
 
-func on_hover_end(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_end(gamepiece: Gamepiece) -> void:
 	_stop_pulse(gamepiece)
 
 func _start_pulse(gamepiece: Gamepiece) -> void:

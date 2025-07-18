@@ -13,7 +13,7 @@ func _on_configured() -> void:
 	if interaction_type.is_empty():
 		push_error("OpenPanelBehavior requires 'interaction_type' parameter")
 
-func on_click(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_click(gamepiece: Gamepiece) -> void:
 	var controller = gamepiece.get_controller()
 	if not controller:
 		return

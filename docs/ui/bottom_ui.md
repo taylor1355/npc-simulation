@@ -37,7 +37,7 @@ It updates through two mechanisms:
 
 **Time updates** come from the SimulationTime system. The BottomUI subscribes to receive updates 10 times per second, formatting the time and date for display.
 
-**Position updates** come from cell highlighting events. Whenever the mouse hovers over a new grid cell, the coordinates update to show that position.
+**Position updates** come from mouse hover events. Whenever the mouse moves over the game world, the coordinates update to show the current grid position.
 
 ## Tab Management
 
@@ -56,7 +56,7 @@ The BottomUI integrates with several game systems:
 
 **SimulationTime** provides the current game time and date. The UI subscribes with a specific ID and properly unsubscribes when destroyed.
 
-**EventBus** delivers cell highlighting events for coordinate updates and focus change events for tab updates.
+**EventBus** delivers hover events for coordinate updates and focus change events for tab updates.
 
 **UIElementProvider** supplies the appropriate panels for each entity type, ensuring the right tabs appear for each selection.
 
@@ -117,6 +117,6 @@ status_display.text = "%s  •  %s  •  Pos: %d, %d  •  Health: %d" % [
 
 **Time not showing** - Verify SimulationTime singleton is in the project and autoloaded.
 
-**Position stuck** - Check that cell highlighting events are being dispatched when the mouse moves.
+**Position stuck** - Check that hover events are being dispatched when the mouse moves over the game world.
 
 The BottomUI provides a stable foundation for the game's interface, giving players the information they need while staying out of the way of gameplay.

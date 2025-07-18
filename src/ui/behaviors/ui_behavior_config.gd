@@ -24,13 +24,14 @@ class TriggeredBehavior:
 # Default behaviors for all entities
 static func get_default_behaviors() -> Array[TriggeredBehavior]:
 	return [
-		# Hover behavior for all entities
+		# Hover behavior for all entities - highlights the entity itself
 		TriggeredBehavior.new(
 			UIBehaviorTrigger.for_event("hover"),
-			TintHoverBehavior,
+			HighlightOnHoverBehavior,
 			{
-				"hover_tint": Color(1.2, 1.2, 1.2, 1.0),
-				"normal_tint": Color.WHITE
+				"highlight_target": "self",
+				"highlight_color": Color(1.2, 1.2, 1.2),
+				"highlight_priority": HighlightManager.Priority.HOVER
 			}
 		),
 		
@@ -58,16 +59,18 @@ static func get_state_behaviors() -> Array[TriggeredBehavior]:
 			}
 		),
 		
-		# Conversation state emoji hover - highlight all participants and line
+		# Conversation state emoji hover - highlight all participants
 		TriggeredBehavior.new(
 			UIBehaviorTrigger.for_event("hover")
 				.with_entity("npc")
 				.with_state("interacting")
 				.with_interaction("conversation")
 				.with_ui_element_type(Globals.UIElementType.NAMEPLATE_EMOJI),
-			HighlightTargetBehavior,
+			HighlightOnHoverBehavior,
 			{
-				"highlight_color": Color(1.0, 1.0, 0.5, 0.8)
+				"highlight_target": "interaction",
+				"highlight_color": Color(1.0, 1.0, 0.5, 0.8),
+				"highlight_priority": HighlightManager.Priority.INTERACTION_TARGET
 			}
 		),
 		
@@ -80,20 +83,6 @@ static func get_state_behaviors() -> Array[TriggeredBehavior]:
 			ShowTooltipBehavior,
 			{
 				"tooltip_text": "Eating {item_name}"
-			}
-		),
-		
-		# Sitting state emoji click
-		TriggeredBehavior.new(
-			UIBehaviorTrigger.for_event("click")
-				.with_entity("npc")
-				.with_state("interacting")
-				.with_interaction("sit")
-				.with_ui_element_type(Globals.UIElementType.NAMEPLATE_EMOJI),
-			HighlightTargetBehavior,
-			{
-				"highlight_color": Color(1.0, 1.0, 0.5, 0.8),
-				"flash_duration": 2.0
 			}
 		)
 	]
@@ -115,12 +104,33 @@ static func get_item_behaviors() -> Array[TriggeredBehavior]:
 		)
 	]
 
+# Interaction-specific behaviors
+static func get_interaction_behaviors() -> Array[TriggeredBehavior]:
+	return [
+		# Multi-party interaction lines (conversations, etc.)
+		# Start drawing lines when conversation starts
+		TriggeredBehavior.new(
+			UIBehaviorTrigger.for_event("interaction_started")
+				.with_interaction("conversation"),
+			MultiPartyInteractionBehavior,
+			{}
+		),
+		# Stop drawing lines when conversation ends
+		TriggeredBehavior.new(
+			UIBehaviorTrigger.for_event("interaction_ended")
+				.with_interaction("conversation"),
+			MultiPartyInteractionBehavior,
+			{}
+		)
+	]
+
 # Get all behavior configurations
 static func get_all_behaviors() -> Array[TriggeredBehavior]:
 	var behaviors: Array[TriggeredBehavior] = []
 	behaviors.append_array(get_default_behaviors())
 	behaviors.append_array(get_state_behaviors())
 	behaviors.append_array(get_item_behaviors())
+	behaviors.append_array(get_interaction_behaviors())
 	return behaviors
 
 # Find matching behaviors for a given state and event

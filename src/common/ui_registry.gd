@@ -46,6 +46,7 @@ func _ready() -> void:
 	EventBus.event_dispatched.connect(_on_event)
 
 func _on_event(event: Event) -> void:
+	# Handle interaction lifecycle events
 	match event.event_type:
 		Event.Type.GAMEPIECE_CLICKED:
 			_handle_gamepiece_event(event, BehaviorRegistry.EventType.CLICK)
@@ -55,6 +56,10 @@ func _on_event(event: Event) -> void:
 			_handle_gamepiece_event(event, BehaviorRegistry.EventType.HOVER_END)
 		Event.Type.FOCUSED_GAMEPIECE_CHANGED:
 			_handle_focus_changed(event)
+		Event.Type.INTERACTION_STARTED:
+			_handle_interaction_event(event, BehaviorRegistry.EventType.INTERACTION_STARTED)
+		Event.Type.INTERACTION_ENDED:
+			_handle_interaction_event(event, BehaviorRegistry.EventType.INTERACTION_ENDED)
 
 ## Register a behavior for a specific trigger condition
 func register_behavior(trigger: UIBehaviorTrigger, behavior: BaseUIBehavior) -> void:
@@ -160,13 +165,13 @@ func _handle_gamepiece_event(event: Event, event_type: BehaviorRegistry.EventTyp
 		# Call appropriate behavior method based on event type
 		match event_type:
 			BehaviorRegistry.EventType.CLICK:
-				behavior.on_click(gamepiece, _ui_state_tracker)
+				behavior.on_click(gamepiece)
 			BehaviorRegistry.EventType.HOVER_START:
 				_ui_state_tracker.mark_hovered(gamepiece)
-				behavior.on_hover_start(gamepiece, _ui_state_tracker)
+				behavior.on_hover_start(gamepiece)
 			BehaviorRegistry.EventType.HOVER_END:
 				_ui_state_tracker.unmark_hovered(gamepiece)
-				behavior.on_hover_end(gamepiece, _ui_state_tracker)
+				behavior.on_hover_end(gamepiece)
 
 # Handle focus change events
 func _handle_focus_changed(event: Event) -> void:
@@ -187,7 +192,7 @@ func _handle_focus_changed(event: Event) -> void:
 			var controller_info = controller.get_ui_info()
 			var behaviors = _behavior_registry.find_matching_behaviors(controller_info, BehaviorRegistry.EventType.FOCUS)
 			for behavior in behaviors:
-				behavior.on_unfocus(old_focused, _ui_state_tracker)
+				behavior.on_unfocus(old_focused)
 	
 	# Handle focus behaviors
 	if new_focused:
@@ -196,14 +201,44 @@ func _handle_focus_changed(event: Event) -> void:
 			var controller_info = controller.get_ui_info()
 			var behaviors = _behavior_registry.find_matching_behaviors(controller_info, BehaviorRegistry.EventType.FOCUS)
 			for behavior in behaviors:
-				behavior.on_focus(new_focused, _ui_state_tracker)
+				behavior.on_focus(new_focused)
 
 
 
+
+# Handle interaction events (started, ended, etc.)
+func _handle_interaction_event(event: Event, event_type: BehaviorRegistry.EventType) -> void:
+	var interaction_event = event as InteractionEvents.InteractionEvent
+	if not interaction_event:
+		return
+	
+	# Build info dict for trigger matching
+	var interaction_info = {
+		Globals.UIInfoFields.INTERACTION_NAME: interaction_event.interaction_type
+	}
+	
+	# Find and execute matching behaviors
+	var behaviors = _behavior_registry.find_matching_behaviors(interaction_info, event_type)
+	for behavior in behaviors:
+		# Call appropriate behavior method based on event type
+		match event_type:
+			BehaviorRegistry.EventType.INTERACTION_STARTED:
+				behavior.on_interaction_started(interaction_event.interaction_id)
+			BehaviorRegistry.EventType.INTERACTION_ENDED:
+				behavior.on_interaction_ended(interaction_event.interaction_id)
 
 ## Registry that maps triggers to behaviors
 class BehaviorRegistry extends RefCounted:
-	enum EventType { CLICK, HOVER_START, HOVER_END, FOCUS }
+	enum EventType { 
+		CLICK, 
+		HOVER_START, 
+		HOVER_END, 
+		FOCUS,
+		INTERACTION_STARTED,
+		INTERACTION_ENDED,
+		INTERACTION_PARTICIPANT_JOINED,
+		INTERACTION_PARTICIPANT_LEFT
+	}
 	
 	const UNIVERSAL_KEY = "*"  # Special key for behaviors that apply to all types
 	
@@ -256,6 +291,10 @@ class BehaviorRegistry extends RefCounted:
 			EventType.CLICK: return "click"
 			EventType.HOVER_START, EventType.HOVER_END: return "hover"
 			EventType.FOCUS: return "focus"
+			EventType.INTERACTION_STARTED: return "interaction_started"
+			EventType.INTERACTION_ENDED: return "interaction_ended"
+			EventType.INTERACTION_PARTICIPANT_JOINED: return "interaction_participant_joined"
+			EventType.INTERACTION_PARTICIPANT_LEFT: return "interaction_participant_left"
 			_: return ""
 
 
@@ -267,11 +306,14 @@ class UIStateTracker extends RefCounted:
 	signal interaction_deselected(interaction_id: String)
 	signal interaction_highlighted(interaction_id: String)
 	signal interaction_unhighlighted(interaction_id: String)
+	signal entity_highlighted(entity_id: String)
+	signal entity_unhighlighted(entity_id: String)
 	
 	var _focused_entity: Gamepiece = null
 	var _hovered_entities: Dictionary = {}  # instance_id -> entity
 	var _selected_interactions: Dictionary = {}  # interaction_id -> true
-	var _highlighted_interactions: Dictionary = {}  # interaction_id -> true
+	var _highlighted_interactions: Dictionary = {}  # interaction_id -> ref_count
+	var _highlighted_entities: Dictionary = {}  # entity_id -> ref_count
 	var _open_windows: Dictionary = {}  # window_id -> window
 	
 	## Mark entity as hovered
@@ -317,21 +359,57 @@ class UIStateTracker extends RefCounted:
 	func is_interaction_selected(interaction_id: String) -> bool:
 		return _selected_interactions.has(interaction_id)
 	
-	## Mark interaction as highlighted
+	## Mark interaction as highlighted (with reference counting)
 	func highlight_interaction(interaction_id: String) -> void:
 		if not _highlighted_interactions.has(interaction_id):
-			_highlighted_interactions[interaction_id] = true
+			_highlighted_interactions[interaction_id] = 0
+		_highlighted_interactions[interaction_id] += 1
+		
+		# Only emit signal on first highlight
+		if _highlighted_interactions[interaction_id] == 1:
 			interaction_highlighted.emit(interaction_id)
 	
-	## Unmark interaction as highlighted
+	## Unmark interaction as highlighted (with reference counting)
 	func unhighlight_interaction(interaction_id: String) -> void:
-		if _highlighted_interactions.has(interaction_id):
+		if not _highlighted_interactions.has(interaction_id):
+			return
+			
+		_highlighted_interactions[interaction_id] -= 1
+		
+		# Only emit signal when ref count reaches 0
+		if _highlighted_interactions[interaction_id] <= 0:
 			_highlighted_interactions.erase(interaction_id)
 			interaction_unhighlighted.emit(interaction_id)
 	
 	## Check if interaction is highlighted
 	func is_interaction_highlighted(interaction_id: String) -> bool:
 		return _highlighted_interactions.has(interaction_id)
+	
+	## Mark entity as highlighted (with reference counting)
+	func highlight_entity(entity_id: String) -> void:
+		if not _highlighted_entities.has(entity_id):
+			_highlighted_entities[entity_id] = 0
+		_highlighted_entities[entity_id] += 1
+		
+		# Only emit signal on first highlight
+		if _highlighted_entities[entity_id] == 1:
+			entity_highlighted.emit(entity_id)
+	
+	## Unmark entity as highlighted (with reference counting)
+	func unhighlight_entity(entity_id: String) -> void:
+		if not _highlighted_entities.has(entity_id):
+			return
+			
+		_highlighted_entities[entity_id] -= 1
+		
+		# Only emit signal when ref count reaches 0
+		if _highlighted_entities[entity_id] <= 0:
+			_highlighted_entities.erase(entity_id)
+			entity_unhighlighted.emit(entity_id)
+	
+	## Check if entity is highlighted
+	func is_entity_highlighted(entity_id: String) -> bool:
+		return _highlighted_entities.has(entity_id)
 	
 	## Track a window
 	func track_window(window_id: String, window: Control) -> void:

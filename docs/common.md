@@ -21,6 +21,29 @@ entity_id = IdGenerator.generate_entity_id()  # "entity_<uuid>"
 window_id = IdGenerator.generate_interaction_panel_id(interaction.id)
 ```
 
+## Entity Registry (`src/common/entity_registry.gd`)
+
+The `EntityRegistry` singleton provides safe entity lookups by ID, preventing "freed instance" errors.
+
+**Key Features:**
+- Tracks all active gamepiece controllers by entity ID
+- Automatic cleanup when entities are destroyed
+- Safe null returns for freed entities
+
+**Core Methods:**
+- `register(controller)` - Register a gamepiece controller
+- `get_entity(entity_id)` - Get controller by ID (returns null if freed)
+- `entity_exists(entity_id)` - Check if entity is still valid
+
+**Usage:**
+```gdscript
+# Safe entity lookup
+var target = EntityRegistry.get_entity(target_id)
+if target:
+    # Entity is valid and can be used
+    target.do_something()
+```
+
 ## Global Constants (`src/common/globals.gd`)
 
 The `Globals` singleton provides system-wide constants and enumerations.
@@ -85,4 +108,4 @@ Singleton coordinating UI functionality through several subsystems:
 
 The registry manages UI element lifecycle, behavior execution, and state synchronization across the UI system.
 
-See [UI Documentation](ui.md) for detailed architecture and usage.
+See [UI Documentation](ui/README.md) for detailed architecture and usage.

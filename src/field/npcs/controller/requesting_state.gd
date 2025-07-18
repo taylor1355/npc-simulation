@@ -211,17 +211,21 @@ func _handle_timeout() -> void:
 
 func get_context_data() -> Dictionary:
 	var context = {
-		"target_name": target_controller.get_display_name() if target_controller else "",
+		"target_name": "",
 		"interaction_name": interaction_name,
 		"request_status": InteractionBid.BidStatus.keys()[interaction_request.status] if interaction_request else ""
 	}
 	
-	# Add position for items
-	if target_controller is ItemController:
-		context["target_position"] = {
-			"x": target_controller._gamepiece.cell.x,
-			"y": target_controller._gamepiece.cell.y
-		}
+	# Safely check if target still exists
+	if is_instance_valid(target_controller) and not target_controller.is_queued_for_deletion():
+		context["target_name"] = target_controller.get_display_name()
+		
+		# Add position for items
+		if target_controller is ItemController and target_controller._gamepiece:
+			context["target_position"] = {
+				"x": target_controller._gamepiece.cell.x,
+				"y": target_controller._gamepiece.cell.y
+			}
 	
 	# Add multi-party info
 	if interaction_request is MultiPartyBid:
@@ -288,5 +292,9 @@ func get_state_emoji() -> String:
 
 func get_state_description(include_links: bool = false) -> String:
 	if interaction_name and target_controller:
-		return "Requesting %s with %s" % [interaction_name, target_controller.get_display_name()]
+		var target_name = target_controller.get_display_name()
+		if include_links:
+			var link = UILink.entity(target_controller.get_entity_id(), target_name)
+			target_name = link.to_bbcode()
+		return "Requesting %s with %s" % [interaction_name, target_name]
 	return "Requesting interaction..."

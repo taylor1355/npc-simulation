@@ -18,20 +18,20 @@ The project has successfully implemented:
 
 ## Development Phases
 
-### Phase 0: UI Link Enhancement & Entity Highlighting 🔗
+### Phase 0: UI Link Enhancement & Entity Highlighting 🔗 ✅ COMPLETED
 **Goal**: Extend UILink hover highlighting to all entity references and ensure consistent link creation throughout UI  
 **Priority**: HIGH | **Effort**: Low-Medium | **Impact**: High
 
-#### 0.1 UILink Hover Highlighting
+#### 0.1 UILink Hover Highlighting ✅ COMPLETED
 **Priority**: HIGH | **Effort**: Low | **Impact**: High
 
-Currently, hovering over an NPC's status emoji highlights conversation participants and the line between them. This same highlighting behavior should be triggered when hovering over any UILink that references an interaction.
+UILinks now trigger entity and interaction highlighting when hovered.
 
-**Current State**:
-- ✅ ConversationVisualHandler highlights participants when hovering status emoji
-- ✅ UILink system exists for creating entity and interaction links
-- ✅ SpriteColorManager and UIStateTracker handle highlighting
-- ❌ UILinks don't trigger highlighting on hover
+**Completed**:
+- ✅ RichTextLabelLink directly calls HighlightManager on hover
+- ✅ Entity links highlight the referenced entity
+- ✅ Interaction links highlight all participants and lines
+- ✅ Unified highlighting through HighlightManager singleton
 
 **Implementation**:
 
@@ -58,10 +58,10 @@ func _on_link_hover_ended(link_url: String) -> void:
 3. Connect hover events to UIStateTracker highlighting system
 4. Ensure ConversationVisualHandler responds to UIStateTracker signals
 
-#### 0.2 Entity Highlighting System
+#### 0.2 Entity Highlighting System ✅ COMPLETED
 **Priority**: HIGH | **Effort**: Low | **Impact**: High
 
-Extend the existing highlighting system to support individual entities, not just interactions.
+The highlighting system now supports individual entities through the HighlightManager.
 
 **Implementation**:
 
@@ -96,15 +96,18 @@ func _on_entity_highlighted(entity_id: String) -> void:
         )
 ```
 
-**Benefits**:
-- Consistent highlighting behavior across all UI elements
+**Completed**:
+- ✅ Created HighlightManager singleton with priority-based highlighting
+- ✅ Replaced SpriteColorManager with entity ID-based system
+- ✅ Added entity highlighting with automatic cleanup
+- ✅ Integrated with InteractionLineManager for coordinated effects
 - Better visual feedback for entity references
 - Improved user understanding of relationships
 
-#### 0.3 Comprehensive UILink Creation
+#### 0.3 Comprehensive UILink Creation ✅ COMPLETED
 **Priority**: MEDIUM | **Effort**: Medium | **Impact**: High
 
-Many places in the UI show entity names as plain text instead of clickable links. This inconsistency makes the UI less interactive and harder to navigate.
+Entity names throughout the UI are now clickable UILinks that trigger highlighting and focus.
 
 **Current Issues**:
 ```gdscript
@@ -149,13 +152,35 @@ var speaker_text = "[b]%s[/b]: " % speaker_link
 # - Any entity reference that users might want to inspect
 ```
 
-**Locations Needing Updates**:
-1. `interacting_state.gd`: get_activity_description()
-2. `conversation_interaction.gd`: Message formatting
-3. `requesting_state.gd`: Status descriptions
-4. `npc_info_tab.gd`: Any entity references
-5. `working_memory_panel.gd`: Memory entries referencing entities
-6. `event_formatter.gd`: Event descriptions with entity names
+**Completed**:
+- ✅ `interacting_state.gd`: Participant names now clickable UILinks
+- ✅ `requesting_state.gd`: Target names now clickable UILinks
+- ✅ UILinks trigger entity/interaction highlighting on hover
+- ✅ Clicking UILinks focuses camera on entity
+
+**Future Enhancement** (not critical path):
+- `conversation_panel.gd`: Speaker names in messages (requires UI structure change)
+- `npc_info_tab.gd`: Any entity references
+- `working_memory_panel.gd`: Memory entries referencing entities
+- `event_formatter.gd`: Event descriptions with entity names
+
+#### 0.4 Conversation Panel Enhancement
+**Priority**: MEDIUM | **Effort**: Low | **Impact**: Medium
+
+The conversation panel currently uses plain Labels for speaker names, preventing them from being clickable links. Converting to RichTextLabelLink would enable:
+- Click on speaker names to focus on that NPC
+- Hover to highlight the speaker in the game world
+- Consistent interaction patterns across all UI
+
+**Implementation**:
+1. Replace Label with RichTextLabelLink in `conversation_message.gd`
+2. Update `ConversationInteraction.get_messages()` to include speaker entity IDs
+3. Format speaker names as UILinks in the message display
+
+**Benefits**:
+- More interactive conversation UI
+- Easier to track who's speaking in multi-party conversations
+- Consistent with other UI link behaviors
 
 **Testing Requirements**:
 - All entity names in UI should be hoverable
@@ -163,14 +188,14 @@ var speaker_text = "[b]%s[/b]: " % speaker_link
 - Clicking focuses the camera on the entity
 - Links work correctly in all UI contexts (panels, tooltips, status text)
 
-### Phase 0: Critical Infrastructure - Entity Registry 🚨
+### Phase 0: Critical Infrastructure - Entity Registry 🚨 ✅ COMPLETED
 **Goal**: Prevent "freed instance" crashes and establish safe entity reference patterns  
 **Priority**: CRITICAL | **Effort**: Low-Medium | **Impact**: Very High
 
-#### 0.1 Core Entity Registry Implementation
+#### 0.1 Core Entity Registry Implementation ✅ COMPLETED
 **Priority**: CRITICAL | **Effort**: Low | **Impact**: Very High
 
-The system currently suffers from crashes when NPCs interact with freed entities (e.g., two NPCs trying to consume the same apple). This must be fixed immediately.
+The EntityRegistry now provides safe entity lookups that prevent "freed instance" crashes.
 
 **Core Implementation**:
 

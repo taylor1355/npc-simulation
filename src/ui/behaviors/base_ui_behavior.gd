@@ -7,19 +7,26 @@ class_name BaseUIBehavior extends Resource
 var config: Dictionary = {}
 
 # Called when behavior is activated
-func on_hover_start(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_start(gamepiece: Gamepiece) -> void:
 	pass
 
-func on_hover_end(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_end(gamepiece: Gamepiece) -> void:
 	pass
 
-func on_click(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_click(gamepiece: Gamepiece) -> void:
 	pass
 
-func on_focus(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_focus(gamepiece: Gamepiece) -> void:
 	pass
 
-func on_unfocus(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_unfocus(gamepiece: Gamepiece) -> void:
+	pass
+
+# Interaction lifecycle methods
+func on_interaction_started(interaction_id: String) -> void:
+	pass
+
+func on_interaction_ended(interaction_id: String) -> void:
 	pass
 
 # Initialize with configuration

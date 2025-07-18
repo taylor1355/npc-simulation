@@ -10,7 +10,7 @@ var _tooltip_instance: Tooltip
 func _on_configured() -> void:
 	tooltip_text = config.get("tooltip_text", "")
 
-func on_hover_start(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_start(gamepiece: Gamepiece) -> void:
 	var controller = _get_controller(gamepiece)
 	if not controller:
 		return
@@ -28,11 +28,11 @@ func on_hover_start(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) ->
 	
 	_tooltip_instance.show_tooltip(formatted_text)
 
-func on_hover_end(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_hover_end(gamepiece: Gamepiece) -> void:
 	if _tooltip_instance:
 		_tooltip_instance.hide_tooltip()
 
-func on_click(gamepiece: Gamepiece, tracker: UIRegistry.UIStateTracker) -> void:
+func on_click(gamepiece: Gamepiece) -> void:
 	# Hide tooltip on click to avoid interference
 	if _tooltip_instance:
 		_tooltip_instance.hide_tooltip()

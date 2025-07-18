@@ -49,3 +49,22 @@
 - **Expected**: Traits should display the NPC's actual traits
 - **Actual**: Traits section displays "Loading..." and never updates
 - **Likely Cause**: The traits system or backend integration may not be properly implemented
+
+### No Entity Selected on Game Start
+- **Description**: When the game starts, no entity is selected in the UI panels
+- **Steps to Reproduce**: Start the game and observe the info panels
+- **Expected**: Either the first NPC should be selected by default, or panels should show a helpful message
+- **Actual**: Panels appear empty/blank with no indication of what to do
+- **Impact**: New users may be confused about how to interact with the UI
+
+## Gameplay Issues
+
+### Potential Crash with Concurrent Consumption
+- **Description**: When multiple NPCs try to consume the same item simultaneously, the game may crash
+- **Steps to Reproduce**: 
+  1. Place two hungry NPCs near a single apple
+  2. Let both NPCs attempt to consume it at the same time
+- **Expected**: One NPC succeeds in consuming the item, the other's action fails gracefully
+- **Actual**: Potential "freed instance" error if second NPC accesses the consumed item
+- **Status**: EntityRegistry implemented to prevent this, but needs testing
+- **Priority**: HIGH - Can cause game crashes

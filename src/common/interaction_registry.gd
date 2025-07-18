@@ -7,8 +7,6 @@ var _interactions_by_participant: Dictionary[String, Array] = {}
 var _contexts_by_host: Dictionary[String, Array] = {}
 var _interaction_contexts: Dictionary[String, InteractionContext] = {}  # interaction_id -> context
 
-# Reference to the interaction visualizer (set by the visualizer on ready)
-var _interaction_visualizer: Node2D = null
 
 func _ready():
 	# Listen for interaction lifecycle events
@@ -126,6 +124,17 @@ func get_interaction_between(a: NpcController, b: NpcController, type: String = 
 	
 	return null
 
-## Get an interaction by its ID
-func get_interaction_by_id(interaction_id: String) -> Interaction:
+func get_interaction(interaction_id: String) -> Interaction:
 	return _interactions_by_id.get(interaction_id)
+
+func get_context_for_interaction(interaction_id: String) -> InteractionContext:
+	var interaction = get_interaction(interaction_id)
+	if not interaction:
+		return null
+	
+	for contexts in _contexts_by_host.values():
+		for context in contexts:
+			if context.interaction == interaction:
+				return context
+	
+	return null

@@ -73,32 +73,20 @@ func execute() -> void:
 			_execute_interaction_link()
 
 func _execute_entity_link() -> void:
-	var gamepiece = _find_gamepiece_by_entity_id(target_id)
-	if not gamepiece:
+	var controller = EntityRegistry.get_entity(target_id)
+	if not controller:
 		push_warning("Entity link references non-existent entity: " + target_id)
 		return
 	
 	# Focus on the entity
-	var event = GamepieceEvents.create_focused(gamepiece)
+	var event = GamepieceEvents.create_focused(controller.get_gamepiece())
 	EventBus.dispatch(event)
 
 func _execute_interaction_link() -> void:
-	var interaction = InteractionRegistry.get_interaction_by_id(target_id)
+	var interaction = InteractionRegistry.get_interaction(target_id)
 	if not interaction:
 		push_warning("Interaction link references non-existent interaction: " + target_id)
 		return
 	
 	# Use UIElementProvider singleton to display the panel
 	UIElementProvider.display_interaction_panel(interaction)
-
-func _find_gamepiece_by_entity_id(entity_id: String) -> Gamepiece:
-	# TODO: Use EntityRegistry when available
-	# TECHNICAL DEBT: This searches through all gamepieces O(n)
-	# Should be replaced with EntityRegistry.get_entity(entity_id) once implemented
-	
-	# Use UIRegistry (which is a Node) to access the scene tree
-	var gamepieces = UIRegistry.get_tree().get_nodes_in_group(Globals.GAMEPIECE_GROUP)
-	for gamepiece in gamepieces:
-		if gamepiece is Gamepiece and gamepiece.entity_id == entity_id:
-			return gamepiece
-	return null

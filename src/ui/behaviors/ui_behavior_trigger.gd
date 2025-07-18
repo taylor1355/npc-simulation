@@ -6,7 +6,7 @@ class_name UIBehaviorTrigger extends Resource
 ## matches the conditions that should activate a UI behavior.
 
 # Required criteria (must be set)
-@export var event_type: String = ""  # "hover", "click", etc.
+@export var event_type: String = ""  # "hover", "click", "interaction_started", "interaction_ended", etc.
 
 # Optional criteria (empty string means "any")
 @export var entity_type: String = ""  # "npc", "item", or empty for any

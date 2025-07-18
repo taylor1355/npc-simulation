@@ -38,6 +38,11 @@ The `Gamepiece` class (extends `Node2D`) is the fundamental building block for a
 The `GamepieceController` (extends `Node2D`) is responsible for managing the behavior, pathfinding, and environmental awareness of its parent `Gamepiece`. Specialized controllers (like `NpcController` or `ItemController`) inherit from this.
 
 **Key Responsibilities & Features:**
+*   **Entity Registry Integration:**
+    *   Automatically registers with `EntityRegistry` on `_ready()` for safe global lookups
+    *   Provides `get_entity_id() -> String`: Returns the parent gamepiece's entity_id
+    *   Registration is deferred to ensure entity_id is available
+    *   Automatic cleanup on destruction
 *   **Pathfinding Management:**
     *   Owns and manages a `Pathfinder` instance.
     *   `_rebuild_pathfinder()`: Initializes or rebuilds the `Pathfinder` based on terrain data (queried using `_terrain_searcher`).
@@ -55,6 +60,9 @@ The `GamepieceController` (extends `Node2D`) is responsible for managing the beh
 *   **State & Event Handling:**
     *   Responds to game events like `EventBus.input_paused`, `EventBus.terrain_changed`, and `GamepieceEvents.CellChangedEvent` to update its state or pathfinding data.
     *   Connects to parent `_gamepiece` signals (`arriving`, `arrived`) to manage path following.
+*   **Interaction Management:**
+    *   `handle_interaction_bid(bid: InteractionBid) -> void`: Evaluates and responds to interaction requests
+    *   `interaction_finished` signal: Emitted when an interaction completes
 *   **Configuration Exports:**
     *   `@export_flags_2d_physics var terrain_mask` (default `0x2`).
     *   `@export_flags_2d_physics var gamepiece_mask` (default `0x1`).

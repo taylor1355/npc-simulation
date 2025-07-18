@@ -39,6 +39,10 @@ func get_cell_position() -> Vector2i:
 func get_display_name() -> String:
 	return _gamepiece.display_name if _gamepiece else ""
 
+## Get the entity ID of the gamepiece.
+func get_entity_id() -> String:
+	return _gamepiece.entity_id if _gamepiece else ""
+
 ## Get UI-relevant information about this controller's current state.
 ## Used by the UI system to determine which behaviors to trigger.
 func get_ui_info() -> Dictionary:
@@ -104,7 +108,6 @@ func add_component_node(component: GamepieceComponent) -> void:
 		add_child(component)
 	
 	# Only collect interaction factories at runtime
-	# CRITICAL: This was causing 30+ second editor freezes
 	if Engine.is_editor_hint():
 		return
 		
@@ -135,6 +138,9 @@ func _ready() -> void:
 		
 		_gameboard = _gamepiece.gameboard
 		assert(_gameboard, "%s error: invalid Gameboard object!" % name)
+		
+		# Register with EntityRegistry for safe reference management
+		EntityRegistry.register(self)
 		
 		EventBus.input_paused.connect(_on_input_paused)
 		

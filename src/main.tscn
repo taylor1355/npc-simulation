@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=4 uid="uid://cg6x04dsiwoas"]
+[gd_scene load_steps=14 format=4 uid="uid://cg6x04dsiwoas"]
 
 [ext_resource type="Script" uid="uid://ch2qg4lyqcd1" path="res://src/field/field.gd" id="1_4kyoj"]
 [ext_resource type="TileSet" uid="uid://biq84075xlypd" path="res://assets/terrain/tilesets/kenney_obstacles.tres" id="1_q4jvv"]
@@ -10,7 +10,6 @@
 [ext_resource type="Script" uid="uid://6ngphcy68b2w" path="res://src/field/gameboard/debug_map_boundaries.gd" id="10_8t3yh"]
 [ext_resource type="PackedScene" uid="uid://bve4u0hewur8" path="res://src/ui/ui.tscn" id="11_jm6mo"]
 [ext_resource type="Script" uid="uid://xr0nyjw5eiyo" path="res://src/field/items/items_manager.gd" id="12_items"]
-[ext_resource type="Script" uid="uid://ghekhe7ttjte" path="res://src/field/interaction_visuals/interaction_visualizer.gd" id="13_visuals"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mablp"]
 texture = ExtResource("4_l0eot")
@@ -205,9 +204,6 @@ gameboard = ExtResource("2_l26x2")
 [node name="Items" type="Node2D" parent="Field/Entities"]
 y_sort_enabled = true
 script = ExtResource("12_items")
-
-[node name="InteractionVisualizer" type="Node2D" parent="Field"]
-script = ExtResource("13_visuals")
 
 [node name="MapBoundaries" type="Node2D" parent="."]
 visible = false

@@ -20,7 +20,7 @@ The UIRegistry contains three main subsystems:
 
 **UIStateTracker** keeps track of the current UI state - what entity is hovered, what's selected, which windows are open. This state informs behavior decisions.
 
-**Event Processing** connects to the game's event bus and processes relevant UI events, executing matched behaviors in response.
+**Event Processing** connects to the game's event bus and processes UI events including hover, click, focus, and interaction lifecycle events.
 
 ## State Tracking
 
@@ -59,14 +59,12 @@ This process happens quickly enough to feel instantaneous to players.
 
 ## Event Integration
 
-The registry listens for specific event types:
+The registry processes these event types:
 
-- **Hover events** - Update hover state and trigger hover behaviors
-- **Click events** - Update selection and trigger click behaviors  
-- **Focus events** - Update focused entity for panel display
-- **Interaction events** - Track interaction lifecycle for UI updates
-
-Each event type has specialized handling to extract the relevant information and update appropriate state.
+- **GAMEPIECE_HOVER_STARTED/ENDED** - Triggers hover behaviors
+- **GAMEPIECE_CLICKED** - Triggers click behaviors and selection
+- **FOCUSED_GAMEPIECE_CHANGED** - Updates panel display
+- **INTERACTION_STARTED/ENDED** - Manages interaction-specific behaviors
 
 ## Window Management
 
@@ -146,12 +144,13 @@ To add new behavior types:
 
 ## Integration with Other Systems
 
-The UIRegistry works closely with:
+The UIRegistry coordinates with:
 
-**EventBus** - Source of all UI-relevant events
-**UIElementProvider** - Creates UI elements that behaviors might open
-**SpriteColorManager** - Manages visual highlighting from behaviors
-**FloatingWindowContainer** - Hosts windows tracked by the registry
+- **EventBus** - Source of all UI events
+- **UIElementProvider** - Creates panels and windows
+- **HighlightManager** - Visual entity highlighting
+- **InteractionLineManager** - Interaction visualization
+- **EntityRegistry** - Safe entity lookups
 
 ## Best Practices
 

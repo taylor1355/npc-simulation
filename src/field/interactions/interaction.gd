@@ -167,3 +167,13 @@ func create_context(target_controller: GamepieceController = null) -> Interactio
 	if context_type == InteractionContext.ContextType.GROUP:
 		context.interaction = self
 	return context
+
+## Get all entity IDs involved in this interaction (participants only)
+## Note: Host entity is managed by InteractionContext, not stored directly in Interaction
+func get_entity_ids() -> Array[String]:
+	var entity_ids: Array[String] = []
+	
+	for participant in participants:
+		entity_ids.append(participant.get_entity_id())
+	
+	return entity_ids

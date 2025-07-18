@@ -121,14 +121,25 @@ func get_state_description(include_links: bool = false) -> String:
 	if interaction.participants.size() > 1:
 		var other_participants = interaction.participants.filter(func(p): return p != controller)
 		if other_participants.size() > 0:
-			var names = other_participants.map(func(p): return p.get_display_name())
-			if names.size() == 1:
-				return "%s with %s" % [interaction_name, names[0]]
+			if other_participants.size() == 1:
+				var participant = other_participants[0]
+				var name_text = participant.get_display_name()
+				if include_links:
+					var link = UILink.entity(participant.get_entity_id(), name_text)
+					name_text = link.to_bbcode()
+				return "%s with %s" % [interaction_name, name_text]
 			else:
-				return "%s with %d others" % [interaction_name, names.size()]
+				return "%s with %d others" % [interaction_name, other_participants.size()]
 	
 	# For single-party interactions with items
-	return "%s with %s" % [interaction_name, context.host.get_display_name() if context.host else "Unknown"]
+	if context.host:
+		var host_name = context.host.get_display_name()
+		if include_links:
+			var link = UILink.entity(context.host.get_entity_id(), host_name)
+			host_name = link.to_bbcode()
+		return "%s with %s" % [interaction_name, host_name]
+	else:
+		return "%s with Unknown" % interaction_name
 
 # Override bid handling to properly manage interaction transitions
 func on_interaction_bid(bid: MultiPartyBid) -> void:

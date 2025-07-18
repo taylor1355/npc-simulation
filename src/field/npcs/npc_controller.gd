@@ -236,12 +236,13 @@ func change_state(new_state: BaseControllerState) -> void:
 
 func _on_state_changed(old_state_name: String, new_state_name: String) -> void:
 	# Log state transition
-	print("[NPC %s] State changed from %s to %s" % [npc_id, old_state_name, new_state_name])
+	# print("[NPC %s] State changed from %s to %s" % [npc_id, old_state_name, new_state_name])
+	pass
 
 
-######################
-### Placeholder AI ###
-######################
+#######################
+### Decision-making ###
+#######################
 func decide_behavior() -> void:
 	if not npc_id:
 		return

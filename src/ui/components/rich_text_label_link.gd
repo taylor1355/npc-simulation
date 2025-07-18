@@ -25,9 +25,33 @@ func _on_meta_clicked(meta: Variant) -> void:
 
 func _on_meta_hover_started(meta: Variant) -> void:
 	Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND)
+	
+	# Trigger highlighting based on link type
+	var link_ref = str(meta)
+	var link = UILink.parse(link_ref)
+	if not link:
+		return
+	
+	match link.target_type:
+		UILink.TargetType.ENTITY:
+			HighlightManager.highlight(link.target_id, "ui_link", Color.YELLOW, HighlightManager.Priority.SELECTION)
+		UILink.TargetType.INTERACTION:
+			HighlightManager.highlight_interaction(link.target_id, "ui_link", Color.YELLOW, HighlightManager.Priority.SELECTION)
 
 func _on_meta_hover_ended(meta: Variant) -> void:
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	
+	# Remove highlighting
+	var link_ref = str(meta)
+	var link = UILink.parse(link_ref)
+	if not link:
+		return
+		
+	match link.target_type:
+		UILink.TargetType.ENTITY:
+			HighlightManager.unhighlight(link.target_id, "ui_link")
+		UILink.TargetType.INTERACTION:
+			HighlightManager.unhighlight_interaction(link.target_id, "ui_link")
 
 ## Helper to add a UILink to the text
 func add_link(link: UILink) -> void:

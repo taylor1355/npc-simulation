@@ -21,7 +21,7 @@ func set_interaction_id(id: String) -> void:
 	
 	# Setup new interaction
 	interaction_id = id
-	current_interaction = InteractionRegistry.get_interaction_by_id(id)
+	current_interaction = InteractionRegistry.get_interaction(id)
 	
 	if current_interaction:
 		# Check if interaction is already ended based on participants

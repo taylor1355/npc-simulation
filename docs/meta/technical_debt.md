@@ -376,7 +376,7 @@ var elapsed := SimulationTime.get_elapsed_seconds()
 **Progress**: ✅ **Entity ID system implemented** (January 2025)
 - Added `entity_id` property to Gamepiece base class with auto-generation
 - Made `npc_id` a property that returns `gamepiece.entity_id` for consistency
-- Updated SpriteColorManager to use entity IDs as keys
+- Replaced SpriteColorManager with HighlightManager using entity IDs
 - UIRegistry tracks UI elements by owner entity ID
 
 **Remaining Problem**: The codebase still passes object references directly instead of using IDs with registry lookups. This blocks critical features for multiplayer and distributed compute.
@@ -549,7 +549,7 @@ var parent_gamepiece: Gamepiece:
 - **Missing Implementations**: Tooltip system placeholder, resize handles not implemented
 - **No Z-Layer Management**: Hardcoded z-index values (floating windows = 10)
 - **Object References**: UI system passes object references instead of IDs
-- **Missing Documentation**: Referenced UI docs don't exist (ui/overview.md, ui/panels.md)
+- **Missing Documentation**: Some referenced UI docs don't exist (ui/panels.md still needs creation)
 
 **Current State**:
 ```gdscript
@@ -584,6 +584,38 @@ func display_tooltip(text: String, position: Vector2) -> void:
 - Type safety only enforced during initial setup
 
 **Solution**: Add property setters with validation, ensure type safety throughout component lifecycle
+
+### 24. Interaction Line Rendering Performance
+**Impact**: Medium | **Effort**: Medium | **Leverage**: 🔥🔥
+
+**Problem**: InteractionLineManager draws all interaction lines every frame without culling:
+- Lines are drawn even when completely off-screen
+- No spatial partitioning or visibility checks
+- Could become performance issue with many simultaneous interactions
+
+**Implementation Complexity**: 
+- Need to check if line endpoints are within viewport bounds
+- Account for line segments that cross viewport even if endpoints are outside
+- Consider expanded bounds for smooth entry/exit transitions
+- Balance culling accuracy vs computation cost
+
+**Proposed Solution**:
+```gdscript
+func _should_draw_line(points: PackedVector2Array) -> bool:
+    var viewport_rect = get_viewport_rect()
+    # Expand rect slightly for smooth transitions
+    viewport_rect = viewport_rect.grow(100)
+    
+    # Check if any point is visible
+    for point in points:
+        if viewport_rect.has_point(to_local(point)):
+            return true
+    
+    # Check if line crosses viewport (more complex)
+    return _line_intersects_rect(points, viewport_rect)
+```
+
+**Benefits**: Better performance with many NPCs, scalable to larger simulations
 
 ## Conclusion
 
